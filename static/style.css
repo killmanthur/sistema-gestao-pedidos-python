@@ -1,0 +1,1511 @@
+/* ==========================================================================
+    Quadro de Pedidos CSS - Refatorado (v2.2)
+    ==========================================================================
+    1.  :root      - Variáveis Globais e Temas
+    2.  Base       - Reset e Estilos Globais
+    3.  Layout     - Estrutura de containers e grades
+    4.  Components - Elementos reutilizáveis (Botões, Cards, Modais, etc.)
+    5.  Pages      - Estilos específicos para páginas
+    6.  Utilities  - Classes auxiliares e Modificadores
+*/
+
+/* --- 1. :root (Variáveis Globais e Temas) --- */
+:root {
+    --clr-primary: #3B71CA;
+    --clr-primary-hover: #3566b6;
+    --clr-primary-gradient: linear-gradient(45deg, #3B71CA, #2a5a9e);
+    --clr-success: #5cb85c;
+    --clr-warning: #f0ad4e;
+    --clr-danger: #d9534f;
+    --clr-info: #2575fc;
+    --clr-secondary: #6c757d;
+    --bg-main: #f0f2f5;
+    --bg-surface: #ffffff;
+    --bg-muted: #f8f9fa;
+    --text-primary: #212529;
+    --text-secondary: #6c757d;
+    --border-main: #dee2e6;
+    --bg-success-soft: rgba(92, 184, 92, 0.1);
+    --bg-warning-soft: rgba(240, 173, 78, 0.1);
+    --bg-danger-soft: rgba(217, 83, 79, 0.1);
+    --bg-info-soft: #e9f1ff;
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.08);
+    --shadow-lg: 0 10px 20px rgba(0, 0, 0, 0.1);
+    --border-radius-md: 8px;
+    --transition-main: all 0.2s ease-in-out;
+}
+
+body.dark-mode {
+    --clr-primary: #4A90E2;
+    --clr-primary-hover: #5a9ee7;
+    --bg-main: #121212;
+    --bg-surface: #1e1e1e;
+    --bg-muted: #2c2c2c;
+    --text-primary: #e0e0e0;
+    --text-secondary: #a0a0a0;
+    --border-main: #3a3a3a;
+    --bg-success-soft: rgba(92, 184, 92, 0.2);
+    --bg-warning-soft: rgba(240, 173, 78, 0.2);
+    --bg-danger-soft: rgba(217, 83, 79, 0.2);
+    --bg-info-soft: #1c2a45;
+    --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 10px 20px rgba(0, 0, 0, 0.4);
+}
+
+/* --- 2. Base (Reset e Estilos Globais) --- */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Roboto', sans-serif;
+    background: var(--bg-main);
+    color: var(--text-primary);
+    line-height: 1.6;
+    transition: background 0.3s, color 0.3s;
+}
+
+main {
+    max-width: 1600px;
+    margin: 2rem auto;
+    padding: 0 1.5rem;
+}
+
+h1,
+h2,
+h3 {
+    color: var(--text-primary);
+}
+
+hr {
+    border: 0;
+    border-top: 1px solid var(--border-main);
+    margin: 2rem 0;
+}
+
+a {
+    color: var(--clr-primary);
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+/* --- 3. Layout --- */
+.layout-grid-2-cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+}
+
+.layout-grid-3-cols {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+}
+
+.layout-grid-4-cols {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+}
+
+.layout-grid-5-cols {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1.5rem;
+}
+
+.quadro-coluna h2,
+.sugestoes-coluna h2 {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    font-weight: 500;
+}
+
+.quadro-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.5rem;
+    min-height: 200px;
+}
+
+.quadro-vazio-msg {
+    color: var(--text-secondary);
+    text-align: center;
+    margin-top: 2rem;
+    padding: 2rem;
+    background: var(--bg-muted);
+    border-radius: var(--border-radius-md);
+    border: 2px dashed var(--border-main);
+}
+
+/* --- 4. Components --- */
+/* Header & Navegação */
+header {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    background: var(--clr-primary-gradient);
+    color: white;
+    padding: 0.5rem 2rem;
+    box-shadow: var(--shadow-md);
+    transition: var(--transition-main);
+}
+
+.header__content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 2rem;
+}
+
+.header__brand h1 {
+    color: white;
+    font-size: 1.5rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.header__nav {
+    flex-grow: 1;
+}
+
+.header__nav ul {
+    list-style: none;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.header__nav a {
+    color: rgba(255, 255, 255, 0.85);
+    font-weight: 500;
+    padding: 0.6rem 1rem;
+    border-radius: 6px;
+    transition: var(--transition-main);
+    display: block;
+}
+
+.header__nav a:hover {
+    color: white;
+    background: rgba(255, 255, 255, 0.15);
+}
+
+#li-logout a {
+    background: var(--clr-danger);
+    color: white !important;
+}
+
+.header__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.btn-icon {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    width: 40px;
+    height: 40px;
+    padding: 6px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: var(--transition-main);
+    position: relative;
+}
+
+.btn-icon:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.btn-icon img {
+    width: 100%;
+    height: 100%;
+}
+
+body.dark-mode .btn-icon img {
+    filter: invert(1) brightness(1.5);
+}
+
+#theme-icon-moon {
+    display: none;
+}
+
+body.dark-mode #theme-icon-moon {
+    display: block;
+}
+
+body.dark-mode #theme-icon-sun {
+    display: none;
+}
+
+#notification-count {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background: var(--clr-danger);
+    color: white;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 2px solid var(--clr-primary);
+}
+
+/* Botões */
+.btn {
+    display: inline-block;
+    padding: 0.7rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 700;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    text-align: center;
+    transition: var(--transition-main);
+}
+
+.btn--primary {
+    background: var(--clr-primary);
+    color: white;
+    border-color: var(--clr-primary);
+}
+
+.btn--primary:hover:not(:disabled) {
+    background: var(--clr-primary-hover);
+    border-color: var(--clr-primary-hover);
+}
+
+.btn--secondary {
+    background: var(--clr-secondary);
+    color: white;
+    border-color: var(--clr-secondary);
+}
+
+.btn--secondary:hover {
+    background: #5a6268;
+    border-color: #5a6268;
+}
+
+.btn--danger {
+    background: var(--clr-danger);
+    color: white;
+    border-color: var(--clr-danger);
+}
+
+.btn--danger:hover {
+    background: #c9302c;
+    border-color: #c9302c;
+}
+
+.btn[disabled] {
+    opacity: 0.7;
+    cursor: wait;
+}
+
+/* Formulários */
+.form-container {
+    max-width: 800px;
+    margin: 2rem auto;
+    background: var(--bg-surface);
+    padding: 2.5rem;
+    border-radius: 12px;
+    box-shadow: var(--shadow-md);
+}
+
+.form-container h2 {
+    text-align: center;
+    margin-bottom: 2rem;
+    color: var(--clr-primary);
+}
+
+.form-group {
+    margin-bottom: 1.25rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+input,
+select,
+textarea {
+    width: 100%;
+    padding: 0.8rem 1rem;
+    border: 1px solid var(--border-main);
+    border-radius: 6px;
+    font-size: 1rem;
+    background: var(--bg-main);
+    color: var(--text-primary);
+    transition: var(--transition-main);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+    outline: none;
+    border-color: var(--clr-primary);
+    background: var(--bg-surface);
+    box-shadow: 0 0 0 3px rgba(59, 113, 202, 0.2);
+}
+
+.item-row {
+    border: 1px solid var(--border-main);
+    border-radius: var(--border-radius-md);
+    padding: 1rem;
+    margin-bottom: 1rem;
+    background: var(--bg-muted);
+}
+
+.item-row-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.item-row-header h4 {
+    margin: 0;
+    color: var(--clr-primary);
+}
+
+.item-row-fields {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-end;
+}
+
+.item-row-fields .form-group {
+    margin: 0;
+}
+
+/* Cards */
+.card {
+    background: var(--bg-surface);
+    border-radius: var(--border-radius-md);
+    box-shadow: var(--shadow-md);
+    border-left: 5px solid var(--border-main);
+    display: flex;
+    flex-direction: column;
+    transition: var(--transition-main);
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+}
+
+.card__header,
+.card__body,
+.card__footer {
+    padding: 1rem 1.25rem;
+}
+
+.card__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-main);
+}
+
+.card__header h3 {
+    font-size: 1.1rem;
+    font-weight: 500;
+}
+
+.card__body p {
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.card__body p strong {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.card__footer {
+    margin-top: auto;
+    background: var(--bg-muted);
+    border-top: 1px solid var(--border-main);
+    border-radius: 0 0 var(--border-radius-md) var(--border-radius-md);
+}
+
+.card--status-awaiting {
+    border-left-color: var(--clr-danger);
+}
+
+.card--status-progress {
+    border-left-color: var(--clr-warning);
+}
+
+.card--status-done {
+    border-left-color: var(--clr-success);
+}
+
+.card__actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.card__actions .btn {
+    padding: 0.5rem;
+    font-size: 0.85rem;
+    flex-grow: 1;
+    background: transparent;
+}
+
+.btn--success {
+    color: var(--clr-success);
+    border-color: var(--clr-success);
+}
+
+.btn--success:hover {
+    background: var(--clr-success);
+    color: white;
+}
+
+.btn--warning {
+    color: var(--clr-warning);
+    border-color: var(--clr-warning);
+}
+
+.btn--warning:hover {
+    background: var(--clr-warning);
+    color: white;
+}
+
+.btn--edit {
+    color: var(--clr-secondary);
+    border-color: var(--clr-secondary);
+}
+
+.btn--edit:hover {
+    background: var(--clr-secondary);
+    color: white;
+}
+
+.card__header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.card__header-actions .btn-icon {
+    width: 28px;
+    height: 28px;
+    padding: 4px;
+}
+
+.card__header-actions .btn-icon:hover {
+    background: var(--bg-muted);
+}
+
+.card__header-actions .btn--danger {
+    padding: 0.2rem 0.6rem;
+    font-size: 0.8rem;
+}
+
+/* Modals */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: var(--bg-surface);
+    width: 90%;
+    max-width: 800px;
+    border-radius: 12px;
+    box-shadow: var(--shadow-lg);
+    display: flex;
+    flex-direction: column;
+    max-height: 90vh;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-main);
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: var(--clr-primary);
+}
+
+.modal-body {
+    padding: 1.5rem;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--border-main);
+    background: var(--bg-muted);
+}
+
+.close-modal {
+    background: transparent;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    width: 32px;
+    height: 32px;
+    transition: var(--transition-main);
+}
+
+.close-modal:hover {
+    color: var(--clr-danger);
+    transform: rotate(90deg);
+}
+
+/* --- 5. Pages --- */
+/* Página de Separações */
+.filtro-container-actions {
+    display: flex;
+    gap: 1rem;
+    max-width: 800px;
+    margin: 0 auto 2rem;
+}
+
+.filtro-container-actions input {
+    flex-grow: 1;
+}
+
+.filtro-container-actions button {
+    flex-shrink: 0;
+}
+
+/* Página Gerenciar Sistema */
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.admin-table th,
+.admin-table td {
+    padding: 0.8rem 1rem;
+    border: 1px solid var(--border-main);
+    text-align: left;
+    vertical-align: middle;
+}
+
+.admin-table th {
+    background-color: var(--bg-muted);
+}
+
+.admin-table th.sortable {
+    cursor: pointer;
+    position: relative;
+    padding-right: 25px;
+}
+
+.admin-table th.sortable::after {
+    content: '↕';
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0.5;
+}
+
+.admin-table th.sortable.asc::after {
+    content: '↑';
+    opacity: 1;
+}
+
+.admin-table th.sortable.desc::after {
+    content: '↓';
+    opacity: 1;
+}
+
+.admin-table .card__actions .btn {
+    padding: 0.4rem 0.8rem;
+}
+
+/* Dashboard */
+#dashboard-container .layout-grid-3-cols {
+    align-items: start;
+}
+
+/* --- 6. Utilities --- */
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.spinner {
+    border: 4px solid var(--border-main);
+    border-top-color: var(--clr-primary);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+}
+
+.pagination-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 2rem;
+    min-height: 60px;
+}
+
+body.tv-mode header,
+body.tv-mode .form-container,
+body.tv-mode .filtro-container-actions {
+    display: none;
+}
+
+body.tv-mode main {
+    margin-top: 1.5rem;
+}
+
+@media (max-width: 1200px) {
+
+    .layout-grid-3-cols,
+    .layout-grid-4-cols {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 992px) {
+    .header__nav {
+        display: none;
+    }
+}
+
+@media (max-width: 768px) {
+
+    .layout-grid-2-cols,
+    .layout-grid-3-cols,
+    .layout-grid-4-cols {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ==========================================================================
+    7. Card Component Overrides & Fixes (v2.3)
+   ========================================================================== */
+
+/* --- Estrutura e Corpo do Card --- */
+.card {
+    border-radius: 10px;
+}
+
+.card__header,
+.card__body,
+.card__footer {
+    padding: 1rem 1.25rem;
+}
+
+.card__header-actions .btn-icon img {
+
+    /* Mantém os ícones de log visíveis no modo escuro */
+    body.dark-mode & {
+        filter: invert(80%);
+    }
+}
+
+/* --- Rodapé e Ações --- */
+.card__footer {
+    padding: 1rem 1.25rem;
+    background-color: var(--bg-muted);
+}
+
+.card__actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.card__footer p {
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+}
+
+/* --- Botões de Ação Dentro do Card --- */
+.card__actions .btn {
+    flex-grow: 1;
+    padding: 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    border: 1px solid;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background: transparent;
+}
+
+.dark-mode .card__actions .btn {
+    background-color: var(--bg-surface);
+}
+
+/* --- Cores dos Botões de Ação --- */
+.btn--edit {
+    color: var(--clr-secondary);
+    border-color: var(--clr-secondary);
+}
+
+.btn--edit:hover {
+    background: var(--clr-secondary);
+    color: white;
+}
+
+.btn--warning {
+    color: var(--clr-warning);
+    border-color: var(--clr-warning);
+}
+
+.btn--warning:hover {
+    background: var(--clr-warning) !important;
+    color: #212529;
+}
+
+.btn--success {
+    color: var(--clr-success);
+    border-color: var(--clr-success);
+}
+
+.btn--success:hover {
+    background: var(--clr-success) !important;
+    color: white;
+}
+
+/* --- Status e Badge de Finalizado --- */
+.card__footer .status-value,
+.finalizado-badge {
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+}
+
+.card--status-awaiting .status-value {
+    color: var(--clr-danger);
+    background: var(--bg-danger-soft);
+}
+
+.card--status-progress .status-value {
+    color: var(--clr-warning);
+    background: var(--bg-warning-soft);
+}
+
+.card--status-done .status-value {
+    color: var(--clr-success);
+    background: var(--bg-success-soft);
+}
+
+.finalizado-badge {
+    width: 100%;
+    text-align: center;
+    font-weight: 700;
+    color: var(--clr-success);
+    background: var(--bg-success-soft);
+}
+
+/* --- Seletor de Comprador --- */
+.comprador-select-wrapper {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--border-main);
+}
+
+.comprador-select-wrapper label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    display: block;
+    margin-bottom: 4px;
+}
+
+.comprador-select-wrapper select {
+    width: 100%;
+    padding: 5px;
+    border-radius: 4px;
+    border: 1px solid var(--border-main);
+    background-color: var(--bg-surface);
+    color: var(--text-primary);
+}
+
+.dark-mode .comprador-select-wrapper select {
+    background-color: var(--bg-muted);
+}
+
+/* ==========================================================================
+    8. Component Hotfixes & Refinements (v2.4)
+   ========================================================================== */
+
+/* --- Card de Sugestões: Barra de Rolagem e Status do Item --- */
+.sugestoes-coluna .card__body {
+    flex-grow: 1;
+    overflow-y: auto;
+    /* Habilita a barra de rolagem se o conteúdo for maior */
+    max-height: 280px;
+    /* Limita a altura máxima do conteúdo */
+    padding-right: 10px;
+    /* Espaço para a barra de rolagem não colar no texto */
+}
+
+.item-list-selectable li {
+    padding: 0.4rem 0;
+    border-bottom: 1px dashed var(--border-main);
+}
+
+.item-list-selectable li:last-child {
+    border-bottom: none;
+}
+
+.item-status-badge {
+    font-size: 0.8em;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-left: 8px;
+    color: white;
+}
+
+.item-status-badge--pendente {
+    background-color: var(--clr-warning);
+    color: #212529;
+    /* Texto escuro para melhor contraste com amarelo */
+}
+
+.item-status-badge--atendido {
+    background-color: var(--clr-success);
+}
+
+/* --- Correção do Botão Excluir (Sugestões) --- */
+.card__actions .btn--danger {
+    background-color: transparent;
+    color: var(--clr-danger);
+    border-color: var(--clr-danger);
+}
+
+.card__actions .btn--danger:hover {
+    background-color: var(--clr-danger);
+    color: white;
+}
+
+/* Garante que o botão Excluir fique visível mesmo desabilitado (se for o caso) */
+.card__actions .btn--danger:disabled {
+    opacity: 0.4;
+    color: var(--clr-danger);
+    background-color: transparent;
+}
+
+/* ==========================================================================
+    9. Hotfix: Alinhamento de Itens em Sugestões (v2.5)
+   ========================================================================== */
+
+.item-list-selectable .item-content {
+    display: flex;
+    align-items: center;
+    /* Alinha verticalmente os itens */
+    gap: 0.75rem;
+    /* Espaço entre o checkbox/bullet e o texto */
+}
+
+.item-list-selectable .item-checkbox-wrapper {
+    flex-shrink: 0;
+    /* Impede que o container do checkbox encolha */
+    width: 20px;
+    /* Largura fixa para alinhar o texto independentemente do conteúdo */
+    text-align: center;
+    /* Centraliza o bullet point (•) quando o checkbox não está presente */
+}
+
+.item-list-selectable .item-text-wrapper {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    /* Permite que a badge quebre a linha em telas pequenas */
+    gap: 0.5rem;
+    /* Espaço entre o texto e a badge */
+}
+
+/* ==========================================================================
+    10. Hotfix: Estilos do Modal de Log e Botões (v2.6)
+   ========================================================================== */
+
+/* --- Estilos do Modal de Histórico/Log --- */
+.log-entry-body ul {
+    list-style: none;
+    padding-left: 10px;
+    margin-top: 5px;
+}
+
+.log-entry-body li {
+    padding: 2px 0;
+    border: none;
+}
+
+.log-entry-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+}
+
+.log-entry-header .log-author {
+    font-weight: bold;
+    color: var(--text-primary);
+}
+
+.log-entry-body {
+    font-size: 0.95rem;
+}
+
+.log-entry-body .log-action {
+    font-weight: bold;
+}
+
+/* CORREÇÃO: Adiciona a cor azul para os detalhes do log */
+.log-entry-body .log-detail {
+    color: var(--clr-primary);
+    font-style: italic;
+}
+
+/* ==========================================================================
+    11. Hotfix: Estilo do Modal de Permissões de Usuário (v2.7)
+   ========================================================================== */
+
+/* Container que usa Grid para criar colunas responsivas */
+.permissions-grid {
+    display: grid;
+    /* Cria colunas que têm no mínimo 220px, preenchendo o espaço disponível */
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 0.75rem;
+    /* Espaçamento entre os itens */
+    margin-bottom: 1rem;
+}
+
+/* Estilo para cada item de permissão (o <label>) */
+.permissions-grid label {
+    display: flex;
+    /* Usa flexbox para alinhar o checkbox e o texto */
+    align-items: center;
+    /* Alinha verticalmente ao centro */
+    gap: 0.75rem;
+    /* Espaço entre o checkbox e o texto */
+    padding: 0.6rem 0.8rem;
+    background-color: var(--bg-muted);
+    border: 1px solid var(--border-main);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: var(--transition-main);
+}
+
+.permissions-grid label:hover {
+    background-color: var(--bg-surface);
+    border-color: var(--clr-primary);
+}
+
+/* Garante que o checkbox não tenha margens estranhas */
+.permissions-grid input[type="checkbox"] {
+    margin: 0;
+    width: auto;
+    /* Reseta a largura padrão de 100% */
+}
+
+/* ==========================================================================
+    13. Hotfix: Layout Definitivo do Modal de Usuário (v2.9)
+   ========================================================================== */
+
+/* 1. Torna o FORM o elemento que cresce para preencher o espaço vertical */
+#user-modal-overlay #form-user {
+    display: flex;
+    /* O próprio formulário se torna um container flex */
+    flex-direction: column;
+    /* Para empilhar o body e o footer */
+    flex: 1;
+    /* Faz o formulário crescer e preencher o espaço */
+    min-height: 0;
+    /* Truque de CSS para evitar problemas de overflow em flex containers */
+}
+
+/* 2. Remove a regra genérica 'flex: 1' do modal-body, pois agora ela será mais específica */
+.modal-body {
+    padding: 1.5rem;
+    overflow-y: auto;
+    /* REMOVA a linha 'flex: 1;' daqui se você a adicionou globalmente antes */
+}
+
+/* 3. Aplica a regra 'flex: 1' APENAS ao modal-body que está DENTRO do formulário do usuário */
+#user-modal-overlay #form-user .modal-body {
+    flex: 1;
+    /* Faz o corpo do formulário crescer, empurrando o footer para baixo */
+}
+
+/* ==========================================================================
+    14. Estilos do Painel de Notificações (v3.0)
+   ========================================================================== */
+
+/* Torna o container dos botões um ponto de referência para o painel */
+.header__actions {
+    position: relative;
+}
+
+#notification-panel {
+    position: absolute;
+    top: 120%;
+    /* Posiciona abaixo do sino */
+    right: 0;
+    width: 380px;
+    max-height: 400px;
+    background-color: var(--bg-surface);
+    color: var(--text-primary);
+    border: 1px solid var(--border-main);
+    border-radius: var(--border-radius-md);
+    box-shadow: var(--shadow-lg);
+    z-index: 1100;
+    display: flex;
+    flex-direction: column;
+}
+
+.notification-panel__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border-main);
+}
+
+.notification-panel__header h3 {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.notification-panel__header .btn--sm {
+    padding: 0.2rem 0.6rem;
+    font-size: 0.75rem;
+}
+
+#notification-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    overflow-y: auto;
+    /* Adiciona scroll se a lista for longa */
+}
+
+#notification-list li {
+    padding: 0.8rem 1rem;
+    border-bottom: 1px solid var(--border-main);
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+#notification-list li:last-child {
+    border-bottom: none;
+}
+
+#notification-list li:hover {
+    background-color: var(--bg-muted);
+}
+
+#notification-list li.unread {
+    background-color: var(--bg-info-soft);
+    font-weight: 500;
+}
+
+#notification-list .notification-time {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin-top: 0.25rem;
+}
+
+/* ==========================================================================
+    15. Hotfix: Estilo dos Botões da Tabela de Admin (v3.1)
+   ========================================================================== */
+
+/* Container da célula para alinhar os botões */
+.actions-cell {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+/* Estilo base para todos os botões de ação na tabela */
+.btn-action {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: var(--transition-main);
+    text-align: center;
+    color: white;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Estilo para os botões "Editar" e "Redefinir Senha" */
+.btn-action.btn-edit,
+.btn-action.btn-reset-pass {
+    background-color: var(--clr-secondary);
+    border-color: var(--clr-secondary);
+}
+
+.btn-action.btn-edit:hover,
+.btn-action.btn-reset-pass:hover {
+    background-color: #5a6268;
+    border-color: #545b62;
+}
+
+/* Estilo para o botão "Excluir" */
+.btn-action.btn-delete {
+    background-color: var(--clr-danger);
+    border-color: var(--clr-danger);
+}
+
+.btn-action.btn-delete:hover {
+    background-color: #c9302c;
+    border-color: #ac2925;
+}
+
+/* ==========================================================================
+    16. Hotfix: Estilos da Observação e Botão Secundário (v3.2)
+   ========================================================================== */
+
+/* Garante que o botão secundário seja visível no tema claro */
+.card__actions .btn--secondary {
+    color: var(--clr-secondary);
+    border-color: var(--clr-secondary);
+}
+
+.card__actions .btn--secondary:hover {
+    background: var(--clr-secondary);
+    color: white;
+}
+
+/* Novo container para o log de observações */
+.obs-log-container {
+    max-height: 120px;
+    /* Limita a altura */
+    overflow-y: auto;
+    /* Adiciona scroll se necessário */
+    background-color: var(--bg-muted);
+    border: 1px solid var(--border-main);
+    border-radius: var(--border-radius-md);
+    padding: 0.75rem;
+    margin-top: 0.5rem;
+}
+
+.obs-entry {
+    padding: 0.4rem 0;
+    border-bottom: 1px dashed var(--border-main);
+    font-size: 0.9rem;
+}
+
+.obs-entry:last-child {
+    border-bottom: none;
+}
+
+.obs-entry small {
+    display: block;
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    margin-top: 0.2rem;
+}
+
+/* ==========================================================================
+    17. Badge de Notificação no Menu (v3.3)
+   ========================================================================== */
+
+/* Posiciona a <li> como referência para a badge */
+.nav-item {
+    position: relative;
+}
+
+/* Estilo da badge de notificação */
+.notification-badge {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background-color: var(--clr-danger);
+    color: white;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    font-size: 0.75rem;
+    font-weight: bold;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 2px solid var(--clr-primary-hover);
+}
+
+/* ==========================================================================
+    18. Estilos da Fila de Separação (v3.4)
+   ========================================================================== */
+
+.fila-separadores {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    margin-top: 1rem;
+}
+
+.fila-separadores li {
+    background-color: var(--bg-muted);
+    border: 1px solid var(--border-main);
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 500;
+}
+
+.fila-separadores li.proximo-separador {
+    background-color: var(--clr-success);
+    color: white;
+    border-color: var(--clr-success);
+    font-weight: 700;
+}
+
+/* ==========================================================================
+    19. Estilos Compactos para Cards de Separação
+   ========================================================================== */
+
+.separacao-card .card__body {
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+}
+
+/* Cria o grid para as informações principais do card */
+.separacao-card .card-info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    /* Duas colunas de largura igual */
+    gap: 0.2rem 1rem;
+    /* Espaçamento vertical pequeno, horizontal maior */
+    margin-bottom: 0.5rem;
+}
+
+/* Remove a margem padrão dos parágrafos dentro do grid */
+.separacao-card .card-info-grid p {
+    margin-bottom: 0;
+    white-space: nowrap;
+    /* Impede que o texto quebre linha */
+    overflow: hidden;
+    /* Esconde o texto que transbordar */
+    text-overflow: ellipsis;
+    /* Adiciona "..." ao texto cortado */
+}
+
+/* Diminui a altura e o preenchimento do log de observações */
+.separacao-card .obs-log-container {
+    max-height: 65px;
+    /* Altura máxima menor */
+    padding: 0.5rem;
+}
+
+.separacao-card .obs-entry {
+    font-size: 0.8rem;
+    /* Fonte menor para as observações */
+}
+
+/* Diminui o espaçamento entre os botões de ação */
+.separacao-card .card__actions {
+    gap: 0.3rem;
+}
+
+/* Estilo para botões de ação menores */
+.separacao-card .card__actions .btn {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+/* Estilo para o dropdown de conferente menor */
+.separacao-card .comprador-select-wrapper select {
+    padding: 4px;
+    font-size: 0.8rem;
+    height: auto;
+}
+
+.separacao-card .comprador-select-wrapper {
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+}
+
+/* ==========================================================================
+    20. Estilos Ultra-Compactos (Refinamento)
+   ========================================================================== */
+
+/* --- Otimização da Fila de Separação --- */
+.fila-separadores li {
+    padding: 0.25rem 0.8rem;
+    /* Pílulas da fila menores */
+    font-size: 0.8rem;
+    border-radius: 15px;
+}
+
+/* --- Compactação Máxima dos Cards de Separação --- */
+
+/* Diminui o preenchimento do cabeçalho e corpo do card */
+.separacao-card .card__header,
+.separacao-card .card__body {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+}
+
+.separacao-card .card__header {
+    padding-top: 0.1rem;
+    padding-bottom: 0.1rem;
+}
+
+.separacao-card .card__body {
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+}
+
+/* Diminui a fonte do título do card (Mov. XXXXXX) */
+.separacao-card .card__header h3 {
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+/* Otimização crucial: remove o espaçamento vertical do grid e diminui a fonte */
+.separacao-card .card-info-grid {
+    gap: 0 1rem;
+    /* Zera o espaçamento vertical (entre linhas) */
+    font-size: 0.85rem;
+    /* Diminui a fonte de todo o grid */
+}
+
+/* Força os parágrafos dentro do grid a serem ainda mais compactos */
+.separacao-card .card-info-grid p {
+    line-height: 1.2;
+    /* Reduz a altura da linha */
+}
+
+/* ==========================================================================
+    21. Compactação Final da Interface de Controle
+   ========================================================================== */
+
+/* Reduz o espaçamento geral do container da barra de busca */
+.filtro-container-actions {
+    margin-bottom: 1rem;
+    /* Menos espaço abaixo da barra */
+}
+
+/* Reduz a altura do campo de busca */
+.filtro-container-actions input {
+    padding-top: 0.3rem;
+    padding-bottom: 0.3rem;
+    font-size: 0.9rem;
+}
+
+/* Reduz a altura do botão "Atualizar" para corresponder à busca */
+.filtro-container-actions button {
+    padding-top: 0.3rem;
+    padding-bottom: 0.3rem;
+    font-size: 0.9rem;
+}
+
+/* --- Compactação do Formulário de Criação de Separação --- */
+
+/* Reduz a altura dos campos de input e select */
+#form-separacao input,
+#form-separacao select {
+    padding-top: 0.3rem;
+    padding-bottom: 0.3rem;
+    font-size: 0.9rem;
+    height: auto;
+    /* Permite que a altura seja definida pelo padding */
+}
+
+/* Reduz o tamanho e o espaçamento das etiquetas (labels) */
+#form-separacao label {
+    font-size: 0.8rem;
+    margin-bottom: 0.2rem;
+}
+
+/* Reduz a altura do botão "Criar" para alinhar com os inputs */
+#form-separacao .btn--primary {
+    padding-top: 0.3rem;
+    padding-bottom: 0.3rem;
+    font-size: 0.9rem;
+}
+
+/* ==========================================================================
+    22. Ajustes Finais de Espaçamento Vertical
+   ========================================================================== */
+
+/* Reduz o espaço abaixo dos títulos das colunas de separação */
+.quadro-coluna h2 {
+    margin-bottom: 0.3rem;
+    /* O valor anterior era 1.5rem */
+}
+
+/* ==========================================================================
+    19. Ajustes na Tabela de Gerenciamento (v3.5)
+   ========================================================================== */
+
+/* Torna as linhas da tabela mais compactas */
+.admin-table th,
+.admin-table td {
+    padding: 0.6rem 0.8rem;
+    /* Diminui o padding vertical e horizontal */
+}
+
+/* Estilo para a tag colorida do separador */
+.separador-tag {
+    display: inline-block;
+    padding: 0.25rem 0.6rem;
+    border-radius: 12px;
+    /* Deixa a tag mais arredondada */
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: white;
+    /* Cor do texto sempre branca */
+    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.2);
+    /* Sombra para legibilidade */
+}

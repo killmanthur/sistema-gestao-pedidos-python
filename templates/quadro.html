@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Quadro de Requisições{% endblock %}
+
+{% block content %}
+<section class="form-container" style="max-width: 800px; padding: 1.5rem; margin-bottom: 2rem;">
+    <input type="text" id="filtro-quadro-ativo" placeholder="🔎 Buscar por código, orçamento, vendedor, ...">
+</section>
+
+<section class="layout-grid-2-cols">
+    <div class="quadro-coluna">
+        <h2>Pedidos Rua</h2>
+        <div id="quadro-pedidos-rua" class="quadro-container">
+            <!-- Cards -->
+        </div>
+    </div>
+    <div class="quadro-coluna">
+        <h2>Atualização de Orçamentos</h2>
+        <div id="quadro-orcamentos" class="quadro-container">
+            <!-- Cards -->
+        </div>
+    </div>
+</section>
+{% endblock %}

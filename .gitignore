@@ -1,0 +1,33 @@
+# Arquivos de Chave de Serviço e Configurações Sensíveis
+serviceAccountKey.json
+*.env
+
+# Ambiente Virtual do Python
+venv/
+.venv/
+env/
+
+# Arquivos de cache e logs do Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Pastas e arquivos gerados pelo PyInstaller
+build/
+dist/
+*.spec
+
+# Bancos de dados locais
+*.db
+*.sqlite3
+
+# Arquivos de configuração de IDEs e editores
+.vscode/
+.idea/
+
+# Logs e outros arquivos temporários
+*.log
+
+#regras do Firebase
+firebase_rules.txt

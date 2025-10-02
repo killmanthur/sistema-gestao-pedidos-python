@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}Gerenciar Separações{% endblock %}
+
+{% block content %}
+<section class="form-container" style="max-width: 1400px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h2>Gerenciar Separações (Visão de Tabela)</h2>
+    </div>
+    <p>Visualize todas as separações em formato de planilha. Edições feitas aqui serão refletidas na página principal de
+        Separações.</p>
+
+    <div style="margin: 2rem 0;">
+        <input type="search" id="filtro-tabela-separacoes" placeholder="🔎 Buscar em todas as colunas...">
+    </div>
+
+    <!-- MUDANÇA: O spinner agora está fora da tabela -->
+    <div id="loading-spinner-tabela" class="spinner" style="display: block; margin: 2rem auto;"></div>
+
+    <table id="tabela-separacoes" class="admin-table" style="display: none; width: 100%; margin-top: 2rem;">
+        <thead>
+            <tr>
+                <th>Nº Mov.</th>
+                <th>Cliente</th>
+                <th>Vendedor</th>
+                <th>Separador</th>
+                <th>Conferente</th>
+                <th>Data Criação</th>
+                <th>Data Finalização</th>
+                <th style="width: 120px;">Ações</th>
+            </tr>
+        </thead>
+        <tbody id="tabela-separacoes-body"></tbody>
+    </table>
+
+    <!-- NOVO: Container de paginação para o spinner de "carregar mais" -->
+    <div id="pagination-container-tabela" class="pagination-container">
+        <div id="loading-more-spinner" class="spinner" style="display: none;"></div>
+    </div>
+</section>
+
+<!-- O modal de edição de separação já existe no base.html e será reutilizado -->
+{% endblock %}

@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}Início{% endblock %}
+
+{% block content %}
+<section class="welcome-container"
+    style="max-width: 800px; margin: 4rem auto; padding: 2.5rem; text-align: center; background-color: var(--bg-surface); border-radius: 12px; box-shadow: var(--shadow-md);">
+    <h2 id="welcome-message">Bem-vindo(a)!</h2>
+    <p>Você está no Quadro de Pedidos.</p>
+    <p>Use o menu de navegação acima para acessar as áreas disponíveis para você.</p>
+    <div id="no-access-message" style="display: none; margin-top: 2rem;">
+        <p
+            style="background-color: var(--bg-danger-soft); color: var(--clr-danger); padding: 1rem; border-radius: 8px;">
+            Você não tem permissão para acessar nenhuma página no momento. Por favor, entre em contato com um
+            administrador.</p>
+    </div>
+</section>
+{% endblock %}

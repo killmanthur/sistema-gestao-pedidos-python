@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<section class="form-container" style="max-width: 400px; margin-top: 5rem;">
+    <h2>Acessar o Sistema</h2>
+    <form id="form-login">
+        <!-- CORREÇÃO: Adicionando o DIV de mensagem de erro que estava faltando -->
+        <div id="login-error-message"
+            style="display: none; padding: 1rem; margin-bottom: 1rem; border-radius: 8px; background-color: var(--bg-danger-soft); color: var(--clr-danger); text-align: center;">
+        </div>
+
+        <div class="form-group">
+            <label for="username">Usuário:</label>
+            <input type="text" id="username" required autocomplete="username">
+        </div>
+
+        <div class="form-group">
+            <label for="password">Senha</label>
+            <input type="password" id="password" required autocomplete="current-password">
+        </div>
+        <button type="submit" id="btn-login-submit" class="btn btn--primary" style="width:100%;">Entrar</button>
+    </form>
+</section>
+{% endblock %}

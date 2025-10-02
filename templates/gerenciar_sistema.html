@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Gerenciar Sistema{% endblock %}
+
+{% block content %}
+<section class="form-container" style="max-width: 1300px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h2>Gerenciar Usuários e Permissões</h2>
+        <button id="btn-create-user" class="btn btn--primary">Criar Novo Usuário</button>
+    </div>
+    <p>Adicione, edite, remova e gerencie as permissões de acesso de cada usuário no sistema.</p>
+
+    <!-- NOVO CAMPO DE BUSCA -->
+    <div style="margin: 2rem 0;">
+        <input type="search" id="filtro-tabela-usuarios" placeholder="🔎 Buscar por nome, email ou role...">
+    </div>
+
+    <div id="loading-spinner-users" class="spinner" style="display: block; margin: 2rem auto;"></div>
+    <table id="users-table" class="admin-table" style="display: none; width: 100%; margin-top: 2rem;">
+        <thead>
+            <tr>
+                <th class="sortable" data-sort="nome">Nome</th>
+                <th class="sortable" data-sort="email">Email</th>
+                <th class="sortable" data-sort="role">Role (Grupo)</th>
+                <th style="width: 280px;">Ações</th>
+            </tr>
+        </thead>
+        <tbody id="users-table-body"></tbody>
+    </table>
+</section>
+<div id="user-modal-overlay" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="user-modal-title">Novo Usuário</h2><button class="close-modal">×</button>
+        </div>
+        <form id="form-user" novalidate>
+            <div class="modal-body">
+                <input type="hidden" id="user-uid">
+                <div class="layout-grid-2-cols" style="gap: 1rem;">
+                    <div class="form-group">
+                        <label for="user-nome">Nome Completo</label>
+                        <input type="text" id="user-nome" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="user-email">Email</label>
+                        <input type="email" id="user-email" required>
+                    </div>
+                </div>
+                <div id="password-group" class="form-group">
+                    <label for="user-password">Senha (mínimo 6 caracteres)</label>
+                    <input type="password" id="user-password" minlength="6">
+                </div>
+                <div class="form-group">
+                    <label for="user-role">Role (Grupo de Permissão)</label>
+                    <select id="user-role" required>
+                        <option value="Vendedor">Vendedor</option>
+                        <option value="Comprador">Comprador</option>
+                        <option value="Estoque">Estoque</option>
+                        <option value="Separador">Separador</option>
+                        <option value="Expedição">Expedição</option>
+                        <!-- NOVO: Role Recepção adicionada -->
+                        <option value="Recepção">Recepção</option>
+                        <option value="Admin">Admin</option>
+                    </select>
+                </div>
+                <hr>
+
+                <h4>Páginas Acessíveis</h4>
+                <div id="pages-permissions-container" class="permissions-grid">
+                </div>
+
+                <hr>
+
+                <h4>Permissões (Separações)</h4>
+                <div id="separacoes-permissions-container" class="permissions-grid">
+                </div>
+                <hr>
+
+                <h4>Permissões (Sugestões)</h4>
+                <div id="sugestoes-permissions-container" class="permissions-grid">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="btn-cancel-user-modal" class="btn btn--secondary">Cancelar</button>
+                <button type="submit" id="btn-save-user" class="btn btn--primary">Salvar</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

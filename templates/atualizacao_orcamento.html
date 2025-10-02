@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}Atualização de Orçamentos{% endblock %}
+
+{% block content %}
+<section class="form-container">
+    <h2>Atualização de Orçamentos</h2>
+    <form id="form-orcamento">
+        <div class="form-group">
+            <label for="orcamento-nome">Numero do Orçamento</label>
+            <input type="text" id="orcamento-nome" required>
+        </div>
+        <div class="form-group">
+            <label for="observacao">Observação (Opcional)</label>
+            <textarea id="observacao" rows="4"></textarea>
+        </div>
+        <button type="submit" class="btn btn--primary" style="width:100%;">Criar Requisição</button>
+    </form>
+</section>
+{% endblock %}

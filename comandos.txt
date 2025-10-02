@@ -1,0 +1,11 @@
+# executa o programa no proprio console
+python run.py 
+
+# empacota tudo num unico executavel (VERSÃO CORRIGIDA)
+pyinstaller --clean --name "QuadroDePedidos" --onefile --windowed --add-data "templates;templates" --add-data "static;static" --add-data "serviceAccountKey.json;." run.py
+
+# cria o executavel do Launcher
+pyinstaller --onefile Launcher.py
+
+# entra no ambiente virtual
+venv\Scripts\activate

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Criar Novo Pedido{% endblock %}
+
+{% block content %}
+<section class="form-container">
+    <h2>Pedidos Rua</h2>
+    <form id="form-pedido">
+        <div id="itens-container"></div>
+        <div class="form-group">
+            <button type="button" id="btn-add-item" class="btn btn--secondary" style="width:100%;">+ Adicionar outro
+                item</button>
+        </div>
+        <hr>
+        <div class="form-group">
+            <label for="observacao-geral">Observação Geral (Opcional)</label>
+            <textarea id="observacao-geral" rows="3"></textarea>
+        </div>
+        <button type="submit" class="btn btn--primary" style="width:100%;">Salvar Pedido</button>
+    </form>
+</section>
+{% endblock %}

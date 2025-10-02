@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Histórico de Pedidos{% endblock %}
+
+{% block content %}
+<section class="form-container" style="max-width: 1200px;">
+    <h2>Filtrar Histórico</h2>
+    <form id="form-filtros">
+        <div class="layout-grid-4-cols" style="gap: 1rem;">
+            <div class="form-group"><label for="filtro-vendedor">Vendedor</label><input type="text"
+                    id="filtro-vendedor"></div>
+            <div class="form-group"><label for="filtro-comprador">Comprador</label><input type="text"
+                    id="filtro-comprador"></div>
+            <div class="form-group"><label for="filtro-codigo">Cód. Produto / Orçamento</label><input type="text"
+                    id="filtro-codigo"></div>
+            <div class="form-group"><label for="filtro-data-inicio">De:</label><input type="date"
+                    id="filtro-data-inicio"></div>
+            <div class="form-group"><label for="filtro-data-fim">Até:</label><input type="date" id="filtro-data-fim">
+            </div>
+        </div>
+        <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+            <button type="submit" class="btn btn--primary" style="flex-grow: 1;">Filtrar</button>
+            <button type="button" id="btn-limpar-filtros" class="btn btn--secondary" style="flex-grow: 1;">Limpar
+                Filtros</button>
+            <button type="button" id="btn-gerar-relatorio" class="btn btn--primary" style="flex-grow: 1;">Gerar
+                Relatório</button>
+        </div>
+    </form>
+</section>
+
+<section id="relatorio-container" style="display: none; max-width: 1200px; margin: 2rem auto;">
+    <div class="modal-content" style="box-shadow: var(--shadow-lg); border: 1px solid var(--border-main);">
+        <div class="modal-header">
+            <h2>Relatório de Pedidos Finalizados</h2>
+            <div style="display: flex; gap: 0.5rem;">
+                <button id="btn-salvar-relatorio" class="btn btn--primary" style="padding: 0.5rem 1rem;">Salvar</button>
+                <button id="btn-fechar-relatorio" class="close-modal">X</button>
+            </div>
+        </div>
+        <pre id="relatorio-output"
+            style="padding: 1.5rem; background: var(--bg-main); max-height: 70vh; overflow-y: auto;"></pre>
+    </div>
+</section>
+
+<hr>
+
+<section class="layout-grid-2-cols">
+    <div class="quadro-coluna">
+        <h2>Pedidos Rua (Finalizados)</h2>
+        <div id="quadro-historico-rua" class="quadro-container"></div>
+    </div>
+    <div class="quadro-coluna">
+        <h2>Atualização de Orçamentos (Finalizadas)</h2>
+        <div id="quadro-historico-orcamentos" class="quadro-container"></div>
+    </div>
+</section>
+
+<div id="pagination-container" class="pagination-container">
+    <div id="loading-spinner" class="spinner" style="display: none;"></div>
+    <button id="btn-carregar-mais" class="btn btn--secondary">Carregar mais antigos</button>
+</div>
+{% endblock %}
