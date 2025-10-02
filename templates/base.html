@@ -32,14 +32,18 @@
                             href="{{ url_for('main_views.atualizacao_orcamento_form') }}">Atualizar Orçamento</a></li>
                     <li class="nav-item" data-page="sugestoes"><a
                             href="{{ url_for('main_views.sugestoes_page') }}">Sugestão de Compras</a></li>
+                    <!-- NOVO: Link para a nova página -->
+                    <li class="nav-item" data-page="recebimento"><a href="{{ url_for('main_views.recebimento_page') }}">Recebimento</a></li>
+                    <li class="nav-item" data-page="conferencias"><a href="{{ url_for('main_views.conferencias_page') }}">Conferência</a>
+                    </li>
+                    <li class="nav-item" data-page="gestao_pendencias"><a href="{{ url_for('main_views.gestao_pendencias_page') }}">Gestão
+                            de Pendências</a></li>
                     <li class="nav-item" data-page="separacoes">
                         <a href="{{ url_for('main_views.separacoes_page') }}">
                             Separações
-                            <span id="separacoes-notification-badge" class="notification-badge"
-                                style="display: none;"></span>
+                            <span id="separacoes-notification-badge" class="notification-badge" style="display: none;"></span>
                         </a>
                     </li>
-                    <!-- NOVO: Link para a nova página -->
                     <li class="nav-item" data-page="gerenciar_separacoes"><a
                             href="{{ url_for('main_views.gerenciar_separacoes_page') }}">Gerenciar Separações</a></li>
                     <li class="nav-item" data-page="dashboard"><a
@@ -173,10 +177,10 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-
+    
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
-
+    
     <script type="module" src="{{ url_for('static', filename='js/main.js') }}?v={{ cache_id }}"></script>
-</body>
-
-</html>
+    </body>
+    
+    </html>

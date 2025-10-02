@@ -43,7 +43,20 @@ def dashboard_page():
 def separacoes_page():
     return render_template('separacoes.html')
 
-# NOVO: Rota para a nova página
+@main_views_bp.route('/conferencias')
+def conferencias_page():
+    return render_template('conferencias.html')
+
+# NOVO: Rota para a página de Recebimento de Notas
+@main_views_bp.route('/recebimento')
+def recebimento_page():
+    return render_template('recebimento.html')
+
+# NOVO: Rota para a página de Gestão de Pendências
+@main_views_bp.route('/gestao-pendencias')
+def gestao_pendencias_page():
+    return render_template('gestao_pendencias.html')
+
 @main_views_bp.route('/gerenciar-separacoes')
 def gerenciar_separacoes_page():
     return render_template('gerenciar_separacoes.html')
@@ -51,3 +64,5 @@ def gerenciar_separacoes_page():
 @main_views_bp.route('/admin/sistema')
 def gerenciar_sistema_page():
     return render_template('gerenciar_sistema.html')
+
+# CORREÇÃO: A função get_estoquista_nomes foi removida daqui e movida para usuarios.py

@@ -10,16 +10,19 @@ separacoes_bp = Blueprint('separacoes', __name__, url_prefix='/api/separacoes')
 
 FILA_PATH = 'configuracoes/fila_separadores'
 
+# REVERTIDO: A função volta a buscar uma lista simples
 def _get_fila_separadores():
     fila = db.reference(FILA_PATH).get()
     if not fila or not isinstance(fila, list):
         todos_separadores_ref = db.reference('usuarios').order_by_child('role').equal_to('Separador').get()
         if not todos_separadores_ref:
             return []
-        fila = sorted([user['nome'] for user in todos_separadores_ref.values()])
+        # Filtra o usuário "separacao" se ele existir
+        fila = sorted([user['nome'] for user in todos_separadores_ref.values() if user.get('nome', '').lower() != 'separacao'])
         db.reference(FILA_PATH).set(fila)
     return fila
 
+# REVERTIDO: A função volta a rotacionar a lista simples
 def _atualizar_fila_separadores(separador_designado):
     try:
         fila_atual = _get_fila_separadores()
@@ -54,7 +57,6 @@ def criar_notificacao_separacao(destinatario_nome, mensagem, autor_nome):
         print(f"ERRO ao criar notificação para '{destinatario_nome}': {e}")
 
 
-# MUDANÇA: O endpoint foi refatorado para paginar apenas os finalizados
 @separacoes_bp.route('/paginadas', methods=['POST'])
 def get_separacoes_paginadas():
     try:
@@ -66,20 +68,14 @@ def get_separacoes_paginadas():
         user_name = dados.get('user_name')
         offset = page * limit
 
-        # 1. Busca todos os dados de uma vez
         snapshot = db.reference('separacoes').get() or {}
         todas_separacoes = [{'id': key, **value} for key, value in snapshot.items()]
 
-        # 2. Filtra por vendedor se necessário (aplica a todas as listas)
         if user_role == 'Vendedor':
             todas_separacoes = [s for s in todas_separacoes if s.get('vendedor_nome') == user_name]
 
-        # 3. Separa em listas de status
-        andamento = sorted([s for s in todas_separacoes if s.get('status') == 'Em Separação'], key=lambda x: x.get('data_criacao'), reverse=True)
-        conferencia = sorted([s for s in todas_separacoes if s.get('status') == 'Em Conferência'], key=lambda x: x.get('data_criacao'), reverse=True)
         finalizadas = sorted([s for s in todas_separacoes if s.get('status') == 'Finalizado'], key=lambda x: x.get('data_finalizacao') or x.get('data_criacao'), reverse=True)
         
-        # 4. Aplica filtro de busca
         if search_term:
             def check_search(s):
                 return (search_term in str(s.get('numero_movimentacao', '')).lower() or
@@ -87,18 +83,12 @@ def get_separacoes_paginadas():
                         search_term in str(s.get('vendedor_nome', '')).lower() or
                         search_term in str(s.get('separador_nome', '')).lower())
             
-            andamento = [s for s in andamento if check_search(s)]
-            conferencia = [s for s in conferencia if check_search(s)]
             finalizadas = [s for s in finalizadas if check_search(s)]
 
-        # 5. Pagina APENAS a lista de finalizadas
         finalizadas_paginadas = finalizadas[offset : offset + limit]
         tem_mais = (offset + limit) < len(finalizadas)
 
-        # 6. Monta o resultado final
         resultado = {
-            'andamento': andamento,
-            'conferencia': conferencia,
             'finalizadas': finalizadas_paginadas,
             'temMais': tem_mais
         }
@@ -175,9 +165,7 @@ def editar_separacao(separacao_id):
                 if ids_existentes[0] != separacao_id:
                      return jsonify({'error': f'O número de movimentação {num_movimentacao} já pertence a outra separação.'}), 409
 
-        # MUDANÇA: Lógica de status ao editar conferente
         if 'conferente_nome' in dados and dados.get('conferente_nome'):
-            # Só muda para 'Em Conferência' se já não estiver finalizado e estiver 'Em Separação'
             if separacao_antiga.get('status') == 'Em Separação':
                 dados['status'] = 'Em Conferência'
 
@@ -189,7 +177,6 @@ def editar_separacao(separacao_id):
             criar_notificacao_separacao(vendedor_nome, mensagem, editor_nome)
 
         alteracoes = []
-        # MUDANÇA: 'conferente_nome' não é mais ignorado no log
         campos_ignorados = ['status'] 
         for chave, valor_novo in dados.items():
             if chave in campos_ignorados: continue
@@ -310,6 +297,10 @@ def atualizar_status_separacao(separacao_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# REMOVIDO: Endpoint toggle não é mais necessário
+# @separacoes_bp.route('/fila-separadores/toggle', methods=['POST']) ...
+
+# REVERTIDO: get_fila_endpoint volta a retornar a lista simples
 @separacoes_bp.route('/fila-separadores', methods=['GET'])
 def get_fila_endpoint():
     try:

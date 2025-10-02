@@ -105,7 +105,7 @@ export function initializeTheme() {
  */
 export function setupUI() {
     const mainNav = document.getElementById('main-nav');
-    const navContainer = document.querySelector('.header__nav'); // Seleciona o container <nav>
+    const navContainer = document.querySelector('.header__nav');
 
     if (!mainNav || !navContainer) {
         console.error("Elementos da navegação não encontrados.");
@@ -113,35 +113,41 @@ export function setupUI() {
     }
 
     const user = AppState.currentUser;
-    const navItems = mainNav.querySelectorAll('li.nav-item');
-    const logoutItem = mainNav.querySelector('#li-logout');
+    // Seleciona TODOS os itens, incluindo os que estão dentro dos dropdowns
+    const navItems = mainNav.querySelectorAll('.nav-item');
+    const logoutItem = document.getElementById('li-logout'); // Seleciona pelo ID
 
     if (user && user.isLoggedIn) {
-        // Usuário está logado
+        // Remove a classe do body, não precisamos mais dela para isso
+        document.body.classList.remove('user-logged-in');
+
         navItems.forEach(item => {
             const pageKey = item.dataset.page;
-            // Verifica se o usuário é Admin ou se a página está na sua lista de acesso
-            const canAccess = user.role === 'Admin' || (user.accessible_pages && user.accessible_pages.includes(pageKey));
-
-            // Define o display do item com base na permissão
-            item.style.display = canAccess ? 'list-item' : 'none';
+            if (pageKey) { // Garante que só vamos avaliar itens com data-page
+                const canAccess = user.role === 'Admin' || (user.accessible_pages && user.accessible_pages.includes(pageKey));
+                item.style.display = canAccess ? 'list-item' : 'none';
+            }
         });
 
-        // Mostra o botão de logout
+        // Controla a visibilidade dos menus dropdown
+        mainNav.querySelectorAll('.nav-item--dropdown').forEach(dropdown => {
+            // Se houver pelo menos um item visível dentro do dropdown, mostra o dropdown inteiro
+            const hasVisibleItem = dropdown.querySelector('.dropdown-menu .nav-item[style*="display: list-item"]');
+            dropdown.style.display = hasVisibleItem ? 'list-item' : 'none';
+        });
+
+        // CORREÇÃO: Controla o botão Sair aqui
         if (logoutItem) logoutItem.style.display = 'list-item';
 
     } else {
-        // Usuário está deslogado
         navItems.forEach(item => {
             item.style.display = 'none';
         });
         if (logoutItem) logoutItem.style.display = 'none';
     }
 
-    // CORREÇÃO FINAL: Garante que o container da navegação esteja visível
-    // Isso remove qualquer 'visibility: hidden' ou 'display: none' que possa ter sido aplicado.
     navContainer.style.visibility = 'visible';
-    navContainer.style.display = 'block'; // ou 'flex', dependendo do seu layout
+    navContainer.style.display = 'block';
 }
 
 

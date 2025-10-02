@@ -80,6 +80,7 @@ def create_app():
     from .blueprints.usuarios import usuarios_bp
     from .blueprints.separacoes import separacoes_bp
     from .blueprints.configuracoes import config_bp
+    from .blueprints.conferencias import conferencias_bp
     
     app.register_blueprint(usuarios_bp)
     app.register_blueprint(main_views_bp)
@@ -88,6 +89,7 @@ def create_app():
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(separacoes_bp)
     app.register_blueprint(config_bp)
+    app.register_blueprint(conferencias_bp)
 
     api_instance = Api()
     

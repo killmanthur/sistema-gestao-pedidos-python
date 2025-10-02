@@ -23,6 +23,7 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+# ... (rotas get_all_users, create_user, update_user, delete_user, set_user_password) ...
 @usuarios_bp.route('', methods=['GET'])
 @admin_required
 def get_all_users():
@@ -102,7 +103,6 @@ def delete_user(uid):
     except Exception as e:
         return jsonify({"error": f"Erro ao excluir usuário: {str(e)}"}), 500
 
-# NOVO ENDPOINT
 @usuarios_bp.route('/<string:uid>/set-password', methods=['POST'])
 @admin_required
 def set_user_password(uid):
@@ -116,18 +116,6 @@ def set_user_password(uid):
     except Exception as e:
         return jsonify({"error": f"Erro ao definir a senha: {str(e)}"}), 500
 
-
-@usuarios_bp.route('/<string:uid>/reset-password', methods=['POST'])
-@admin_required
-def send_password_reset(uid):
-    try:
-        user = auth.get_user(uid)
-        auth.generate_password_reset_link(user.email)
-        return jsonify({"status": "success", "message": f"E-mail de redefinição enviado para {user.email}."})
-    except Exception as e:
-        return jsonify({"error": f"Erro ao enviar e-mail: {str(e)}"}), 500
-
-# --- Endpoints Públicos para Nomes ---
 @usuarios_bp.route('/comprador-nomes', methods=['GET'])
 def get_comprador_nomes():
     try:
@@ -159,6 +147,14 @@ def get_vendedor_nomes():
 def get_expedicao_nomes():
     try:
         users = db.reference('usuarios').order_by_child('role').equal_to('Expedição').get() or {}
+        nomes = sorted([u['nome'] for u in users.values() if 'nome' in u])
+        return jsonify(nomes)
+    except Exception as e: return jsonify({"error": str(e)}), 500
+
+@usuarios_bp.route('/estoquista-nomes', methods=['GET'])
+def get_estoquista_nomes():
+    try:
+        users = db.reference('usuarios').order_by_child('role').equal_to('Estoque').get() or {}
         nomes = sorted([u['nome'] for u in users.values() if 'nome' in u])
         return jsonify(nomes)
     except Exception as e: return jsonify({"error": str(e)}), 500

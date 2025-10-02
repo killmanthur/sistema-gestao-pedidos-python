@@ -7,7 +7,6 @@ import { clearNotificationsBackend } from '../notifications-separacao.js';
 
 let state = {};
 let debounceTimer;
-// NOVO: Variável para o timer de atualização automática
 let autoRefreshInterval = null;
 
 function resetState() {
@@ -30,10 +29,8 @@ export function openEditModal(separacao) {
     modal.clienteInput.value = separacao.nome_cliente;
     populateSelect(modal.vendedorSelect, state.listasUsuarios.vendedores, separacao.vendedor_nome);
     populateSelect(modal.separadorSelect, state.listasUsuarios.separadores, separacao.separador_nome);
-    // MUDANÇA: Popula o novo select de conferente
     const conferenteSelect = modal.conferenteSelect;
     populateSelect(conferenteSelect, state.listasUsuarios.expedicao, separacao.conferente_nome);
-    // Adiciona a opção de remover/limpar o conferente
     conferenteSelect.insertAdjacentHTML('afterbegin', '<option value="">-- Remover Conferente --</option>');
     if (!separacao.conferente_nome) {
         conferenteSelect.value = "";
@@ -43,12 +40,8 @@ export function openEditModal(separacao) {
     modal.overlay.style.display = 'flex';
 };
 
+// REVERTIDO: A função da fila volta a ser uma busca simples, sem o listener de tempo real
 async function fetchAndRenderFila() {
-    const filaContainer = document.getElementById('container-fila-separadores');
-    // MUDANÇA: Adiciona uma verificação para ver se o container da fila está visível
-    if (!filaContainer || filaContainer.style.display === 'none') {
-        return; // Não faz nada se a fila não for visível para o usuário
-    }
     const listaFila = document.getElementById('fila-separadores-lista');
     if (!listaFila) return;
     try {
@@ -70,7 +63,7 @@ async function fetchAndRenderFila() {
 
         const separadorSelect = document.getElementById('separador-nome');
         if (separadorSelect && fila.length > 0) {
-            separadorSelect.value = fila[0];
+            populateSelect(separadorSelect, filaVisivel, fila[0]);
         }
 
     } catch (error) {
@@ -82,7 +75,6 @@ async function fetchAndRenderFila() {
 
 function criarCardElement(separacao) {
     const card = document.createElement('div');
-    // CORREÇÃO: Readicionando a classe 'separacao-card' para aplicar os estilos compactos
     card.className = 'card separacao-card';
     card.dataset.id = separacao.id;
 
@@ -153,8 +145,6 @@ function criarCardElement(separacao) {
         observacoesHTML += '</div>';
     }
 
-
-    // CORREÇÃO: Restaurando a estrutura compacta com 'card-info-grid'
     card.innerHTML = `
         <div class="card__header">
             <h3>Mov. ${separacao.numero_movimentacao}</h3>
@@ -227,7 +217,8 @@ function setupRealtimeListener() {
         const termoBusca = state.elementos.filtroInput.value.toLowerCase().trim();
         if (termoBusca) {
             separacoesAtivas = separacoesAtivas.filter(s =>
-                Object.values(s).some(val => String(val).toLowerCase().includes(termoBusca))
+                Object.values(s).some(val => String(val).toLowerCase().includes(termoBusca)) ||
+                String(s.conferente_nome).toLowerCase().includes(termoBusca)
             );
         }
 
@@ -237,7 +228,6 @@ function setupRealtimeListener() {
         renderizarColunasAtivas();
     });
 }
-
 
 async function carregarFinalizados(recarregar = false) {
     if (state.carregando || (!state.temMais && !recarregar)) return;
@@ -293,7 +283,7 @@ async function fetchInitialData() {
         populateSelect(state.elementos.editModal.vendedorSelect, vend);
         populateSelect(state.elementos.editModal.separadorSelect, separadoresVisiveis);
         populateSelect(document.getElementById('vendedor-nome'), vend);
-        populateSelect(document.getElementById('separador-nome'), separadoresVisiveis);
+        // O select de separador será populado pela função da fila
     } catch (error) {
         showToast("Não foi possível carregar as listas de usuários.", "error");
     }
@@ -302,16 +292,20 @@ async function fetchInitialData() {
 function populateSelect(selectElement, dataList, selectedValue) {
     if (!selectElement) return;
     const placeholder = selectElement.dataset.placeholder || "Selecione";
-    selectElement.innerHTML = `<option value="" disabled selected>${placeholder}</option>`;
+    selectElement.innerHTML = `<option value="" disabled>${placeholder}</option>`;
     dataList.forEach(nome => {
         const option = document.createElement('option');
         option.value = nome;
         option.textContent = nome;
-        if (nome === selectedValue) {
-            option.selected = true;
-        }
         selectElement.appendChild(option);
     });
+    if (selectedValue) {
+        selectElement.value = selectedValue;
+    } else if (dataList.length === 0) {
+        selectElement.innerHTML = `<option value="" disabled selected>Nenhum disponível</option>`;
+    } else {
+        selectElement.selectedIndex = 0; // Garante que o placeholder seja selecionado
+    }
 }
 
 const handleDelete = (separacaoId) => {
@@ -324,7 +318,6 @@ const handleDelete = (separacaoId) => {
             });
             if (!response.ok) throw new Error((await response.json()).error);
             showToast('Separação excluída!', 'success');
-            await fetchAndRenderFila();
         } catch (error) { showToast(`Erro: ${error.message}`, 'error'); }
     });
 };
@@ -340,7 +333,6 @@ const handleFinalize = (separacaoId) => {
             if (!response.ok) throw new Error((await response.json()).error);
             showToast('Separação finalizada!', 'success');
             await carregarFinalizados(true);
-            await fetchAndRenderFila();
         } catch (error) { showToast(`Erro: ${error.message}`, 'error'); }
     });
 };
@@ -357,7 +349,6 @@ const handleAssignConferente = (e, separacaoId) => {
             });
             if (!response.ok) throw new Error((await response.json()).error);
             showToast('Enviado para conferência!', 'success');
-            await fetchAndRenderFila();
         } catch (error) {
             showToast(`Erro: ${error.message}`, 'error');
             e.target.value = '';
@@ -401,7 +392,7 @@ async function handleFormSubmit(event) {
 
         showToast('Separação criada com sucesso!', 'success');
         state.elementos.formSeparacao.reset();
-        await fetchAndRenderFila();
+        await fetchAndRenderFila(); // Atualiza a fila após a criação
     } catch (error) {
         showToast(error.message, 'error');
     } finally {
@@ -426,7 +417,6 @@ async function handleEditFormSubmit(event) {
         nome_cliente: document.getElementById('edit-nome-cliente').value,
         vendedor_nome: modal.vendedorSelect.value,
         separador_nome: modal.separadorSelect.value,
-        // MUDANÇA: Envia o valor do novo campo
         conferente_nome: modal.conferenteSelect.value,
         editor_nome: AppState.currentUser.nome
     };
@@ -485,22 +475,14 @@ async function handleObsFormSubmit(event) {
     }
 }
 
-// NOVO: Função para iniciar o timer de atualização automática
 function startAutoRefresh() {
-    // Limpa qualquer timer anterior para evitar múltiplos timers rodando
     if (autoRefreshInterval) {
         clearInterval(autoRefreshInterval);
     }
-
-    // Configura um novo timer para recarregar os dados a cada 15 segundos
     autoRefreshInterval = setInterval(async () => {
-        console.log("Atualizando dados da página de separações automaticamente...");
-        // Recarrega apenas a lista de finalizados, pois as outras são em tempo real
-        // mas sem limpar a tela para uma experiência mais fluida.
-        // Para uma recarga completa, seria carregarFinalizados(true).
         await carregarFinalizados(true);
         await fetchAndRenderFila();
-    }, 15000); // 15000 milissegundos = 15 segundos
+    }, 15000);
 }
 
 export async function initSeparacoesPage() {
@@ -522,7 +504,6 @@ export async function initSeparacoesPage() {
             clienteInput: document.getElementById('edit-nome-cliente'),
             vendedorSelect: document.getElementById('edit-vendedor-nome'),
             separadorSelect: document.getElementById('edit-separador-nome'),
-            // MUDANÇA: Adiciona referência ao novo select
             conferenteSelect: document.getElementById('edit-conferente-nome'),
             saveButton: document.getElementById('btn-save-edit-separacao'),
             cancelButton: document.getElementById('btn-cancel-edit-separacao')
@@ -540,11 +521,9 @@ export async function initSeparacoesPage() {
         document.getElementById('form-container-separacao').style.display = 'block';
     }
 
-    // NOVO: Controla a visibilidade da fila de separadores
     const filaContainer = document.getElementById('container-fila-separadores');
     if (filaContainer) {
         const userRole = AppState.currentUser.role;
-        // A fila só é visível para Admin e Separador
         if (userRole === 'Admin' || userRole === 'Separador') {
             filaContainer.style.display = 'block';
         } else {
@@ -556,7 +535,6 @@ export async function initSeparacoesPage() {
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(() => {
             state.termoBusca = e.target.value;
-            // O filtro agora é tratado pelo listener de tempo real e pela recarga dos finalizados
             carregarFinalizados(true);
         }, 500);
     });
@@ -587,9 +565,7 @@ export async function initSeparacoesPage() {
 
     await fetchInitialData();
     setupRealtimeListener();
+    await fetchAndRenderFila(); // REVERTIDO: Busca a fila uma vez na inicialização
     await carregarFinalizados(true);
-    await fetchAndRenderFila();
-
-    // NOVO: Inicia o timer de atualização automática
     startAutoRefresh();
 }

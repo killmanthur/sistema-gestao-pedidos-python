@@ -2,7 +2,7 @@
 import { showToast } from '../toasts.js';
 import { showConfirmModal, toggleButtonLoading } from '../ui.js';
 
-// ... (constantes ALL_PAGES, etc. permanecem iguais) ...
+// ... (constantes ALL_PAGES, etc.) ...
 const ALL_PAGES = {
     quadro: "Quadro Ativo",
     historico: "Histórico",
@@ -10,7 +10,10 @@ const ALL_PAGES = {
     atualizacao_orcamento: "Atualizar Orçamento (Criar)",
     sugestoes: "Sugestão de Compras",
     dashboard: "Dashboard",
+    recebimento: "Recebimento",
+    gestao_pendencias: "Gestão de Pendências",
     separacoes: "Separações",
+    conferencias: "Conferência",
     gerenciar_separacoes: "Gerenciar Separações",
     admin_sistema: "Gerenciar Sistema"
 };
@@ -28,6 +31,12 @@ const SEPARACOES_PERMS = {
 
 const SUGESTOES_PERMS = {
     pode_editar_sugestao_finalizada: "Pode Editar Finalizada"
+};
+
+const CONFERENCIAS_PERMS = {
+    pode_editar_conferencia: "Pode Editar Conferência",
+    pode_deletar_conferencia: "Pode Deletar Conferência",
+    pode_ver_botoes_conferencia_finalizada: "Vê Ações em Finalizadas"
 };
 
 
@@ -50,6 +59,7 @@ async function apiCall(endpoint, method = 'GET', body = null) {
     return result;
 }
 
+// ... (função renderPermissionsCheckboxes) ...
 function renderPermissionsCheckboxes(container, permissionsMap, userPermissions) {
     container.innerHTML = Object.entries(permissionsMap).map(([key, name]) => {
         const isChecked = userPermissions && userPermissions[key] === true;
@@ -61,6 +71,7 @@ function renderPermissionsCheckboxes(container, permissionsMap, userPermissions)
         `;
     }).join('');
 }
+
 
 function openModal(mode = 'create', user = null) {
     elements.form.reset();
@@ -75,6 +86,7 @@ function openModal(mode = 'create', user = null) {
     );
     renderPermissionsCheckboxes(elements.separacoesPermissionsContainer, SEPARACOES_PERMS, allPermissions);
     renderPermissionsCheckboxes(elements.sugestoesPermissionsContainer, SUGESTOES_PERMS, allPermissions);
+    renderPermissionsCheckboxes(elements.conferenciasPermissionsContainer, CONFERENCIAS_PERMS, allPermissions);
 
 
     if (mode === 'edit') {
@@ -100,7 +112,6 @@ function closeModal() {
     elements.modal.style.display = 'none';
 }
 
-// NOVO: Função para abrir o modal de definir senha
 function openSetPasswordModal(user) {
     const modal = document.getElementById('set-password-modal-overlay');
     const form = document.getElementById('form-set-password');
@@ -136,15 +147,15 @@ function renderTable() {
     filteredUsers.forEach(user => {
         const tr = document.createElement('tr');
         tr.dataset.user = JSON.stringify(allUsersData.find(u => u.uid === user.uid));
+        // MUDANÇA: Botão "Redefinir Senha (E-mail)" removido
         tr.innerHTML = `
             <td>${user.nome}</td>
             <td>${user.email}</td>
             <td>${user.role}</td>
             <td class="actions-cell">
                <button class="btn-action btn-edit">Editar</button>
-               <button class="btn-action btn-set-pass">Definir Senha</button> <!-- NOVO BOTÃO -->
+               <button class="btn-action btn-set-pass">Definir Senha</button>
                <button class="btn-action btn-delete">Excluir</button>
-               <button class="btn-action btn-reset-pass">Redefinir Senha (E-mail)</button>
             </td>`;
         elements.tableBody.appendChild(tr);
     });
@@ -179,6 +190,9 @@ async function handleFormSubmit(event) {
         permissions[cb.dataset.key] = true;
     });
     elements.sugestoesPermissionsContainer.querySelectorAll('input:checked').forEach(cb => {
+        permissions[cb.dataset.key] = true;
+    });
+    elements.conferenciasPermissionsContainer.querySelectorAll('input:checked').forEach(cb => {
         permissions[cb.dataset.key] = true;
     });
 
@@ -225,7 +239,7 @@ function handleTableActions(event) {
 
     if (target.classList.contains('btn-edit')) {
         openModal('edit', user);
-    } else if (target.classList.contains('btn-set-pass')) { // NOVO HANDLER
+    } else if (target.classList.contains('btn-set-pass')) {
         openSetPasswordModal(user);
     } else if (target.classList.contains('btn-delete')) {
         showConfirmModal(`Excluir o usuário ${user.nome}? Esta ação é permanente.`, async () => {
@@ -235,14 +249,8 @@ function handleTableActions(event) {
                 fetchAndRenderUsers();
             } catch (error) { showToast(`Erro ao excluir: ${error.message}`, 'error'); }
         });
-    } else if (target.classList.contains('btn-reset-pass')) {
-        showConfirmModal(`Enviar e-mail de redefinição de senha para ${user.email}?`, async () => {
-            try {
-                await apiCall(`/${user.uid}/reset-password`, 'POST');
-                showToast('E-mail enviado!', 'success');
-            } catch (error) { showToast(`Erro: ${error.message}`, 'error'); }
-        });
     }
+    // MUDANÇA: Lógica do botão "reset-pass" removida
 }
 
 function handleSort(event) {
@@ -266,7 +274,6 @@ function handleSort(event) {
     renderTable();
 }
 
-// NOVO: Função para lidar com o envio do formulário de nova senha
 async function handleSetPasswordSubmit(event) {
     event.preventDefault();
     const form = event.target;
@@ -312,11 +319,11 @@ export function initAdminSistemaPage() {
         pagesPermissionsContainer: document.getElementById('pages-permissions-container'),
         separacoesPermissionsContainer: document.getElementById('separacoes-permissions-container'),
         sugestoesPermissionsContainer: document.getElementById('sugestoes-permissions-container'),
+        conferenciasPermissionsContainer: document.getElementById('conferencias-permissions-container'),
         filtroInput: document.getElementById('filtro-tabela-usuarios')
     };
     if (!elements.tableBody) return;
 
-    // NOVO: Listeners para o novo modal
     const setPasswordForm = document.getElementById('form-set-password');
     const btnCancelSetPassword = document.getElementById('btn-cancel-set-password');
     if (setPasswordForm && btnCancelSetPassword) {

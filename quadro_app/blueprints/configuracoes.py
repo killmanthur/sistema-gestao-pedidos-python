@@ -22,6 +22,11 @@ PERMISSOES_SUGESTOES_VALIDAS = [
     "pode_editar_sugestao_finalizada"
 ]
 
+PERMISSOES_CONFERENCIA_VALIDAS = [
+    "pode_editar_conferencia",
+    "pode_deletar_conferencia",
+    "pode_ver_botoes_conferencia_finalizada"
+]
 
 @config_bp.route('/permissoes', methods=['GET'])
 @admin_required
@@ -41,7 +46,8 @@ def set_permissoes():
     dados = request.get_json()
     try:
         permissoes_validadas = {}
-        todas_permissoes_validas = PERMISSOES_SEPARACAO_VALIDAS + PERMISSOES_SUGESTOES_VALIDAS
+        # MUDANÇA: Inclui as novas permissões na validação
+        todas_permissoes_validas = PERMISSOES_SEPARACAO_VALIDAS + PERMISSOES_SUGESTOES_VALIDAS + PERMISSOES_CONFERENCIA_VALIDAS
 
         for role, perms in dados.items():
             if role in ROLES_VALIDAS:

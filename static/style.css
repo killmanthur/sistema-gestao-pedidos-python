@@ -152,6 +152,7 @@ header {
     z-index: 1000;
     background: var(--clr-primary-gradient);
     color: white;
+    /* Revertendo para um padding mais confortável */
     padding: 0.5rem 2rem;
     box-shadow: var(--shadow-md);
     transition: var(--transition-main);
@@ -180,6 +181,7 @@ header {
     display: flex;
     justify-content: center;
     align-items: center;
+    /* MODIFICAÇÃO: Revertido para permitir quebra de linha se necessário, mas não vai mais quebrar */
     flex-wrap: wrap;
     gap: 0.5rem;
 }
@@ -187,7 +189,9 @@ header {
 .header__nav a {
     color: rgba(255, 255, 255, 0.85);
     font-weight: 500;
+    /* MODIFICAÇÃO: Revertido para o tamanho original */
     padding: 0.6rem 1rem;
+    font-size: 1rem;
     border-radius: 6px;
     transition: var(--transition-main);
     display: block;
@@ -196,6 +200,85 @@ header {
 .header__nav a:hover {
     color: white;
     background: rgba(255, 255, 255, 0.15);
+}
+
+/* CORREÇÃO PARA O PISQUE DO BOTÃO SAIR */
+#li-logout {
+    display: none;
+    /* JavaScript vai controlar isso agora */
+}
+
+body.user-logged-in #li-logout {
+    display: list-item;
+    /* Mostra o botão quando logado */
+}
+
+
+#li-logout a {
+    background: var(--clr-danger);
+    color: white !important;
+}
+
+/* ==========================================================================
+    NOVOS ESTILOS PARA O MENU DROPDOWN
+   ========================================================================== */
+
+.nav-item--dropdown {
+    position: relative;
+}
+
+.dropdown-menu {
+    display: none;
+    /* Começa escondido */
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background-color: var(--clr-primary);
+    /* Fundo igual ao header */
+    border-radius: 0 0 8px 8px;
+    box-shadow: var(--shadow-md);
+    min-width: 220px;
+    /* Largura mínima do dropdown */
+    z-index: 1100;
+    flex-direction: column;
+    /* Itens empilhados verticalmente */
+    align-items: stretch;
+    /* Itens ocupam toda a largura */
+    padding: 0.5rem 0;
+}
+
+.nav-item--dropdown:hover .dropdown-menu {
+    display: flex;
+    /* Mostra o dropdown ao passar o mouse */
+}
+
+.dropdown-menu .nav-item {
+    width: 100%;
+}
+
+.dropdown-menu a {
+    padding: 0.75rem 1.5rem;
+    font-size: 0.95rem;
+    border-radius: 0;
+    white-space: nowrap;
+}
+
+/* Garante que a badge de notificação fique correta dentro do dropdown */
+.dropdown-menu .nav-item a {
+    position: relative;
+}
+
+.dropdown-menu .notification-badge {
+    right: 1rem;
+    /* Ajusta posição da badge */
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+body.user-logged-in #li-logout {
+    /* Quando o usuário está logado, o botão se torna visível suavemente */
+    visibility: visible;
+    opacity: 1;
 }
 
 #li-logout a {
@@ -1184,15 +1267,16 @@ body.tv-mode main {
     letter-spacing: 0.5px;
 }
 
-/* Estilo para os botões "Editar" e "Redefinir Senha" */
+/* MUDANÇA: A classe .btn-reset-pass foi combinada com .btn-set-pass */
+/* Estilo para os botões "Editar", "Definir Senha" */
 .btn-action.btn-edit,
-.btn-action.btn-reset-pass {
+.btn-action.btn-set-pass {
     background-color: var(--clr-secondary);
     border-color: var(--clr-secondary);
 }
 
 .btn-action.btn-edit:hover,
-.btn-action.btn-reset-pass:hover {
+.btn-action.btn-set-pass:hover {
     background-color: #5a6268;
     border-color: #545b62;
 }
@@ -1508,4 +1592,24 @@ body.tv-mode main {
     /* Cor do texto sempre branca */
     text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.2);
     /* Sombra para legibilidade */
+}
+
+/* NOVO: Garante que o botão primário no rodapé do card seja visível */
+.card__actions .btn--primary {
+    background-color: var(--clr-primary);
+    color: white;
+    border-color: var(--clr-primary);
+}
+
+.card__actions .btn--primary:hover {
+    background-color: var(--clr-primary-hover);
+    border-color: var(--clr-primary-hover);
+}
+.admin-table .linha-finalizada {
+    background-color: var(--bg-success-soft) !important;
+    border-left: 4px solid var(--clr-success);
+}
+
+.admin-table .linha-finalizada:hover {
+    background-color: rgba(92, 184, 92, 0.2) !important;
 }

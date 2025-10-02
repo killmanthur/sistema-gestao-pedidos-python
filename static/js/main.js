@@ -13,7 +13,9 @@ import { initDashboardPage } from './pages/dashboard.js';
 import { initAdminSistemaPage } from './pages/admin-sistema.js';
 import { initInicioPage } from './pages/inicio.js';
 import { initSeparacoesPage } from './pages/separacoes.js';
-// NOVO: Importa a função de inicialização da nova página
+import { initConferenciasPage } from './pages/conferencias.js';
+import { initRecebimentoPage } from './pages/recebimento.js'; // NOVO
+import { initGestaoPendenciasPage } from './pages/gestao_pendencias.js';
 import { initGerenciarSeparacoesPage } from './pages/gerenciar-separacoes.js';
 
 
@@ -53,7 +55,9 @@ export async function initializeAuthenticatedApp() {
     else if (path.includes('/atualizacao-orcamento')) initAtualizacaoOrcamentoPage();
     else if (path.includes('/dashboard')) initDashboardPage();
     else if (path.includes('/separacoes')) initSeparacoesPage();
-    // NOVO: Adiciona a rota para a nova página no "roteador"
+    else if (path.includes('/conferencias')) initConferenciasPage();
+    else if (path.includes('/recebimento')) initRecebimentoPage(); // NOVO
+    else if (path.includes('/gestao-pendencias')) initGestaoPendenciasPage();
     else if (path.includes('/gerenciar-separacoes')) initGerenciarSeparacoesPage();
 
 }

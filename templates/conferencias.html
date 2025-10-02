@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Conferência de Espelhos{% endblock %}
+
+{% block content %}
+<section class="filtro-container-actions" style="margin: 0 auto 1.5rem; max-width: 1000px;">
+    <input type="text" id="filtro-conferencias" placeholder="🔎 Buscar por Nº NF, Fornecedor...">
+</section>
+
+<section class="layout-grid-2-cols">
+    <div class="quadro-coluna">
+        <h2>Aguardando Conferência</h2>
+        <div id="quadro-aguardando" class="quadro-container"></div>
+    </div>
+    <div class="quadro-coluna">
+        <h2>Espelhos em Conferência</h2>
+        <div id="quadro-em-conferencia" class="quadro-container"></div>
+    </div>
+</section>
+
+<!-- Modal para adicionar múltiplos conferentes -->
+<div id="add-conferente-modal-overlay" class="modal-overlay" style="display:none;">
+    <div class="modal-content" style="max-width: 400px;">
+        <div class="modal-header">
+            <h2>Adicionar Conferentes</h2>
+            <button class="close-modal">×</button>
+        </div>
+        <form id="form-add-conferente">
+            <div class="modal-body">
+                <p>Selecione um ou mais conferentes para iniciar a conferência.</p>
+                <div id="conferentes-checkbox-container" class="permissions-grid" style="grid-template-columns: 1fr;">
+                    <!-- Checkboxes serão inseridos aqui -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <!-- CORREÇÃO: O botão agora é um 'button' padrão com um ID para o JavaScript -->
+                <button type="button" id="btn-cancel-add-conferente" class="btn btn--secondary">Cancelar</button>
+                <button type="submit" class="btn btn--primary">Confirmar e Iniciar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal de Finalização (existente) -->
+<div id="finalize-modal-overlay" class="modal-overlay" style="display:none;">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <h2>Finalizar Conferência</h2>
+            <button class="close-modal">×</button>
+        </div>
+        <form id="form-finalize">
+            <div class="modal-body">
+                <p>Se houver alguma divergência (ex: item quebrado, quantidade errada), finalize com pendência e
+                    descreva o problema.</p>
+                <div class="form-group">
+                    <label for="finalize-observacao">Observação da Pendência (Obrigatório se houver pendência)</label>
+                    <textarea id="finalize-observacao" rows="4"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="btn-finalize-ok" class="btn btn--success">Finalizar OK</button>
+                <button type="submit" id="btn-finalize-pendencia" class="btn btn--danger">Finalizar com
+                    Pendência</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+<!-- Outros modais que possam ser necessários -->
+{% endblock %}
