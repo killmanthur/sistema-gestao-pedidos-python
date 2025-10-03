@@ -6,6 +6,83 @@ from quadro_app.utils import registrar_log
 
 separacoes_bp = Blueprint('separacoes', __name__, url_prefix='/api/separacoes')
 
+STATUS_PATH = 'configuracoes/status_separadores'
+
+@separacoes_bp.route('/status-todos-separadores', methods=['GET'])
+def get_status_todos_separadores():
+    """
+    Retorna uma lista de TODOS os usuários com a role 'Separador' e 
+    indica se estão ativos na fila ou não.
+    """
+    try:
+        # 1. Pega todos os usuários que são separadores
+        todos_separadores_ref = db.reference('usuarios').order_by_child('role').equal_to('Separador').get()
+        if not todos_separadores_ref:
+            return jsonify([])
+
+        all_separator_names = sorted([
+            user['nome'] for user in todos_separadores_ref.values() 
+            if user.get('nome', '').lower() != 'separacao'
+        ])
+        
+        # 2. Pega os status atuais de ativação
+        status_atual = db.reference(STATUS_PATH).get() or {}
+
+        # 3. Combina as informações
+        resultado = []
+        for nome in all_separator_names:
+            is_active = status_atual.get(nome, {}).get('ativo', True) # Padrão é True se não definido
+            resultado.append({'nome': nome, 'ativo': is_active})
+            
+        return jsonify(resultado)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@separacoes_bp.route('/fila-separadores', methods=['PUT'])
+def atualizar_fila_e_status():
+    """
+    Recebe uma lista de separadores que devem estar ATIVOS.
+    Atualiza os status e reordena a fila de prioridade.
+    """
+    try:
+        nomes_ativos_recebidos = request.get_json()
+        if not isinstance(nomes_ativos_recebidos, list):
+            return jsonify({'error': 'O corpo da requisição deve ser uma lista de nomes.'}), 400
+
+        # 1. Obter a lista completa de todos os separadores possíveis
+        todos_separadores_ref = db.reference('usuarios').order_by_child('role').equal_to('Separador').get()
+        all_separator_names = [
+            user['nome'] for user in todos_separadores_ref.values() 
+            if user.get('nome', '').lower() != 'separacao'
+        ]
+
+        # 2. Criar o novo objeto de status
+        novo_status_separadores = {}
+        for nome in all_separator_names:
+            novo_status_separadores[nome] = {'ativo': nome in nomes_ativos_recebidos}
+
+        # 3. Reconstruir a fila ordenada, mantendo a ordem o máximo possível
+        fila_antiga = _get_fila_separadores()
+        
+        # Mantém apenas os que continuam ativos, na mesma ordem
+        nova_fila_ordenada = [nome for nome in fila_antiga if nome in nomes_ativos_recebidos]
+        
+        # Adiciona os que foram reativados ao final da fila
+        for nome in nomes_ativos_recebidos:
+            if nome not in nova_fila_ordenada:
+                nova_fila_ordenada.append(nome)
+
+        # 4. Salvar tudo no Firebase de uma vez
+        db.reference().update({
+            STATUS_PATH: novo_status_separadores,
+            FILA_PATH: nova_fila_ordenada
+        })
+
+        return jsonify({'status': 'success', 'message': 'Fila atualizada com sucesso.'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 # --- FUNÇÕES AUXILIARES DA FILA ---
 
 FILA_PATH = 'configuracoes/fila_separadores'

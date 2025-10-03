@@ -40,6 +40,7 @@
 <section class="filtro-container-actions" style="margin: 0 auto 1.5rem;">
     <input type="text" id="filtro-separacoes" placeholder="🔎 Buscar por Nº Mov, Cliente, Vendedor...">
     <button id="btn-reload-separacoes" class="btn btn--secondary">Atualizar</button>
+    <button id="btn-gerenciar-fila" class="btn btn--primary">Gerenciar Fila</button>
 </section>
 
 <section class="layout-grid-3-cols">
@@ -82,4 +83,26 @@
         </form>
     </div>
 </div>
+<div id="gerenciar-fila-modal-overlay" class="modal-overlay" style="display:none;">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <h2>Gerenciar Fila de Separação</h2>
+            <button class="close-modal">×</button>
+        </div>
+        <form id="form-gerenciar-fila">
+            <div class="modal-body">
+                <p>Marque os separadores que devem estar ativos na fila de prioridade.</p>
+                <div id="fila-checkbox-container" class="permissions-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
+                    <!-- Checkboxes serão inseridos aqui pelo JavaScript -->
+                    <div class="spinner" style="margin: 1rem auto;"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="btn-cancel-fila" class="btn btn--secondary">Cancelar</button>
+                <button type="submit" id="btn-save-fila" class="btn btn--primary">Salvar Alterações</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 {% endblock %}

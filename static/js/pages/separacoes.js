@@ -13,6 +13,8 @@ function resetState() {
     state = {
         elementos: {},
         listasUsuarios: { expedicao: [], vendedores: [], separadores: [] },
+        // NOVO: Guarda a lista completa e não filtrada das separações ativas
+        todasAsSeparacoesAtivas: [], 
         dadosAtivos: { andamento: [], conferencia: [] },
         dadosFinalizados: [],
         paginaAtual: 0,
@@ -72,6 +74,71 @@ async function fetchAndRenderFila() {
     }
 }
 
+async function openFilaModal() {
+    const modal = state.elementos.gerenciarFilaModal;
+    const container = modal.checkboxContainer;
+
+    modal.overlay.style.display = 'flex';
+    container.innerHTML = '<div class="spinner" style="margin: 1rem auto;"></div>';
+
+    try {
+        const response = await fetch('/api/separacoes/status-todos-separadores');
+        if (!response.ok) throw new Error('Falha ao buscar a lista de separadores.');
+        
+        const separadores = await response.json();
+        container.innerHTML = ''; // Limpa o spinner
+
+        if (separadores.length === 0) {
+            container.innerHTML = '<p>Nenhum usuário com a função "Separador" encontrado.</p>';
+            return;
+        }
+
+        separadores.forEach(sep => {
+            const label = document.createElement('label');
+            label.innerHTML = `
+                <input type="checkbox" value="${sep.nome}" ${sep.ativo ? 'checked' : ''}>
+                ${sep.nome}
+            `;
+            container.appendChild(label);
+        });
+
+    } catch (error) {
+        showToast(error.message, 'error');
+        container.innerHTML = `<p style="color: var(--clr-danger);">${error.message}</p>`;
+    }
+}
+
+async function handleSaveFila(event) {
+    event.preventDefault();
+    const modal = state.elementos.gerenciarFilaModal;
+    const saveBtn = modal.saveButton;
+    toggleButtonLoading(saveBtn, true, 'Salvando...');
+
+    const checkboxes = modal.checkboxContainer.querySelectorAll('input[type="checkbox"]:checked');
+    const nomesAtivos = Array.from(checkboxes).map(cb => cb.value);
+
+    try {
+        const response = await fetch('/api/separacoes/fila-separadores', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(nomesAtivos),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Falha ao salvar a fila.');
+        }
+
+        showToast('Fila de separação atualizada com sucesso!', 'success');
+        modal.overlay.style.display = 'none';
+        await fetchAndRenderFila(); // Atualiza a exibição da fila na página principal
+
+    } catch (error) {
+        showToast(error.message, 'error');
+    } finally {
+        toggleButtonLoading(saveBtn, false, 'Salvar Alterações');
+    }
+}
 
 function criarCardElement(separacao) {
     const card = document.createElement('div');
@@ -173,6 +240,28 @@ function criarCardElement(separacao) {
     return card;
 }
 
+function filtrarErenderizarColunasAtivas() {
+    let separacoesAtivasFiltradas = state.todasAsSeparacoesAtivas;
+    const termoBusca = state.elementos.filtroInput.value.toLowerCase().trim();
+
+    if (termoBusca) {
+        separacoesAtivasFiltradas = state.todasAsSeparacoesAtivas.filter(s =>
+            Object.values(s).some(val => String(val).toLowerCase().includes(termoBusca)) ||
+            String(s.conferente_nome).toLowerCase().includes(termoBusca)
+        );
+    }
+
+    state.dadosAtivos.andamento = separacoesAtivasFiltradas
+        .filter(s => s.status === 'Em Separação')
+        .sort((a, b) => new Date(b.data_criacao) - new Date(a.data_criacao));
+        
+    state.dadosAtivos.conferencia = separacoesAtivasFiltradas
+        .filter(s => s.status === 'Em Conferência')
+        .sort((a, b) => new Date(b.data_criacao) - new Date(a.data_criacao));
+
+    renderizarColunasAtivas();
+}
+
 function renderizarColunasAtivas() {
     const { andamento, conferencia } = state.dadosAtivos;
     state.elementos.quadroAndamento.innerHTML = '';
@@ -214,20 +303,14 @@ function setupRealtimeListener() {
             separacoesAtivas = separacoesAtivas.filter(s => s.vendedor_nome === AppState.currentUser.nome);
         }
 
-        const termoBusca = state.elementos.filtroInput.value.toLowerCase().trim();
-        if (termoBusca) {
-            separacoesAtivas = separacoesAtivas.filter(s =>
-                Object.values(s).some(val => String(val).toLowerCase().includes(termoBusca)) ||
-                String(s.conferente_nome).toLowerCase().includes(termoBusca)
-            );
-        }
-
-        state.dadosAtivos.andamento = separacoesAtivas.filter(s => s.status === 'Em Separação').sort((a, b) => new Date(b.data_criacao) - new Date(a.data_criacao));
-        state.dadosAtivos.conferencia = separacoesAtivas.filter(s => s.status === 'Em Conferência').sort((a, b) => new Date(b.data_criacao) - new Date(a.data_criacao));
-
-        renderizarColunasAtivas();
+        // Guarda a lista completa no estado
+        state.todasAsSeparacoesAtivas = separacoesAtivas;
+        
+        // Chama a nova função para filtrar e renderizar
+        filtrarErenderizarColunasAtivas();
     });
 }
+
 
 async function carregarFinalizados(recarregar = false) {
     if (state.carregando || (!state.temMais && !recarregar)) return;
@@ -497,6 +580,14 @@ export async function initSeparacoesPage() {
         spinner: document.getElementById('loading-spinner'),
         btnCarregarMais: document.getElementById('btn-carregar-mais'),
         btnReload: document.getElementById('btn-reload-separacoes'),
+        gerenciarFilaModal: {
+            overlay: document.getElementById('gerenciar-fila-modal-overlay'),
+            form: document.getElementById('form-gerenciar-fila'),
+            checkboxContainer: document.getElementById('fila-checkbox-container'),
+            saveButton: document.getElementById('btn-save-fila'),
+            cancelButton: document.getElementById('btn-cancel-fila'),
+            btnGerenciar: document.getElementById('btn-gerenciar-fila'),
+        },
         editModal: {
             overlay: document.getElementById('edit-separacao-modal-overlay'),
             form: document.getElementById('form-edit-separacao'),
@@ -531,17 +622,50 @@ export async function initSeparacoesPage() {
         }
     }
 
+    const userRole = AppState.currentUser.role;
+    if (userRole === 'Admin' || userRole === 'Separador') {
+        state.elementos.gerenciarFilaModal.btnGerenciar.style.display = 'block';
+    } else {
+        state.elementos.gerenciarFilaModal.btnGerenciar.style.display = 'none';
+    }
+
+    if (AppState.currentUser.permissions?.pode_criar_separacao) {
+        document.getElementById('form-container-separacao').style.display = 'block';
+    }
+
+    const filaModal = state.elementos.gerenciarFilaModal;
+    if (filaModal.btnGerenciar) {
+        filaModal.btnGerenciar.addEventListener('click', openFilaModal);
+    }
+    if (filaModal.form) {
+        filaModal.form.addEventListener('submit', handleSaveFila);
+    }
+    if (filaModal.cancelButton) {
+        filaModal.cancelButton.addEventListener('click', () => {
+            filaModal.overlay.style.display = 'none';
+        });
+    }
+
     state.elementos.filtroInput.addEventListener('input', e => {
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(() => {
             state.termoBusca = e.target.value;
+
+            // ATUALIZA AS COLUNAS ATIVAS (EM TEMPO REAL)
+            filtrarErenderizarColunasAtivas();
+
+            // BUSCA NA COLUNA DE FINALIZADOS (COM CHAMADA AO BACKEND)
             carregarFinalizados(true);
+
         }, 500);
     });
-
+ 
     state.elementos.btnCarregarMais.addEventListener('click', () => carregarFinalizados(false));
 
     state.elementos.btnReload.addEventListener('click', () => {
+        state.elementos.filtroInput.value = ''; // Limpa o campo visualmente
+        state.termoBusca = '';                   // Reseta o termo de busca no estado
+        
         clearNotificationsBackend();
         carregarFinalizados(true);
         fetchAndRenderFila();
