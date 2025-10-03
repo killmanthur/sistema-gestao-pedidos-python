@@ -36,11 +36,12 @@
     </form>
 </section>
 
-<!-- 3. Barra de Busca: Margem superior zerada e margem inferior final -->
+<!-- Barra de Busca -->
 <section class="filtro-container-actions" style="margin: 0 auto 1.5rem;">
     <input type="text" id="filtro-separacoes" placeholder="🔎 Buscar por Nº Mov, Cliente, Vendedor...">
     <button id="btn-reload-separacoes" class="btn btn--secondary">Atualizar</button>
-    <button id="btn-gerenciar-fila" class="btn btn--primary">Gerenciar Fila</button>
+    <!-- BOTÃO RESTAURADO -->
+    <button id="btn-gerenciar-fila" class="btn btn--primary" style="display: none;">Gerenciar Fila</button>
 </section>
 
 <section class="layout-grid-3-cols">
@@ -83,6 +84,7 @@
         </form>
     </div>
 </div>
+
 <div id="gerenciar-fila-modal-overlay" class="modal-overlay" style="display:none;">
     <div class="modal-content" style="max-width: 500px;">
         <div class="modal-header">
@@ -92,8 +94,8 @@
         <form id="form-gerenciar-fila">
             <div class="modal-body">
                 <p>Marque os separadores que devem estar ativos na fila de prioridade.</p>
-                <div id="fila-checkbox-container" class="permissions-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
-                    <!-- Checkboxes serão inseridos aqui pelo JavaScript -->
+                <div id="fila-checkbox-container" class="permissions-grid"
+                    style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
                     <div class="spinner" style="margin: 1rem auto;"></div>
                 </div>
             </div>

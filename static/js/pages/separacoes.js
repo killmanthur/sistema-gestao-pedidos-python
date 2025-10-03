@@ -14,7 +14,7 @@ function resetState() {
         elementos: {},
         listasUsuarios: { expedicao: [], vendedores: [], separadores: [] },
         // NOVO: Guarda a lista completa e não filtrada das separações ativas
-        todasAsSeparacoesAtivas: [], 
+        todasAsSeparacoesAtivas: [],
         dadosAtivos: { andamento: [], conferencia: [] },
         dadosFinalizados: [],
         paginaAtual: 0,
@@ -84,7 +84,7 @@ async function openFilaModal() {
     try {
         const response = await fetch('/api/separacoes/status-todos-separadores');
         if (!response.ok) throw new Error('Falha ao buscar a lista de separadores.');
-        
+
         const separadores = await response.json();
         container.innerHTML = ''; // Limpa o spinner
 
@@ -308,7 +308,7 @@ function setupRealtimeListener() {
 
         // Guarda a lista completa no estado
         state.todasAsSeparacoesAtivas = separacoesAtivas;
-        
+
         // Chama a nova função para filtrar e renderizar
         filtrarErenderizarColunasAtivas();
     });
@@ -662,13 +662,13 @@ export async function initSeparacoesPage() {
 
         }, 500);
     });
- 
+
     state.elementos.btnCarregarMais.addEventListener('click', () => carregarFinalizados(false));
 
     state.elementos.btnReload.addEventListener('click', () => {
         state.elementos.filtroInput.value = ''; // Limpa o campo visualmente
         state.termoBusca = '';                   // Reseta o termo de busca no estado
-        
+
         clearNotificationsBackend();
         carregarFinalizados(true);
         fetchAndRenderFila();

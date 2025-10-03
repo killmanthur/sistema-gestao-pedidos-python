@@ -12,6 +12,7 @@ tz_cuiaba = timezone(timedelta(hours=-4))
 db = None 
 
 def resource_path(relative_path):
+    """ Obtém o caminho absoluto para o recurso, funciona para dev e para PyInstaller """
     try:
         base_path = sys._MEIPASS
     except Exception:
@@ -21,10 +22,9 @@ def resource_path(relative_path):
 class Api:
     def __init__(self):
         self._window = None
+
     def set_window(self, window):
         self._window = window
-
-    # MUDANÇA: As funções flash_window e stop_flash_window foram removidas
     
     def save_file_dialog(self, content):
         try:
@@ -56,7 +56,7 @@ def create_app():
         print("MODO TV ATIVADO.")
 
     try:
-        cred = credentials.Certificate('serviceAccountKey.json')
+        cred = credentials.Certificate(resource_path('serviceAccountKey.json'))
         firebase_admin.initialize_app(cred, {
             'databaseURL': 'https://quadro-de-servicos-berti-default-rtdb.firebaseio.com'
         })
@@ -68,6 +68,9 @@ def create_app():
     app = Flask(__name__,
                 static_folder=resource_path('static'),
                 template_folder=resource_path('templates'))
+
+    # CORREÇÃO DEFINITIVA: Desativa o cache de arquivos estáticos do Flask
+    app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 
     @app.context_processor
     def inject_global_vars():

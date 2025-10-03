@@ -7,5 +7,8 @@ pyinstaller --clean --name "QuadroDePedidos" --onefile --windowed --add-data "te
 # cria o executavel do Launcher
 pyinstaller --onefile Launcher.py
 
+# cria o executavel do Launcher
+pyinstaller --onefile Launcher.py
+
 # entra no ambiente virtual
 venv\Scripts\activate

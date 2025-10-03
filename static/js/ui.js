@@ -2,6 +2,7 @@
 import { db } from './firebase.js';
 import { AppState } from './state.js';
 import { showToast } from './toasts.js';
+import { initQuadroPage } from './pages/quadro.js';
 
 /**
  * Alterna o estado de carregamento de um botão.
@@ -592,15 +593,11 @@ export function setupEditModal() {
     const form = document.getElementById('form-edit');
     const saveBtn = document.getElementById('btn-save-edit');
 
-    if (!modalOverlay) return;
+    if (!modalOverlay || !btnCancel || !form || !saveBtn) return;
 
     const closeModal = () => { modalOverlay.style.display = 'none'; };
 
-    // O botão 'Cancelar' fecha o modal
     btnCancel.onclick = closeModal;
-
-    // CORREÇÃO: A lógica para o botão X e para o clique no overlay foi removida,
-    // pois agora é gerenciada pela função global setupAllModalCloseHandlers.
 
     form.onsubmit = async (e) => {
         e.preventDefault();
@@ -633,8 +630,8 @@ export function setupEditModal() {
 
             updateData.itens = itens;
             updateData.observacao_geral = document.getElementById('edit-observacao-geral').value;
-        } else {
-            updateData['código'] = document.getElementById('edit-orcamento-nome').value;
+        } else { // Atualização Orçamento
+            updateData.codigo = document.getElementById('edit-orcamento-nome').value;
             updateData.descricao = document.getElementById('edit-observacao').value;
         }
 
@@ -649,8 +646,18 @@ export function setupEditModal() {
             if (response.ok) {
                 closeModal();
                 showToast('Pedido salvo com sucesso!', 'success');
+
+                // CORREÇÃO: Força a atualização da UI do quadro
+                // Verificamos se estamos na página do quadro para evitar erros em outras páginas
+                if (window.location.pathname.includes('/quadro')) {
+                    // Re-chama a função que inicializa a página, que por sua vez
+                    // re-ativa o listener do Firebase e redesenha os cards.
+                    initQuadroPage();
+                }
+
             } else {
-                showToast('Falha ao salvar as alterações.', 'error');
+                const errorData = await response.json();
+                showToast(`Falha ao salvar: ${errorData.error || 'Erro desconhecido'}`, 'error');
             }
         } catch (error) {
             showToast('Erro de conexão ao tentar salvar.', 'error');

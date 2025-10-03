@@ -1371,19 +1371,23 @@ body.tv-mode main {
 .fila-separadores {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.75rem;
+    gap: 1rem;
     list-style: none;
     padding: 0;
     margin: 0;
     margin-top: 1rem;
+    justify-content: center;
 }
 
 .fila-separadores li {
     background-color: var(--bg-muted);
     border: 1px solid var(--border-main);
-    padding: 0.5rem 1rem;
-    border-radius: 20px;
+    /* MODIFICAÇÃO: Padding e fonte aumentados ainda mais */
+    padding: 0.75rem 1.5rem;
+    font-size: 1.3rem;
+    border-radius: 30px;
     font-weight: 500;
+    transition: var(--transition-main);
 }
 
 .fila-separadores li.proximo-separador {
@@ -1391,6 +1395,8 @@ body.tv-mode main {
     color: white;
     border-color: var(--clr-success);
     font-weight: 700;
+    transform: scale(1.05);
+    box-shadow: var(--shadow-md);
 }
 
 /* ==========================================================================
