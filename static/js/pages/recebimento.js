@@ -128,7 +128,10 @@ function renderizarTabela() {
             tr.classList.add('linha-finalizada');
         }
         const actionButtonText = item.status === 'Pendente de Resolução' ? 'Resolver' : 'Editar';
-        const editButton = (AppState.currentUser.role === 'Admin')
+
+        // MUDANÇA AQUI: Adicionada a role 'Estoque' à lista de permissões
+        const rolesPermitidas = ['Admin', 'Estoque'];
+        const editButton = (rolesPermitidas.includes(AppState.currentUser.role))
             ? `<button class="btn-action btn-edit" data-id="${item.id}">${actionButtonText}</button>`
             : '';
 

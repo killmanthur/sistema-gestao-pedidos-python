@@ -251,16 +251,19 @@ function filtrarErenderizarColunasAtivas() {
         );
     }
 
+    // MUDANÇA AQUI: Ordenação por numero_movimentacao (decrescente)
     state.dadosAtivos.andamento = separacoesAtivasFiltradas
         .filter(s => s.status === 'Em Separação')
-        .sort((a, b) => new Date(b.data_criacao) - new Date(a.data_criacao));
-        
+        .sort((a, b) => parseInt(b.numero_movimentacao, 10) - parseInt(a.numero_movimentacao, 10));
+
+    // MUDANÇA AQUI: Ordenação por numero_movimentacao (decrescente)
     state.dadosAtivos.conferencia = separacoesAtivasFiltradas
         .filter(s => s.status === 'Em Conferência')
-        .sort((a, b) => new Date(b.data_criacao) - new Date(a.data_criacao));
+        .sort((a, b) => parseInt(b.numero_movimentacao, 10) - parseInt(a.numero_movimentacao, 10));
 
     renderizarColunasAtivas();
 }
+
 
 function renderizarColunasAtivas() {
     const { andamento, conferencia } = state.dadosAtivos;
