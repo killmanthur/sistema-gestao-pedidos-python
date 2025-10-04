@@ -4,11 +4,24 @@ Sistema de desktop para gestão de pedidos e separações. Desenvolvido com Pyth
 
 ## Funcionalidades
 
-- Criação de pedidos de rua e orçamentos.
-- Quadro de visualização em tempo real (Kanban).
-- Sistema de sugestão de compras.
-- Módulo de controle de separações de estoque com fila de prioridade.
-- Autenticação e sistema de permissões por função de usuário.
+- **Gestão de Compras:**
+  - Criação de pedidos de rua e orçamentos.
+  - Quadro de visualização em tempo real (Kanban) para acompanhamento dos compradores.
+  - Sistema de sugestão de compras com fluxo de aprovação.
+
+- **Módulo de Recebimento e Conferência de Mercadorias:**
+  - Registro de entrada de notas fiscais, com um fluxo otimizado para compras locais ("Notas da Rua") sem transportadora.
+  - Atribuição de conferentes e acompanhamento do status da conferência em tempo real.
+  - Gestão de pendências para itens com avaria ou divergência.
+
+- **Controle de Estoque e Separação:**
+  - Módulo de controle de separações com fila de prioridade para distribuição de tarefas.
+  - Acompanhamento do status de separação em um quadro Kanban (Andamento, Conferência, Finalizado).
+
+- **Administração e Análise:**
+  - Autenticação e sistema de permissões granular por função de usuário.
+  - Dashboard com gráficos para análise de produtividade e volume de pedidos.
+  - Histórico de pedidos com filtros avançados e geração de relatórios.
 
 ## Como Executar
 
