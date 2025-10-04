@@ -97,20 +97,26 @@ async function handleEditFormSubmit(event) {
 function renderizarTabela() {
     const filtrosColunas = {};
     document.querySelectorAll('.filtro-coluna').forEach(input => {
-        filtrosColunas[input.dataset.col] = input.value.toLowerCase().trim();
+        // MUDANÇA: Atualizado o data-col para a busca
+        const colKey = input.dataset.col === 'transportadora_ou_vendedor' ? ['nome_transportadora', 'vendedor_nome'] : [input.dataset.col];
+        filtrosColunas[input.dataset.col] = { value: input.value.toLowerCase().trim(), keys: colKey };
     });
     const filtroGeral = elementos.filtroGeral.value.toLowerCase().trim();
 
     const recebimentosFiltrados = todosOsRecebimentos.filter(item => {
-        if (filtroGeral && !Object.values(item).some(val => String(val).toLowerCase().includes(filtroGeral))) {
+        // MUDANÇA: a busca geral agora inclui o vendedor_nome
+        const searchableValues = Object.values(item).concat(item.vendedor_nome || '');
+        if (filtroGeral && !searchableValues.some(val => String(val).toLowerCase().includes(filtroGeral))) {
             return false;
         }
-        for (const col in filtrosColunas) {
-            if (filtrosColunas[col]) {
-                const itemValue = col === 'data_recebimento' ? formatarData(item[col]).toLowerCase() : String(item[col]).toLowerCase();
-                if (!itemValue.includes(filtrosColunas[col])) {
-                    return false;
-                }
+        for (const colName in filtrosColunas) {
+            const filtro = filtrosColunas[colName];
+            if (filtro.value) {
+                const itemHasMatch = filtro.keys.some(key => {
+                    const itemValue = key === 'data_recebimento' ? formatarData(item[key]).toLowerCase() : String(item[key] || '').toLowerCase();
+                    return itemValue.includes(filtro.value);
+                });
+                if (!itemHasMatch) return false;
             }
         }
         return true;
@@ -129,17 +135,21 @@ function renderizarTabela() {
         }
         const actionButtonText = item.status === 'Pendente de Resolução' ? 'Resolver' : 'Editar';
 
-        // MUDANÇA AQUI: Adicionada a role 'Estoque' à lista de permissões
         const rolesPermitidas = ['Admin', 'Estoque'];
         const editButton = (rolesPermitidas.includes(AppState.currentUser.role))
             ? `<button class="btn-action btn-edit" data-id="${item.id}">${actionButtonText}</button>`
             : '';
 
+        // MUDANÇA: Exibe o vendedor se for nota da rua, senão a transportadora
+        const transportadoraCell = item.vendedor_nome
+            ? `<span style="font-weight: bold; color: var(--clr-info);">[RUA] Vendedor: ${item.vendedor_nome}</span>`
+            : item.nome_transportadora;
+
         tr.innerHTML = `
             <td>${formatarData(item.data_recebimento)}</td>
             <td>${item.numero_nota_fiscal}</td>
             <td>${item.nome_fornecedor}</td>
-            <td>${item.nome_transportadora}</td>
+            <td>${transportadoraCell}</td>
             <td>${item.qtd_volumes}</td>
             <td>${item.status}</td>
             <td class="actions-cell">${editButton}</td>
@@ -149,21 +159,41 @@ function renderizarTabela() {
     });
 }
 
+
 async function handleFormSubmit(event) {
     event.preventDefault();
     const submitBtn = elementos.form.querySelector('button[type="submit"]');
     toggleButtonLoading(submitBtn, true, 'Registrando...');
 
-    const dados = {
-        numero_nota_fiscal: document.getElementById('numero-nota-fiscal').value,
-        nome_fornecedor: document.getElementById('nome-fornecedor').value,
-        nome_transportadora: document.getElementById('nome-transportadora').value,
-        qtd_volumes: document.getElementById('qtd-volumes').value,
-        editor_nome: AppState.currentUser.nome
-    };
+    const isNotaDaRua = elementos.notaDaRuaCheckbox.checked;
+
+    // Define o endpoint e os dados com base no checkbox
+    let endpoint;
+    let dados;
+
+    if (isNotaDaRua) {
+        endpoint = '/api/conferencias/recebimento-rua';
+        dados = {
+            numero_nota_fiscal: document.getElementById('numero-nota-fiscal').value,
+            nome_fornecedor: document.getElementById('nome-fornecedor').value,
+            qtd_volumes: document.getElementById('qtd-volumes').value,
+            vendedor_nome: document.getElementById('nome-vendedor').value, // Campo do vendedor
+            editor_nome: AppState.currentUser.nome
+        };
+    } else {
+        endpoint = '/api/conferencias/recebimento';
+        dados = {
+            numero_nota_fiscal: document.getElementById('numero-nota-fiscal').value,
+            nome_fornecedor: document.getElementById('nome-fornecedor').value,
+            nome_transportadora: document.getElementById('nome-transportadora').value, // Campo da transportadora
+            qtd_volumes: document.getElementById('qtd-volumes').value,
+            editor_nome: AppState.currentUser.nome
+        };
+    }
+
 
     try {
-        const response = await fetch('/api/conferencias/recebimento', {
+        const response = await fetch(endpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(dados),
@@ -172,11 +202,30 @@ async function handleFormSubmit(event) {
 
         showToast('Recebimento registrado com sucesso!', 'success');
         elementos.form.reset();
+        // Reseta o formulário para o estado padrão (não é nota da rua)
+        elementos.notaDaRuaCheckbox.dispatchEvent(new Event('change'));
         document.getElementById('numero-nota-fiscal').focus();
     } catch (error) {
         showToast(`Erro: ${error.message}`, 'error');
     } finally {
         toggleButtonLoading(submitBtn, false, 'Registrar Entrada');
+    }
+}
+
+// NOVO: Função para buscar e popular o dropdown de vendedores
+async function fetchAndPopulateVendors() {
+    try {
+        const response = await fetch('/api/usuarios/vendedor-nomes');
+        if (!response.ok) throw new Error('Falha ao buscar vendedores.');
+        const nomes = await response.json();
+
+        const select = document.getElementById('nome-vendedor');
+        select.innerHTML = '<option value="" disabled selected>Selecione um vendedor</option>';
+        nomes.forEach(nome => {
+            select.innerHTML += `<option value="${nome}">${nome}</option>`;
+        });
+    } catch (error) {
+        showToast(error.message, 'error');
     }
 }
 
@@ -187,6 +236,12 @@ export function initRecebimentoPage() {
         tabelaBody: document.getElementById('tabela-recebimentos-body'),
         spinner: document.getElementById('loading-spinner-tabela'),
         filtroGeral: document.getElementById('filtro-geral-recebimentos'),
+        // NOVO: Referências para os elementos dinâmicos do formulário
+        notaDaRuaCheckbox: document.getElementById('nota-da-rua-checkbox'),
+        transportadoraGroup: document.getElementById('transportadora-group'),
+        transportadoraInput: document.getElementById('nome-transportadora'),
+        vendedorGroup: document.getElementById('vendedor-group'),
+        vendedorSelect: document.getElementById('nome-vendedor'),
         editModal: {
             overlay: document.getElementById('edit-recebimento-modal-overlay'),
             form: document.getElementById('form-edit-recebimento'),
@@ -198,10 +253,19 @@ export function initRecebimentoPage() {
     };
 
     // CORREÇÃO: A verificação agora é robusta. Se os elementos não existirem, a função para.
-    if (!elementos.form || !elementos.editModal.overlay) {
-        // Isso não deve mais acontecer, mas é uma boa prática manter a verificação.
-        return;
-    }
+    if (!elementos.form) return;
+
+    // NOVO: Listener para o checkbox
+    elementos.notaDaRuaCheckbox.addEventListener('change', (e) => {
+        const isChecked = e.target.checked;
+        elementos.transportadoraGroup.style.display = isChecked ? 'none' : 'block';
+        elementos.transportadoraInput.required = !isChecked;
+
+        elementos.vendedorGroup.style.display = isChecked ? 'block' : 'none';
+        elementos.vendedorSelect.required = isChecked;
+    });
+
+    fetchAndPopulateVendors(); // Busca os vendedores ao carregar a página
 
     elementos.form.addEventListener('submit', handleFormSubmit);
     elementos.editModal.form.addEventListener('submit', handleEditFormSubmit);

@@ -6,6 +6,37 @@ from quadro_app.utils import registrar_log
 
 conferencias_bp = Blueprint('conferencias', __name__, url_prefix='/api/conferencias')
 
+@conferencias_bp.route('/recebimento-rua', methods=['POST'])
+def criar_recebimento_rua():
+    dados = request.get_json()
+    editor_nome = dados.get('editor_nome', 'Sistema')
+    
+    try:
+        now_iso = datetime.now(tz_cuiaba).isoformat()
+        
+        novo_recebimento = {
+            'data_recebimento': now_iso,
+            'numero_nota_fiscal': dados.get('numero_nota_fiscal'),
+            'nome_fornecedor': dados.get('nome_fornecedor'),
+            'nome_transportadora': 'NOTA DA RUA', # Identificador claro
+            'qtd_volumes': dados.get('qtd_volumes'),
+            'vendedor_nome': dados.get('vendedor_nome'), # Salva o vendedor
+            'status': 'Finalizado', # Status já é finalizado
+            'data_inicio_conferencia': now_iso,
+            'data_finalizacao': now_iso, # Data de finalização é a mesma da criação
+            'conferente_nome': 'N/A' # Não passa por conferência
+        }
+        
+        ref = db.reference('conferencias')
+        nova_ref = ref.push(novo_recebimento)
+        
+        log_detalhes = f"Recebimento de Nota da Rua (NF: '{dados.get('numero_nota_fiscal')}') para o vendedor '{dados.get('vendedor_nome')}'."
+        registrar_log(nova_ref.key, editor_nome, 'RECEBIMENTO_RUA_CRIADO', detalhes={'info': log_detalhes}, log_type='conferencias')
+        
+        return jsonify({'status': 'success', 'id': nova_ref.key}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 # Endpoint para a página "Recebimento" criar um novo espelho
 @conferencias_bp.route('/recebimento', methods=['POST'])
 def criar_recebimento():
@@ -23,6 +54,7 @@ def criar_recebimento():
             'data_inicio_conferencia': None,
             'data_finalizacao': None,
             'conferente_nome': ''
+            # O campo 'vendedor_nome' não existe neste fluxo
         }
         
         ref = db.reference('conferencias')

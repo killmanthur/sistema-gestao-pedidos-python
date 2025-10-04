@@ -22,14 +22,19 @@ function criarCardElement(item, tipo) {
     card.classList.add(tipo === 'aguardando' ? 'card--status-awaiting' : 'card--status-progress');
 
     let actions = '';
+    // MUDANÇA: Adiciona um container para as informações de tempo
+    let timeInfoHTML = '';
+
     if (tipo === 'aguardando') {
-        // Botão para abrir o modal de seleção
         actions = `<button class="btn btn--primary" data-action="open-conferente-modal">Adicionar Conferente</button>`;
     } else { // emConferencia
         actions = `<button class="btn btn--success" data-action="finalize">Finalizar</button>`;
+        // Popula as informações de tempo apenas para a coluna "Em Conferência"
+        if (item.data_inicio_conferencia) {
+            timeInfoHTML = `<p><small><strong>Início:</strong> ${formatarData(item.data_inicio_conferencia)}</small></p>`;
+        }
     }
 
-    // Exibe a lista de conferentes, se houver
     let conferentesHTML = '';
     if (item.conferentes && item.conferentes.length > 0) {
         conferentesHTML = `<p><strong>Conferente(s):</strong> ${item.conferentes.join(', ')}</p>`;
@@ -43,6 +48,7 @@ function criarCardElement(item, tipo) {
             <p><strong>Volumes:</strong> ${item.qtd_volumes}</p>
             <p><strong>Recebido em:</strong> ${formatarData(item.data_recebimento)}</p>
             ${conferentesHTML}
+            ${timeInfoHTML}
         </div>
         <div class="card__footer">
             <div class="card__actions">${actions}</div>

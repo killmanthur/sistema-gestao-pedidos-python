@@ -55,7 +55,6 @@ async function handleEditFormSubmit(event) {
     }
 }
 
-
 function criarCardElement(item) {
     const card = document.createElement('div');
     card.className = 'card';
@@ -86,6 +85,23 @@ function criarCardElement(item) {
     const editBtn = `<button class="btn-icon" title="Editar Informações da NF" data-action="edit"><img src="/static/edit.svg" alt="Editar"></button>`;
     const deleteBtn = `<button class="btn-icon" title="Excluir" data-action="delete"><img src="/static/delete.svg" alt="Excluir"></button>`;
 
+    let responsavelHTML = '';
+    if (item.vendedor_nome) {
+        responsavelHTML = `<p><strong>Vendedor:</strong> ${item.vendedor_nome}</p>`;
+    } else {
+        responsavelHTML = `<p><strong>Conferente:</strong> ${item.conferente_nome}</p>`;
+    }
+
+    // MUDANÇA: Adiciona o horário de início e ajusta os rótulos
+    let timeInfoHTML = '';
+    if (item.data_inicio_conferencia) {
+        timeInfoHTML += `<p><strong>Início Conferência:</strong> ${formatarData(item.data_inicio_conferencia)}</p>`;
+    }
+    if (item.data_finalizacao) {
+        timeInfoHTML += `<p><strong>Finalização:</strong> ${formatarData(item.data_finalizacao)}</p>`;
+    }
+
+
     card.innerHTML = `
         <div class="card__header">
             <h3>NF: ${item.numero_nota_fiscal}</h3>
@@ -93,8 +109,8 @@ function criarCardElement(item) {
         </div>
         <div class="card__body">
             <p><strong>Fornecedor:</strong> ${item.nome_fornecedor}</p>
-            <p><strong>Conferente:</strong> ${item.conferente_nome}</p>
-            <p><strong>Finalizado em:</strong> ${formatarData(item.data_finalizacao)}</p>
+            ${responsavelHTML}
+            ${timeInfoHTML}
             ${observacoesHTML}
         </div>
         <div class="card__footer">
@@ -104,7 +120,6 @@ function criarCardElement(item) {
         </div>`;
 
     card.querySelector('[data-action="manage"]')?.addEventListener('click', () => openResolverModal(item));
-    // CORREÇÃO: O botão de editar agora abre o modal local
     card.querySelector('[data-action="edit"]')?.addEventListener('click', () => openEditModal(item));
     card.querySelector('[data-action="delete"]')?.addEventListener('click', () => handleDelete(item.id));
 
