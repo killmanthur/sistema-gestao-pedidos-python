@@ -6,32 +6,62 @@ from quadro_app.utils import registrar_log
 
 separacoes_bp = Blueprint('separacoes', __name__, url_prefix='/api/separacoes')
 
-# --- FUNÇÕES AUXILIARES DA FILA (LÓGICA ORIGINAL RESTAURADA) ---
+# --- FUNÇÕES AUXILIARES DA FILA (LÓGICA CORRIGIDA) ---
 
 FILA_PATH = 'configuracoes/fila_separadores'
 STATUS_PATH = 'configuracoes/status_separadores'
 
-def _get_fila_ativos():
-    config = db.reference(FILA_PATH).get() or {}
-    return config.get('ativos', [])
-
 def _get_fila_separadores():
-    """Busca a lista simples de separadores da fila."""
-    fila = db.reference(FILA_PATH).get()
-    # Se a fila não existe ou não é uma lista, cria uma nova a partir dos usuários
-    if not fila or not isinstance(fila, list):
+    """
+    MUDANÇA: Esta função agora é "auto-corretiva". Ela busca a lista canônica de
+    separadores do nó de usuários, a reconcilia com a ordem da fila existente
+    e remove usuários que não existem mais ou adiciona novos.
+    """
+    try:
+        # 1. Pega a lista de todos os usuários que são REALMENTE separadores
         todos_separadores_ref = db.reference('usuarios').order_by_child('role').equal_to('Separador').get()
         if not todos_separadores_ref:
             return []
-        # Filtra usuários com nome "separacao" para não aparecerem na fila
-        fila = sorted([user['nome'] for user in todos_separadores_ref.values() if user.get('nome','').lower() != 'separacao'])
-        db.reference(FILA_PATH).set(fila)
-    return fila
+        
+        # Lista canônica de nomes de separadores válidos, excluindo o usuário genérico
+        separadores_validos = {
+            user['nome'] for user in todos_separadores_ref.values() 
+            if user.get('nome','').lower() != 'separacao'
+        }
+
+        # 2. Pega a ordem da fila que está salva no banco
+        fila_salva = db.reference(FILA_PATH).get() or []
+        if not isinstance(fila_salva, list): # Garante que seja uma lista
+             fila_salva = []
+
+        # 3. Reconcilia as listas para criar a nova fila correta
+        nova_fila = []
+        
+        # Mantém a ordem dos separadores que ainda existem
+        for nome in fila_salva:
+            if nome in separadores_validos:
+                nova_fila.append(nome)
+        
+        # Adiciona novos separadores (que não estavam na fila salva) ao final
+        for nome in sorted(list(separadores_validos)):
+            if nome not in nova_fila:
+                nova_fila.append(nome)
+
+        # 4. Salva a fila corrigida de volta no banco para consistência
+        # Isso garante que usuários excluídos sejam limpos da configuração
+        db.reference(FILA_PATH).set(nova_fila)
+        
+        return nova_fila
+
+    except Exception as e:
+        print(f"ERRO CRÍTICO ao obter/corrigir fila de separadores: {e}")
+        return []
+
 
 def _atualizar_fila_separadores(separador_designado):
     """Move o separador designado para o final da fila."""
     try:
-        fila_atual = _get_fila_separadores()
+        fila_atual = _get_fila_separadores() # Agora usa a função corrigida
         if separador_designado in fila_atual:
             fila_atual.remove(separador_designado)
             fila_atual.append(separador_designado)
@@ -43,6 +73,7 @@ def _atualizar_fila_separadores(separador_designado):
 
 
 def criar_notificacao_separacao(destinatario_nome, mensagem, autor_nome):
+    # ... (código existente sem alterações)
     try:
         usuarios_ref = db.reference('usuarios')
         destinatario_query = usuarios_ref.order_by_child('nome').equal_to(destinatario_nome).get()
@@ -65,6 +96,7 @@ def criar_notificacao_separacao(destinatario_nome, mensagem, autor_nome):
 
 @separacoes_bp.route('/paginadas', methods=['POST'])
 def get_separacoes_paginadas():
+    # ... (código existente sem alterações)
     try:
         dados = request.get_json()
         page = dados.get('page', 0)
@@ -104,9 +136,9 @@ def get_separacoes_paginadas():
         print(f"ERRO em get_separacoes_paginadas: {e}")
         return jsonify({'error': str(e)}), 500
 
-
 @separacoes_bp.route('', methods=['POST'])
 def criar_separacao():
+    # ... (código existente sem alterações)
     dados = request.get_json()
     editor_nome = dados.get('editor_nome', 'Sistema')
     num_movimentacao = dados.get('numero_movimentacao')
@@ -146,6 +178,19 @@ def criar_separacao():
         return jsonify({'status': 'success', 'id': nova_ref.key}), 201
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+# ... (o resto do arquivo com editar_separacao, adicionar_observacao, etc. permanece igual) ...
+
+# MUDANÇA: O endpoint da fila agora usa a nova função auto-corretiva
+@separacoes_bp.route('/fila-separadores', methods=['GET'])
+def get_fila_endpoint():
+    try:
+        fila = _get_fila_separadores()
+        return jsonify(fila)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# ... (o resto do arquivo pode permanecer o mesmo) ...
 
 @separacoes_bp.route('/<string:separacao_id>', methods=['PUT'])
 def editar_separacao(separacao_id):
@@ -303,15 +348,9 @@ def atualizar_status_separacao(separacao_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
     
- 
 @separacoes_bp.route('/status-todos-separadores', methods=['GET'])
 def get_status_todos_separadores():
-    """
-    Retorna uma lista de TODOS os usuários com a role 'Separador' e 
-    indica se estão ativos na fila ou não.
-    """
     try:
-        # 1. Pega todos os usuários que são separadores
         todos_separadores_ref = db.reference('usuarios').order_by_child('role').equal_to('Separador').get()
         if not todos_separadores_ref:
             return jsonify([])
@@ -321,13 +360,11 @@ def get_status_todos_separadores():
             if user.get('nome', '').lower() != 'separacao'
         ])
         
-        # 2. Pega os status atuais de ativação
         status_atual = db.reference(STATUS_PATH).get() or {}
 
-        # 3. Combina as informações
         resultado = []
         for nome in all_separator_names:
-            is_active = status_atual.get(nome, {}).get('ativo', True) # Padrão é True se não definido
+            is_active = status_atual.get(nome, {}).get('ativo', True)
             resultado.append({'nome': nome, 'ativo': is_active})
             
         return jsonify(resultado)
@@ -341,7 +378,7 @@ def atualizar_fila_e_status():
         if not isinstance(nomes_ativos_recebidos, list):
             return jsonify({'error': 'O corpo da requisição deve ser uma lista de nomes.'}), 400
 
-        fila_antiga = _get_fila_ativos()
+        fila_antiga = (db.reference(f'{FILA_PATH}/ativos').get() or [])
         
         nova_fila_ordenada = [nome for nome in fila_antiga if nome in nomes_ativos_recebidos]
         
@@ -356,45 +393,6 @@ def atualizar_fila_e_status():
         
         db.reference(FILA_PATH).set({'ativos': nova_fila_ordenada, 'inativos': inativos})
         return jsonify({'status': 'success'})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@separacoes_bp.route('/fila-separadores/toggle', methods=['POST'])
-def toggle_separador_fila():
-    dados = request.get_json()
-    nome = dados.get('nome')
-    if not nome:
-        return jsonify({'error': 'Nome do separador não fornecido.'}), 400
-    
-    try:
-        fila_ref = db.reference(FILA_PATH)
-        config = fila_ref.get() or {'ativos': [], 'inativos': []}
-        ativos = config.get('ativos', [])
-        inativos = config.get('inativos', [])
-
-        if nome in ativos:
-            ativos.remove(nome)
-            if nome not in inativos: inativos.append(nome)
-        elif nome in inativos:
-            inativos.remove(nome)
-            if nome not in ativos:
-                # LÓGICA CORRIGIDA: Insere no início da fila de ativos
-                ativos.insert(0, nome)
-        else:
-            if nome not in ativos:
-                ativos.insert(0, nome)
-
-        fila_ref.set({'ativos': ativos, 'inativos': inativos})
-        return jsonify({'status': 'success'}), 200
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-# REVERTIDO: get_fila_endpoint volta a retornar a lista simples
-@separacoes_bp.route('/fila-separadores', methods=['GET'])
-def get_fila_endpoint():
-    try:
-        fila = _get_fila_separadores()
-        return jsonify(fila)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
