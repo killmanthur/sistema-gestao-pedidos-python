@@ -3,14 +3,17 @@ import { showToast } from '../toasts.js';
 import { formatarData, toggleButtonLoading } from '../ui.js';
 
 let elementos = {};
-let listasUsuarios = { vendedores: [], separadores: [], expedicao: [] }; // MUDANÇA: Adicionado 'expedicao'
+let listasUsuarios = { vendedores: [], separadores: [], expedicao: [] };
 
-// --- ESTADO DA PÁGINA PARA PAGINAÇÃO ---
+// --- ESTADO DA PÁGINA PARA PAGINAÇÃO E ATUALIZAÇÃO AUTOMÁTICA ---
 let currentPage = 0;
 let isLoading = false;
 let hasMore = true;
 let currentSearchTerm = '';
 let debounceTimer;
+let autoRefreshInterval = null; // NOVO: Variável para o nosso intervalo
+
+// ... (O resto das funções como getSeparatorColor, populateSelect, openEditModalForManager, etc. permanecem exatamente iguais) ...
 
 // --- LÓGICA DE CORES PARA SEPARADORES (PALETA CORRIGIDA) ---
 const SEPARATOR_COLORS = [
@@ -40,7 +43,6 @@ function getSeparatorColor(separatorName) {
 function populateSelect(selectElement, dataList, selectedValue) {
     selectElement.innerHTML = '';
     const placeholder = selectElement.dataset.placeholder || 'Selecione';
-    // Adiciona o placeholder como a primeira opção desabilitada
     selectElement.innerHTML = `<option value="" disabled>${placeholder}</option>`;
 
     dataList.forEach(nome => {
@@ -52,7 +54,6 @@ function populateSelect(selectElement, dataList, selectedValue) {
         }
         selectElement.appendChild(option);
     });
-    // Se nenhum valor foi selecionado, o placeholder permanece visível
     if (!selectedValue) {
         selectElement.value = "";
     }
@@ -69,10 +70,8 @@ function openEditModalForManager(separacao) {
 
     populateSelect(document.getElementById('edit-vendedor-nome'), listasUsuarios.vendedores, separacao.vendedor_nome);
     populateSelect(document.getElementById('edit-separador-nome'), listasUsuarios.separadores, separacao.separador_nome);
-    // MUDANÇA: Popula o novo select de conferente
     const conferenteSelect = document.getElementById('edit-conferente-nome');
     populateSelect(conferenteSelect, listasUsuarios.expedicao, separacao.conferente_nome);
-    // Adiciona a opção de remover/limpar o conferente
     conferenteSelect.insertAdjacentHTML('afterbegin', '<option value="">-- Remover Conferente --</option>');
     if (!separacao.conferente_nome) {
         conferenteSelect.value = "";
@@ -102,7 +101,6 @@ async function handleManagerEditFormSubmit(event) {
         nome_cliente: document.getElementById('edit-nome-cliente').value,
         vendedor_nome: document.getElementById('edit-vendedor-nome').value,
         separador_nome: document.getElementById('edit-separador-nome').value,
-        // MUDANÇA: Envia o valor do novo campo
         conferente_nome: document.getElementById('edit-conferente-nome').value,
         editor_nome: firebase.auth().currentUser.displayName,
     };
@@ -118,7 +116,7 @@ async function handleManagerEditFormSubmit(event) {
 
         showToast('Separação salva com sucesso!', 'success');
         document.getElementById('edit-separacao-modal-overlay').style.display = 'none';
-        await loadTableData(true); // Recarrega a tabela do zero
+        await loadTableData(true);
 
     } catch (error) {
         showToast(error.message, 'error');
@@ -204,7 +202,6 @@ async function loadTableData(reload = false) {
 
 async function fetchInitialUserData() {
     try {
-        // MUDANÇA: Busca também os nomes da expedição
         const [vendedoresRes, separadoresRes, expedicaoRes] = await Promise.all([
             fetch('/api/usuarios/vendedor-nomes'),
             fetch('/api/usuarios/separador-nomes'),
@@ -219,7 +216,6 @@ async function fetchInitialUserData() {
     }
 }
 
-
 function handleTableActions(event) {
     const target = event.target;
     if (!target.classList.contains('btn-edit')) return;
@@ -231,6 +227,22 @@ function handleTableActions(event) {
 
     openEditModalForManager(separacao);
 }
+
+// NOVO: Função para iniciar a atualização automática
+function startAutoRefresh() {
+    // Limpa qualquer intervalo anterior para evitar múltiplos loops
+    if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+
+    autoRefreshInterval = setInterval(async () => {
+        // Só atualiza se não houver uma busca ativa e o usuário estiver no topo da página
+        // Isso evita interromper a rolagem ou uma busca do usuário
+        if (currentSearchTerm === '' && window.scrollY < 100) {
+            console.log("Atualizando automaticamente a tabela de gerenciamento...");
+            await loadTableData(true); // O 'true' recarrega do zero
+        }
+    }, 15000); // 15000 ms = 15 segundos
+}
+
 
 export async function initGerenciarSeparacoesPage() {
     elementos = {
@@ -249,9 +261,14 @@ export async function initGerenciarSeparacoesPage() {
 
     elementos.filtroInput.addEventListener('input', () => {
         clearTimeout(debounceTimer);
+        // NOVO: Para o auto-refresh enquanto o usuário digita
+        if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+
         debounceTimer = setTimeout(() => {
             currentSearchTerm = elementos.filtroInput.value;
             loadTableData(true);
+            // NOVO: Reinicia o auto-refresh após a busca
+            startAutoRefresh();
         }, 500);
     });
 
@@ -271,4 +288,7 @@ export async function initGerenciarSeparacoesPage() {
 
     await fetchInitialUserData();
     await loadTableData(true);
+
+    // NOVO: Inicia a atualização automática quando a página carrega
+    startAutoRefresh();
 }

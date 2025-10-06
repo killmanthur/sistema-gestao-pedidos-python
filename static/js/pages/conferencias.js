@@ -1,4 +1,3 @@
-// static/js/pages/conferencias.js
 import { AppState } from '../state.js';
 import { db } from '../firebase.js';
 import { showToast } from '../toasts.js';
@@ -22,14 +21,12 @@ function criarCardElement(item, tipo) {
     card.classList.add(tipo === 'aguardando' ? 'card--status-awaiting' : 'card--status-progress');
 
     let actions = '';
-    // MUDANÇA: Adiciona um container para as informações de tempo
     let timeInfoHTML = '';
 
     if (tipo === 'aguardando') {
         actions = `<button class="btn btn--primary" data-action="open-conferente-modal">Adicionar Conferente</button>`;
     } else { // emConferencia
         actions = `<button class="btn btn--success" data-action="finalize">Finalizar</button>`;
-        // Popula as informações de tempo apenas para a coluna "Em Conferência"
         if (item.data_inicio_conferencia) {
             timeInfoHTML = `<p><small><strong>Início:</strong> ${formatarData(item.data_inicio_conferencia)}</small></p>`;
         }
@@ -83,13 +80,9 @@ function openConferenteModal(id) {
     const modal = state.elementos.addConferenteModal;
     modal.form.dataset.id = id;
     const container = modal.form.querySelector('#conferentes-checkbox-container');
-    container.innerHTML = ''; // Limpa checkboxes antigos
+    container.innerHTML = '';
     state.listaEstoquistas.forEach(nome => {
-        container.innerHTML += `
-            <label>
-                <input type="checkbox" name="conferente" value="${nome}"> ${nome}
-            </label>
-        `;
+        container.innerHTML += `<label><input type="checkbox" name="conferente" value="${nome}"> ${nome}</label>`;
     });
     modal.overlay.style.display = 'flex';
 }
@@ -105,7 +98,7 @@ async function handleAddConferenteSubmit(event) {
         return;
     }
 
-    const btn = modal.form.querySelector('button[type="submit"]');
+    const btn = modal.btnConfirmar; // Usa a referência correta
     toggleButtonLoading(btn, true, 'Iniciando...');
     try {
         await fetch(`/api/conferencias/${id}/iniciar`, {
@@ -113,7 +106,7 @@ async function handleAddConferenteSubmit(event) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 conferentes: selectedConferentes,
-                editor_nome: AppState.currentUser.nome // Quem clicou para iniciar
+                editor_nome: AppState.currentUser.nome
             })
         });
         showToast('Conferência iniciada!', 'success');
@@ -125,45 +118,51 @@ async function handleAddConferenteSubmit(event) {
     }
 }
 
-
 function openFinalizeModal(item) {
     const modal = state.elementos.finalizeModal;
     modal.form.dataset.id = item.id;
+    // IDs ATUALIZADOS
     modal.obsInput.value = '';
+    modal.checkPendencia.checked = false;
+    modal.checkAlteracao.checked = false;
     modal.overlay.style.display = 'flex';
 }
 
-async function handleFinalizeSubmit(event, comPendencia) {
+async function handleFinalizeSubmit(event) {
     event.preventDefault();
     const modal = state.elementos.finalizeModal;
     const id = modal.form.dataset.id;
+    // IDs ATUALIZADOS
     const observacao = modal.obsInput.value;
-    const btn = comPendencia ? modal.btnPendencia : modal.btnOk;
+    const temPendencia = modal.checkPendencia.checked;
+    const solicitaAlteracao = modal.checkAlteracao.checked;
+    const btn = modal.btnConfirmar;
 
-    if (comPendencia && !observacao.trim()) {
-        showToast('Para finalizar com pendência, a observação é obrigatória.', 'error');
+
+    if ((temPendencia || solicitaAlteracao) && !observacao.trim()) {
+        showToast('A observação é obrigatória quando há qualquer tipo de divergência.', 'error');
         return;
     }
 
-    toggleButtonLoading(btn, true, 'Finalizando...');
+    toggleButtonLoading(btn, true, 'Confirmando...');
     try {
-        const item = state.emConferencia.find(i => i.id === id);
-        const response = await fetch(`/api/conferencias/${id}/finalizar`, {
+        const response = await fetch(`/api/conferencias/${id}/finalizar-conferencia`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                editor_nome: AppState.currentUser.nome, // Quem está finalizando
-                com_pendencia: comPendencia,
-                observacao: observacao
+                editor_nome: AppState.currentUser.nome,
+                observacao: observacao,
+                tem_pendencia_fornecedor: temPendencia,
+                solicita_alteracao: solicitaAlteracao
             })
         });
         if (!response.ok) throw new Error((await response.json()).error);
-        showToast(`Conferência finalizada ${comPendencia ? 'com pendência' : 'com sucesso'}!`, 'success');
+        showToast('Finalização registrada com sucesso!', 'success');
         modal.overlay.style.display = 'none';
     } catch (error) {
         showToast(`Erro: ${error.message}`, 'error');
     } finally {
-        toggleButtonLoading(btn, false, comPendencia ? 'Finalizar com Pendência' : 'Finalizar OK');
+        toggleButtonLoading(btn, false, 'Confirmar Finalização');
     }
 }
 
@@ -186,28 +185,29 @@ export function initConferenciasPage() {
         addConferenteModal: {
             overlay: document.getElementById('add-conferente-modal-overlay'),
             form: document.getElementById('form-add-conferente'),
-            // NOVO: Referência para o botão de cancelar
-            cancelButton: document.getElementById('btn-cancel-add-conferente')
+            cancelButton: document.getElementById('btn-cancel-add-conferente'),
+            btnConfirmar: document.getElementById('btn-confirmar-add-conferente') // Referência com ID corrigido
         },
         finalizeModal: {
             overlay: document.getElementById('finalize-modal-overlay'),
-            form: document.getElementById('form-finalize'),
-            obsInput: document.getElementById('finalize-observacao'),
-            btnOk: document.getElementById('btn-finalize-ok'),
-            btnPendencia: document.getElementById('btn-finalize-pendencia'),
+            // IDs ATUALIZADOS PARA SEREM ÚNICOS DA PÁGINA DE CONFERÊNCIAS
+            form: document.getElementById('form-finalize-conferencia'),
+            obsInput: document.getElementById('finalize-observacao-conferencia'),
+            checkPendencia: document.getElementById('checkbox-pendencia-fornecedor-conferencia'),
+            checkAlteracao: document.getElementById('checkbox-solicitar-alteracao-conferencia'),
+            btnConfirmar: document.getElementById('btn-confirmar-finalizacao-conferencia')
         }
     };
 
+    // Verifica se os elementos principais existem antes de adicionar listeners
+    if (!state.elementos.filtroInput || !state.elementos.addConferenteModal.form || !state.elementos.finalizeModal.form) {
+        console.error("Elementos essenciais da página de conferências não foram encontrados. A inicialização foi interrompida.");
+        return;
+    }
+
     state.elementos.filtroInput.addEventListener('input', renderizarColunas);
-
     state.elementos.addConferenteModal.form.addEventListener('submit', handleAddConferenteSubmit);
-    // NOVO: Listener para o botão de cancelar
-    state.elementos.addConferenteModal.cancelButton.addEventListener('click', () => {
-        state.elementos.addConferenteModal.overlay.style.display = 'none';
-    });
-
-    state.elementos.finalizeModal.btnOk.addEventListener('click', (e) => handleFinalizeSubmit(e, false));
-    state.elementos.finalizeModal.form.addEventListener('submit', (e) => handleFinalizeSubmit(e, true));
+    state.elementos.finalizeModal.form.addEventListener('submit', handleFinalizeSubmit);
 
     fetchInitialData();
 

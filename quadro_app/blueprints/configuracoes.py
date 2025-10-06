@@ -5,8 +5,7 @@ from .usuarios import admin_required # Reutiliza o decorador de admin
 
 config_bp = Blueprint('configuracoes', __name__, url_prefix='/api/configuracoes')
 
-# MUDANÇA: Adicionada a nova role "Recepção"
-ROLES_VALIDAS = ["Admin", "Comprador", "Vendedor", "Estoque", "Expedição", "Recepção", "Separador"]
+ROLES_VALIDAS = ["Admin", "Comprador", "Vendedor", "Estoque", "Expedição", "Recepção", "Separador", "Contabilidade"]
 
 PERMISSOES_SEPARACAO_VALIDAS = [
     "pode_criar_separacao",
@@ -23,10 +22,14 @@ PERMISSOES_SUGESTOES_VALIDAS = [
 ]
 
 PERMISSOES_CONFERENCIA_VALIDAS = [
-    "pode_editar_conferencia",
-    "pode_deletar_conferencia",
-    "pode_ver_botoes_conferencia_finalizada"
+    "pode_deletar_conferencia"
 ]
+
+# NOVA LISTA DE PERMISSÕES
+PERMISSOES_PENDENCIAS_VALIDAS = [
+    "pode_editar_pendencia"
+]
+
 
 @config_bp.route('/permissoes', methods=['GET'])
 @admin_required
@@ -46,8 +49,8 @@ def set_permissoes():
     dados = request.get_json()
     try:
         permissoes_validadas = {}
-        # MUDANÇA: Inclui as novas permissões na validação
-        todas_permissoes_validas = PERMISSOES_SEPARACAO_VALIDAS + PERMISSOES_SUGESTOES_VALIDAS + PERMISSOES_CONFERENCIA_VALIDAS
+        # CORREÇÃO: Adiciona a nova lista à validação geral
+        todas_permissoes_validas = PERMISSOES_SEPARACAO_VALIDAS + PERMISSOES_SUGESTOES_VALIDAS + PERMISSOES_CONFERENCIA_VALIDAS + PERMISSOES_PENDENCIAS_VALIDAS
 
         for role, perms in dados.items():
             if role in ROLES_VALIDAS:

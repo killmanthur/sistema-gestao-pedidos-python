@@ -23,26 +23,24 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# ... (rotas get_all_users, create_user, update_user, delete_user, set_user_password) ...
 @usuarios_bp.route('', methods=['GET'])
 @admin_required
 def get_all_users():
     try:
         all_users_auth = auth.list_users().iterate_all()
         all_users_db = db.reference('usuarios').get() or {}
-        perms_ref = db.reference('configuracoes/permissoes_roles').get() or {}
         
         user_list = []
         for user_auth in all_users_auth:
             user_db_data = all_users_db.get(user_auth.uid, {})
-            role = user_db_data.get('role', 'Sem Role')
             user_list.append({
                 "uid": user_auth.uid,
                 "email": user_auth.email,
                 "nome": user_db_data.get('nome', 'N/A'),
-                "role": role,
+                "role": user_db_data.get('role', 'Sem Role'),
                 "accessible_pages": user_db_data.get('accessible_pages', []),
-                "permissions": perms_ref.get(role, {})
+                # LÓGICA ALTERADA: Pega as permissões de dentro do próprio usuário
+                "permissions": user_db_data.get('permissions', {}) 
             })
         return jsonify(user_list)
     except Exception as e:
@@ -57,14 +55,14 @@ def create_user():
         return jsonify({"error": "Todos os campos são obrigatórios."}), 400
     try:
         new_user = auth.create_user(email=email, password=password)
+        # LÓGICA ALTERADA: Salva tudo no nó do usuário, incluindo as permissões
         db.reference(f'usuarios/{new_user.uid}').set({
             "nome": nome,
             "role": role,
             "email": email,
-            "accessible_pages": data.get('accessible_pages', [])
+            "accessible_pages": data.get('accessible_pages', []),
+            "permissions": data.get('permissions', {}) # Salva permissões individuais
         })
-        if role and 'permissions' in data:
-            db.reference(f'configuracoes/permissoes_roles/{role}').set(data.get('permissions', {}))
         return jsonify({"status": "success", "uid": new_user.uid}), 201
     except Exception as e:
         if 'new_user' in locals(): auth.delete_user(new_user.uid)
@@ -77,22 +75,26 @@ def update_user(uid):
     try:
         if 'email' in data: auth.update_user(uid, email=data['email'])
         
-        role = data.get('role')
+        # LÓGICA ALTERADA: Monta um objeto de atualização para o nó do usuário
         db_updates = {
             'nome': data.get('nome'),
-            'role': role,
+            'role': data.get('role'),
             'email': data.get('email'),
-            'accessible_pages': data.get('accessible_pages', [])
+            'accessible_pages': data.get('accessible_pages'),
+            'permissions': data.get('permissions') # Salva as permissões no usuário
         }
-        db.reference(f'usuarios/{uid}').update({k: v for k, v in db_updates.items() if v is not None})
         
-        if role and 'permissions' in data:
-            db.reference(f'configuracoes/permissoes_roles/{role}').set(data.get('permissions', {}))
+        # Filtra valores None para não apagar campos existentes sem querer
+        updates_filtradas = {k: v for k, v in db_updates.items() if v is not None}
+        
+        db.reference(f'usuarios/{uid}').update(updates_filtradas)
 
         return jsonify({"status": "success"})
     except Exception as e:
         return jsonify({"error": f"Erro ao atualizar usuário: {str(e)}"}), 500
 
+
+# As funções abaixo não precisam de alteração, pois apenas leem nomes e roles
 @usuarios_bp.route('/<string:uid>', methods=['DELETE'])
 @admin_required
 def delete_user(uid):

@@ -82,7 +82,8 @@
     <div class="modal-content">
         <div class="modal-header">
             <h2 id="edit-recebimento-modal-title">Editar Recebimento</h2>
-            <button class="close-modal">×</button>
+            <!-- CORREÇÃO AQUI -->
+            <button class="close-modal close-modal-icon">×</button>
         </div>
         <form id="form-edit-recebimento" novalidate>
             <div class="modal-body">
@@ -106,12 +107,43 @@
             <div class="modal-footer">
                 <button type="button" id="btn-excluir-recebimento" class="btn btn--danger"
                     style="margin-right: auto;">Excluir</button>
-                <button type="button" id="btn-resolver-pendencia" class="btn btn--primary"
-                    style="display: none;">Resolver Pendência</button>
-                <button type="button" id="btn-cancel-edit-recebimento" class="btn btn--secondary">Cancelar</button>
+                <!-- CORREÇÃO AQUI (já estava certo, mas confirmando) -->
+                <button type="button" id="btn-cancel-edit-recebimento"
+                    class="btn btn--secondary close-modal">Cancelar</button>
                 <button type="submit" id="btn-save-edit-recebimento" class="btn btn--primary">Salvar Alterações</button>
             </div>
         </form>
     </div>
 </div>
+
+<div id="finalize-modal-overlay" class="modal-overlay" style="display:none;">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <!-- CORREÇÃO 1: Adicione o ID ao h2 -->
+            <h2 id="finalize-modal-title">Finalizar Nota da Rua</h2>
+            <button class="close-modal close-modal-icon">×</button>
+        </div>
+        <form id="form-finalize">
+            <div class="modal-body">
+                <p><strong>Finalizar OK:</strong> A nota será registrada como finalizada diretamente.</p>
+                <p><strong>Solicitar Alteração:</strong> A nota será enviada para a contabilidade com a sua observação.
+                    <strong>A observação é obrigatória neste caso.</strong>
+                </p>
+                <hr style="margin: 1rem 0;">
+                <div class="form-group">
+                    <label for="finalize-observacao">Observação (Opcional para Finalizar OK)</label>
+                    <textarea id="finalize-observacao" rows="4"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn--secondary close-modal">Cancelar</button>
+                <!-- CORREÇÃO 2: Garanta que este seja type="button" -->
+                <button type="button" id="btn-finalize-ok" class="btn btn--success">Finalizar OK</button>
+                <!-- CORREÇÃO 3: Garanta que este seja type="submit" para acionar o form -->
+                <button type="submit" id="btn-solicitar-alteracao" class="btn btn--primary">Solicitar Alteração</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 {% endblock %}

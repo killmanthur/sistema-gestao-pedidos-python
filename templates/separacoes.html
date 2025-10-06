@@ -68,7 +68,8 @@
     <div class="modal-content" style="max-width: 600px;">
         <div class="modal-header">
             <h2 id="obs-separacao-modal-title">Observação da Separação</h2>
-            <button class="close-modal">×</button>
+            <!-- CORREÇÃO AQUI -->
+            <button class="close-modal close-modal-icon">×</button>
         </div>
         <form id="form-obs-separacao" novalidate>
             <div class="modal-body">
@@ -78,7 +79,9 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" id="btn-cancel-obs-separacao" class="btn btn--secondary">Cancelar</button>
+                <!-- CORREÇÃO AQUI: Adicionando a classe 'close-modal' -->
+                <button type="button" id="btn-cancel-obs-separacao"
+                    class="btn btn--secondary close-modal">Cancelar</button>
                 <button type="submit" id="btn-save-obs-separacao" class="btn btn--primary">Salvar Observação</button>
             </div>
         </form>
@@ -89,7 +92,8 @@
     <div class="modal-content" style="max-width: 500px;">
         <div class="modal-header">
             <h2>Gerenciar Fila de Separação</h2>
-            <button class="close-modal">×</button>
+            <!-- CORREÇÃO AQUI -->
+            <button class="close-modal close-modal-icon">×</button>
         </div>
         <form id="form-gerenciar-fila">
             <div class="modal-body">
@@ -100,7 +104,8 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" id="btn-cancel-fila" class="btn btn--secondary">Cancelar</button>
+                <!-- CORREÇÃO AQUI: Adicionando a classe 'close-modal' -->
+                <button type="button" id="btn-cancel-fila" class="btn btn--secondary close-modal">Cancelar</button>
                 <button type="submit" id="btn-save-fila" class="btn btn--primary">Salvar Alterações</button>
             </div>
         </form>

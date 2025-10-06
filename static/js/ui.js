@@ -119,10 +119,10 @@ export function setupUI() {
     const logoutItem = document.getElementById('li-logout'); // Seleciona pelo ID
 
     if (user && user.isLoggedIn) {
-        // Remove a classe do body, não precisamos mais dela para isso
-        document.body.classList.remove('user-logged-in');
-
         navItems.forEach(item => {
+            // Ignora os containers de dropdown na primeira passada
+            if (item.classList.contains('nav-item--dropdown')) return;
+
             const pageKey = item.dataset.page;
             if (pageKey) { // Garante que só vamos avaliar itens com data-page
                 const canAccess = user.role === 'Admin' || (user.accessible_pages && user.accessible_pages.includes(pageKey));
@@ -130,14 +130,16 @@ export function setupUI() {
             }
         });
 
-        // Controla a visibilidade dos menus dropdown
+        // --- LÓGICA ADICIONADA ---
+        // Agora, verifica cada dropdown para ver se ele deve ser exibido
         mainNav.querySelectorAll('.nav-item--dropdown').forEach(dropdown => {
-            // Se houver pelo menos um item visível dentro do dropdown, mostra o dropdown inteiro
+            // Procura por pelo menos um item filho que esteja visível
             const hasVisibleItem = dropdown.querySelector('.dropdown-menu .nav-item[style*="display: list-item"]');
+
+            // Se encontrou um item visível, mostra o dropdown. Senão, esconde.
             dropdown.style.display = hasVisibleItem ? 'list-item' : 'none';
         });
 
-        // CORREÇÃO: Controla o botão Sair aqui
         if (logoutItem) logoutItem.style.display = 'list-item';
 
     } else {
@@ -150,7 +152,6 @@ export function setupUI() {
     navContainer.style.visibility = 'visible';
     navContainer.style.display = 'block';
 }
-
 
 // --- Funções do Modal de Histórico/Log ---
 

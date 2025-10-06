@@ -72,26 +72,24 @@ export function setupAuthObserver() {
                     return;
                 }
 
-                const userRole = userData.role;
-                const permsRef = db.ref(`configuracoes/permissoes_roles/${userRole}`);
-                const permsSnapshot = await permsRef.once('value');
+                // LÓGICA ALTERADA: Removemos a busca em 'permissoes_roles'
+                // e pegamos as permissões diretamente do 'userData'.
 
-                // CORREÇÃO: Criamos um objeto 'data' limpo apenas com o que precisamos.
                 const currentUserData = {
                     isLoggedIn: true,
                     data: {
                         uid: user.uid,
                         email: user.email,
-                        displayName: userData.nome // Pegamos o nome do nosso DB
+                        displayName: userData.nome
                     },
                     role: userData.role,
                     nome: userData.nome,
                     accessible_pages: userData.accessible_pages || [],
-                    permissions: permsSnapshot.val() || {}
+                    // Pega as permissões individuais do usuário
+                    permissions: userData.permissions || {}
                 };
 
                 AppState.currentUser = currentUserData;
-                // Agora, JSON.stringify vai funcionar porque currentUserData é um objeto simples.
                 sessionStorage.setItem('currentUser', JSON.stringify(currentUserData));
 
                 setupUI();
@@ -107,6 +105,7 @@ export function setupAuthObserver() {
                 auth.signOut();
             }
         } else {
+
             sessionStorage.removeItem('currentUser');
             AppState.currentUser = { isLoggedIn: false };
 

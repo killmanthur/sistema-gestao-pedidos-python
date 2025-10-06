@@ -31,7 +31,9 @@
 <div id="user-modal-overlay" class="modal-overlay" style="display: none;">
     <div class="modal-content">
         <div class="modal-header">
-            <h2 id="user-modal-title">Novo Usuário</h2><button class="close-modal">×</button>
+            <h2 id="user-modal-title">Novo Usuário</h2>
+            <!-- CORREÇÃO AQUI -->
+            <button class="close-modal close-modal-icon">×</button>
         </div>
         <form id="form-user" novalidate>
             <div class="modal-body">
@@ -58,8 +60,8 @@
                         <option value="Estoque">Estoque</option>
                         <option value="Separador">Separador</option>
                         <option value="Expedição">Expedição</option>
-                        <!-- NOVO: Role Recepção adicionada -->
-                        <option value="Recepção">Recepção</option>
+                        <option value="Recepção">Recepção</option>>
+                        <option value="Contabilidade">Contabilidade</option>
                         <option value="Admin">Admin</option>
                     </select>
                 </div>
@@ -79,16 +81,23 @@
                 <h4>Permissões (Sugestões)</h4>
                 <div id="sugestoes-permissions-container" class="permissions-grid">
                 </div>
+                <hr>
+
+                <h4>Permissões (Pendências e Alterações)</h4>
+                <div id="pendencias-permissions-container" class="permissions-grid">
+                </div>
+                <hr>
                 
                 <h4>Permissões (Conferência)</h4>
                 <div id="conferencias-permissions-container" class="permissions-grid">
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" id="btn-cancel-user-modal" class="btn btn--secondary">Cancelar</button>
-                <button type="submit" id="btn-save-user" class="btn btn--primary">Salvar</button>
-            </div>
-        </form>
-    </div>
-</div>
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" id="btn-cancel-user-modal" class="btn btn--secondary close-modal">Cancelar</button>
+                    <button type="submit" id="btn-save-user" class="btn btn--primary">Salvar</button>
+                </div>
+                </form>
+                </div>
+                </div>
 {% endblock %}

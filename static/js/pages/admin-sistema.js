@@ -11,12 +11,13 @@ const ALL_PAGES = {
     sugestoes: "Sugestão de Compras",
     dashboard: "Dashboard",
     recebimento: "Recebimento",
-    gestao_pendencias: "Gestão de Pendências",
+    pendencias_e_alteracoes: "Pendências e Alterações",
     separacoes: "Separações",
     conferencias: "Conferência",
     gerenciar_separacoes: "Gerenciar Separações",
     admin_sistema: "Gerenciar Sistema"
 };
+
 
 const SEPARACOES_PERMS = {
     pode_criar_separacao: "Pode Criar",
@@ -34,11 +35,13 @@ const SUGESTOES_PERMS = {
 };
 
 const CONFERENCIAS_PERMS = {
-    pode_editar_conferencia: "Pode Editar Conferência",
-    pode_deletar_conferencia: "Pode Deletar Conferência",
-    pode_ver_botoes_conferencia_finalizada: "Vê Ações em Finalizadas"
+    pode_deletar_conferencia: "Pode Deletar Conferência"
 };
 
+// NOVA CONSTANTE PARA A NOVA PERMISSÃO
+const PENDENCIAS_PERMS = {
+    pode_editar_pendencia: "Pode Editar Pendências"
+};
 
 // --- ESTADO DO MÓDULO ---
 let elements = {};
@@ -46,6 +49,7 @@ let allUsersData = [];
 let currentSort = { key: 'nome', order: 'asc' };
 let debounceTimer;
 
+// ... (função apiCall, etc. permanecem iguais) ...
 async function apiCall(endpoint, method = 'GET', body = null) {
     const idToken = await firebase.auth().currentUser.getIdToken();
     const options = {
@@ -59,8 +63,8 @@ async function apiCall(endpoint, method = 'GET', body = null) {
     return result;
 }
 
-// ... (função renderPermissionsCheckboxes) ...
 function renderPermissionsCheckboxes(container, permissionsMap, userPermissions) {
+    if (!container) return; // Adiciona uma verificação para segurança
     container.innerHTML = Object.entries(permissionsMap).map(([key, name]) => {
         const isChecked = userPermissions && userPermissions[key] === true;
         return `
@@ -87,7 +91,8 @@ function openModal(mode = 'create', user = null) {
     renderPermissionsCheckboxes(elements.separacoesPermissionsContainer, SEPARACOES_PERMS, allPermissions);
     renderPermissionsCheckboxes(elements.sugestoesPermissionsContainer, SUGESTOES_PERMS, allPermissions);
     renderPermissionsCheckboxes(elements.conferenciasPermissionsContainer, CONFERENCIAS_PERMS, allPermissions);
-
+    // ADIÇÃO: Renderiza o novo checkbox
+    renderPermissionsCheckboxes(elements.pendenciasPermissionsContainer, PENDENCIAS_PERMS, allPermissions);
 
     if (mode === 'edit') {
         elements.modalTitle.textContent = 'Editar Usuário';
@@ -122,6 +127,7 @@ function openSetPasswordModal(user) {
 }
 
 function renderTable() {
+    // ... (função renderTable permanece igual) ...
     const searchTerm = elements.filtroInput.value.toLowerCase().trim();
     const filteredUsers = searchTerm
         ? allUsersData.filter(user =>
@@ -147,7 +153,6 @@ function renderTable() {
     filteredUsers.forEach(user => {
         const tr = document.createElement('tr');
         tr.dataset.user = JSON.stringify(allUsersData.find(u => u.uid === user.uid));
-        // MUDANÇA: Botão "Redefinir Senha (E-mail)" removido
         tr.innerHTML = `
             <td>${user.nome}</td>
             <td>${user.email}</td>
@@ -162,6 +167,7 @@ function renderTable() {
 }
 
 async function fetchAndRenderUsers() {
+    // ... (função fetchAndRenderUsers permanece igual) ...
     elements.spinner.style.display = 'block';
     elements.table.style.display = 'none';
     try {
@@ -195,6 +201,9 @@ async function handleFormSubmit(event) {
     elements.conferenciasPermissionsContainer.querySelectorAll('input:checked').forEach(cb => {
         permissions[cb.dataset.key] = true;
     });
+    elements.pendenciasPermissionsContainer.querySelectorAll('input:checked').forEach(cb => {
+        permissions[cb.dataset.key] = true;
+    });
 
     const userData = {
         nome: document.getElementById('user-nome').value,
@@ -210,19 +219,12 @@ async function handleFormSubmit(event) {
     try {
         const endpoint = mode === 'create' ? '' : `/${uid}`;
         const method = mode === 'create' ? 'POST' : 'PUT';
+        // A CHAMADA EXTRA FOI REMOVIDA DAQUI. Agora só fazemos uma chamada.
         await apiCall(endpoint, method, userData);
-
-        const role = userData.role;
-        const permsParaSalvar = { [role]: permissions };
-        await fetch('/api/configuracoes/permissoes', {
-            method: 'PUT',
-            headers: { 'Authorization': `Bearer ${await firebase.auth().currentUser.getIdToken()}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify(permsParaSalvar)
-        });
 
         showToast(`Usuário ${mode === 'create' ? 'criado' : 'atualizado'} com sucesso!`, 'success');
         closeModal();
-        fetchAndRenderUsers();
+        fetchAndRenderUsers(); // Recarrega a lista de usuários com os novos dados
     } catch (error) {
         showToast(`Erro: ${error.message}`, 'error');
     } finally {
@@ -230,6 +232,7 @@ async function handleFormSubmit(event) {
     }
 }
 
+// ... (Restante do arquivo permanece o mesmo) ...
 function handleTableActions(event) {
     const target = event.target;
     const userRow = target.closest('tr');
@@ -250,7 +253,6 @@ function handleTableActions(event) {
             } catch (error) { showToast(`Erro ao excluir: ${error.message}`, 'error'); }
         });
     }
-    // MUDANÇA: Lógica do botão "reset-pass" removida
 }
 
 function handleSort(event) {
@@ -320,6 +322,8 @@ export function initAdminSistemaPage() {
         separacoesPermissionsContainer: document.getElementById('separacoes-permissions-container'),
         sugestoesPermissionsContainer: document.getElementById('sugestoes-permissions-container'),
         conferenciasPermissionsContainer: document.getElementById('conferencias-permissions-container'),
+        // ADIÇÃO: Obtém a referência do novo container
+        pendenciasPermissionsContainer: document.getElementById('pendencias-permissions-container'),
         filtroInput: document.getElementById('filtro-tabela-usuarios')
     };
     if (!elements.tableBody) return;

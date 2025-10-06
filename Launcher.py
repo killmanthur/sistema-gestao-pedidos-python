@@ -8,7 +8,7 @@ from datetime import datetime
 # --- CONFIGURAÇÃO ---
 # Caminho na rede onde o executável mais recente está.
 # ATENÇÃO: Use barras duplas ou raw strings (r'...') para caminhos do Windows.
-SERVER_PATH = r"\\192.168.1.249\DevTools_Berti\Tools Dist\sistema-gestao-pedidos-python"
+SERVER_PATH = r"\\192.168.1.249\DevTools_Berti\Tools Dist\sistema-gestao-pedidos-python\Executavel"
 
 # Nome do seu programa principal.
 MAIN_APP_EXE = "QuadroDePedidos.exe"

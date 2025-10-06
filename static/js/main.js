@@ -14,8 +14,8 @@ import { initAdminSistemaPage } from './pages/admin-sistema.js';
 import { initInicioPage } from './pages/inicio.js';
 import { initSeparacoesPage } from './pages/separacoes.js';
 import { initConferenciasPage } from './pages/conferencias.js';
-import { initRecebimentoPage } from './pages/recebimento.js'; // NOVO
-import { initGestaoPendenciasPage } from './pages/gestao_pendencias.js';
+import { initRecebimentoPage } from './pages/recebimento.js';
+import { initPendenciasEAlteracoesPage } from './pages/pendencias_e_alteracoes.js'; // ROTA ATUALIZADA
 import { initGerenciarSeparacoesPage } from './pages/gerenciar-separacoes.js';
 
 
@@ -56,8 +56,8 @@ export async function initializeAuthenticatedApp() {
     else if (path.includes('/dashboard')) initDashboardPage();
     else if (path.includes('/separacoes')) initSeparacoesPage();
     else if (path.includes('/conferencias')) initConferenciasPage();
-    else if (path.includes('/recebimento')) initRecebimentoPage(); // NOVO
-    else if (path.includes('/gestao-pendencias')) initGestaoPendenciasPage();
+    else if (path.includes('/recebimento')) initRecebimentoPage();
+    else if (path.includes('/pendencias-e-alteracoes')) initPendenciasEAlteracoesPage(); // ROTA ATUALIZADA
     else if (path.includes('/gerenciar-separacoes')) initGerenciarSeparacoesPage();
 
 }

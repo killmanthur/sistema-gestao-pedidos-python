@@ -8,41 +8,149 @@ conferencias_bp = Blueprint('conferencias', __name__, url_prefix='/api/conferenc
 
 @conferencias_bp.route('/recebimento-rua', methods=['POST'])
 def criar_recebimento_rua():
+    """
+    Cria um registro para uma Nota da Rua. Esta função tem duas responsabilidades:
+    1. Criar o objeto base da conferência no Firebase.
+    2. Chamar a função de finalização para aplicar imediatamente o status
+       (Finalizado, Pendente, etc.) com base nos dados do modal.
+    """
     dados = request.get_json()
     editor_nome = dados.get('editor_nome', 'Sistema')
     
     try:
         now_iso = datetime.now(tz_cuiaba).isoformat()
         
+        # 1. Cria o objeto base da "conferência" para a Nota da Rua
         novo_recebimento = {
             'data_recebimento': now_iso,
             'numero_nota_fiscal': dados.get('numero_nota_fiscal'),
             'nome_fornecedor': dados.get('nome_fornecedor'),
             'nome_transportadora': 'NOTA DA RUA', # Identificador claro
             'qtd_volumes': dados.get('qtd_volumes'),
-            'vendedor_nome': dados.get('vendedor_nome'), # Salva o vendedor
-            'status': 'Finalizado', # Status já é finalizado
-            'data_inicio_conferencia': now_iso,
-            'data_finalizacao': now_iso, # Data de finalização é a mesma da criação
-            'conferente_nome': 'N/A' # Não passa por conferência
+            'vendedor_nome': dados.get('vendedor_nome'),
+            'status': 'Aguardando Conferência', # Status inicial temporário
+            'data_inicio_conferencia': now_iso, # Inicia e finaliza no mesmo instante
+            'data_finalizacao': None, # Será preenchido pela função de finalização
+            'conferentes': [editor_nome], # O registrador é o "conferente"
+            'resolvido_gestor': False,
+            'resolvido_contabilidade': False
         }
         
         ref = db.reference('conferencias')
         nova_ref = ref.push(novo_recebimento)
         
-        log_detalhes = f"Recebimento de Nota da Rua (NF: '{dados.get('numero_nota_fiscal')}') para o vendedor '{dados.get('vendedor_nome')}'."
-        registrar_log(nova_ref.key, editor_nome, 'RECEBIMENTO_RUA_CRIADO', detalhes={'info': log_detalhes}, log_type='conferencias')
-        
-        return jsonify({'status': 'success', 'id': nova_ref.key}), 201
+        log_detalhes_info = f"Registro de Nota da Rua (NF: '{dados.get('numero_nota_fiscal')}') para o vendedor '{dados.get('vendedor_nome')}'."
+        registrar_log(nova_ref.key, editor_nome, 'RECEBIMENTO_RUA_CRIADO', detalhes={'info': log_detalhes_info}, log_type='conferencias')
+
+        # 2. Agora, chama a função de finalização passando o ID recém-criado
+        return finalizar_conferencia_nova_logica(nova_ref.key)
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# Endpoint para a página "Recebimento" criar um novo espelho
+@conferencias_bp.route('/<string:conferencia_id>/finalizar-conferencia', methods=['PUT'])
+def finalizar_conferencia_nova_logica(conferencia_id):
+    dados = request.get_json()
+    editor_nome = dados.get('editor_nome', 'N/A')
+    observacao = dados.get('observacao', '')
+    tem_pendencia_fornecedor = dados.get('tem_pendencia_fornecedor', False)
+    solicita_alteracao = dados.get('solicita_alteracao', False)
+
+    if (tem_pendencia_fornecedor or solicita_alteracao) and not observacao.strip():
+        return jsonify({'error': 'Observação é obrigatória quando há divergências.'}), 400
+
+    try:
+        ref = db.reference(f'conferencias/{conferencia_id}')
+        
+        novo_status = 'Finalizado'
+        if tem_pendencia_fornecedor and solicita_alteracao:
+            novo_status = 'Pendente (Ambos)'
+        elif tem_pendencia_fornecedor:
+            novo_status = 'Pendente (Fornecedor)'
+        elif solicita_alteracao:
+            novo_status = 'Pendente (Alteração)'
+
+        updates = {
+            'status': novo_status,
+            'data_finalizacao': datetime.now(tz_cuiaba).isoformat(),
+            'resolvido_gestor': not tem_pendencia_fornecedor,
+            'resolvido_contabilidade': not solicita_alteracao
+        }
+        ref.update(updates)
+        
+        log_acao = f'FINALIZADO_COM_STATUS_{novo_status.upper()}'
+        registrar_log(conferencia_id, editor_nome, log_acao, detalhes={'info': observacao}, log_type='conferencias')
+
+        if observacao:
+            obs_ref = ref.child('observacoes')
+            obs_ref.push({
+                'texto': f"[DIVERGÊNCIA] {observacao}",
+                'autor': editor_nome,
+                'timestamp': datetime.now(tz_cuiaba).isoformat()
+            })
+
+        return jsonify({'status': 'success'}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@conferencias_bp.route('/<string:conferencia_id>/resolver-item', methods=['PUT'])
+def resolver_item_pendencia(conferencia_id):
+    dados = request.get_json()
+    editor_nome = dados.get('editor_nome', 'N/A')
+    user_role = dados.get('user_role', 'N/A')
+    observacao = dados.get('observacao', '')
+
+    if not observacao.strip():
+        return jsonify({'error': 'A observação de resolução é obrigatória.'}), 400
+
+    try:
+        ref = db.reference(f'conferencias/{conferencia_id}')
+        item_atual = ref.get()
+        if not item_atual:
+            return jsonify({'error': 'Item não encontrado'}), 404
+
+        updates = {}
+        log_acao = ''
+        
+        if user_role in ['Admin', 'Estoque']:
+            updates['resolvido_gestor'] = True
+            log_acao = 'PENDENCIA_FORNECEDOR_RESOLVIDA'
+        elif user_role == 'Contabilidade':
+            updates['resolvido_contabilidade'] = True
+            log_acao = 'ALTERACAO_CONTABILIDADE_RESOLVIDA'
+        else:
+            return jsonify({'error': 'Você não tem permissão para resolver este item.'}), 403
+
+        gestor_ok = updates.get('resolvido_gestor', item_atual.get('resolvido_gestor', False))
+        contabilidade_ok = updates.get('resolvido_contabilidade', item_atual.get('resolvido_contabilidade', False))
+        
+        status_atual = item_atual.get('status')
+        if status_atual == 'Pendente (Ambos)':
+            if gestor_ok and contabilidade_ok:
+                updates['status'] = 'Finalizado'
+        elif status_atual == 'Pendente (Fornecedor)' and gestor_ok:
+            updates['status'] = 'Finalizado'
+        elif status_atual == 'Pendente (Alteração)' and contabilidade_ok:
+            updates['status'] = 'Finalizado'
+
+        ref.update(updates)
+        
+        registrar_log(conferencia_id, editor_nome, log_acao, detalhes={'info': observacao}, log_type='conferencias')
+        obs_ref = ref.child('observacoes')
+        obs_ref.push({
+            'texto': f"[{log_acao}] {observacao}",
+            'autor': editor_nome,
+            'timestamp': datetime.now(tz_cuiaba).isoformat()
+        })
+        
+        return jsonify({'status': 'success'}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @conferencias_bp.route('/recebimento', methods=['POST'])
 def criar_recebimento():
     dados = request.get_json()
     editor_nome = dados.get('editor_nome', 'Sistema')
-    
     try:
         novo_recebimento = {
             'data_recebimento': datetime.now(tz_cuiaba).isoformat(),
@@ -54,136 +162,32 @@ def criar_recebimento():
             'data_inicio_conferencia': None,
             'data_finalizacao': None,
             'conferente_nome': ''
-            # O campo 'vendedor_nome' não existe neste fluxo
         }
-        
         ref = db.reference('conferencias')
         nova_ref = ref.push(novo_recebimento)
-        
-        log_detalhes = f"Recebimento da NF '{dados.get('numero_nota_fiscal')}' do fornecedor '{dados.get('nome_fornecedor')}'."
+        log_detalhes = f"Recebimento da NF '{dados.get('numero_nota_fiscal')}'."
         registrar_log(nova_ref.key, editor_nome, 'RECEBIMENTO_CRIADO', detalhes={'info': log_detalhes}, log_type='conferencias')
-        
         return jsonify({'status': 'success', 'id': nova_ref.key}), 201
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# Endpoint para o estoquista iniciar a conferência
 @conferencias_bp.route('/<string:conferencia_id>/iniciar', methods=['PUT'])
 def iniciar_conferencia(conferencia_id):
     dados = request.get_json()
-    conferentes = dados.get('conferentes') # Lista de nomes
-    
+    conferentes = dados.get('conferentes')
     if not conferentes or not isinstance(conferentes, list):
         return jsonify({'error': 'Lista de conferentes é obrigatória.'}), 400
-
     try:
         ref = db.reference(f'conferencias/{conferencia_id}')
         updates = {
             'status': 'Em Conferência',
             'data_inicio_conferencia': datetime.now(tz_cuiaba).isoformat(),
-            'conferentes': conferentes, # Salva a lista de nomes
-            'conferente_nome': ', '.join(conferentes) # Campo antigo para compatibilidade/busca
+            'conferentes': conferentes,
+            'conferente_nome': ', '.join(conferentes)
         }
         ref.update(updates)
-        
-        # Log com o nome de quem iniciou, se disponível, ou o primeiro da lista
         editor_nome = dados.get('editor_nome', conferentes[0])
         registrar_log(conferencia_id, editor_nome, 'INICIO_CONFERENCIA', detalhes={'conferentes': conferentes}, log_type='conferencias')
-        
-        return jsonify({'status': 'success'}), 200
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-# Endpoint para o estoquista finalizar (com ou sem pendência)
-@conferencias_bp.route('/<string:conferencia_id>/finalizar', methods=['PUT'])
-def finalizar_conferencia(conferencia_id):
-    dados = request.get_json()
-    editor_nome = dados.get('editor_nome', 'N/A')
-    com_pendencia = dados.get('com_pendencia', False)
-    observacao = dados.get('observacao', '')
-
-    try:
-        ref = db.reference(f'conferencias/{conferencia_id}')
-        
-        novo_status = 'Pendente de Resolução' if com_pendencia else 'Finalizado'
-        
-        updates = {
-            'status': novo_status,
-            'data_finalizacao': datetime.now(tz_cuiaba).isoformat()
-        }
-        ref.update(updates)
-        
-        log_acao = 'FINALIZADO_COM_PENDENCIA' if com_pendencia else 'FINALIZADO_OK'
-        registrar_log(conferencia_id, editor_nome, log_acao, log_type='conferencias')
-
-        if observacao:
-            obs_ref = ref.child('observacoes')
-            nova_observacao = {
-                'texto': observacao,
-                'autor': editor_nome,
-                'timestamp': datetime.now(tz_cuiaba).isoformat()
-            }
-            obs_ref.push(nova_observacao)
-            registrar_log(conferencia_id, editor_nome, 'NOVA OBSERVAÇÃO', detalhes={'info': observacao}, log_type='conferencias')
-
-        return jsonify({'status': 'success'}), 200
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-# Endpoint para o gestor resolver uma pendência
-@conferencias_bp.route('/<string:conferencia_id>/resolver', methods=['PUT'])
-def resolver_pendencia(conferencia_id):
-    dados = request.get_json()
-    editor_nome = dados.get('editor_nome', 'N/A')
-    observacao = dados.get('observacao', '')
-    
-    try:
-        ref = db.reference(f'conferencias/{conferencia_id}')
-        ref.update({'status': 'Finalizado'})
-        
-        registrar_log(conferencia_id, editor_nome, 'PENDENCIA_RESOLVIDA', log_type='conferencias')
-
-        # CORREÇÃO: Adiciona a observação de resolução ao histórico
-        if observacao:
-            obs_ref = ref.child('observacoes')
-            nova_observacao = {
-                'texto': f"[RESOLUÇÃO] {observacao}",
-                'autor': editor_nome,
-                'timestamp': datetime.now(tz_cuiaba).isoformat()
-            }
-            obs_ref.push(nova_observacao)
-            registrar_log(conferencia_id, editor_nome, 'OBSERVACAO_RESOLUCAO', detalhes={'info': observacao}, log_type='conferencias')
-
-        return jsonify({'status': 'success'}), 200
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-        
-# As rotas de editar, deletar e adicionar observação continuam úteis
-# ... (cole aqui as funções editar_conferencia, deletar_conferencia e adicionar_observacao do passo anterior) ...
-@conferencias_bp.route('/<string:conferencia_id>', methods=['PUT'])
-def editar_conferencia(conferencia_id):
-    dados = request.get_json()
-    editor_nome = dados.pop('editor_nome', 'N/A')
-    
-    try:
-        ref = db.reference(f'conferencias/{conferencia_id}')
-        conferencia_antiga = ref.get()
-        if not conferencia_antiga:
-            return jsonify({'error': 'Conferência não encontrada'}), 404
-
-        ref.update(dados)
-
-        alteracoes = []
-        for chave, valor_novo in dados.items():
-            valor_antigo = conferencia_antiga.get(chave, '')
-            if str(valor_antigo) != str(valor_novo):
-                alteracoes.append(f"alterou '{chave}' de '{valor_antigo}' para '{valor_novo}'")
-        
-        if alteracoes:
-            log_detalhes = f"Editou a conferência: {', '.join(alteracoes)}."
-            registrar_log(conferencia_id, editor_nome, 'EDIÇÃO', detalhes={'info': log_detalhes}, log_type='conferencias')
-        
         return jsonify({'status': 'success'}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -192,21 +196,29 @@ def editar_conferencia(conferencia_id):
 def adicionar_observacao(conferencia_id):
     dados = request.get_json()
     autor_nome = dados.get('autor', 'N/A')
-    
+    texto_obs = dados.get('texto', '')
+
+    if not texto_obs.strip():
+        return jsonify({'error': 'A observação não pode estar vazia.'}), 400
+
     try:
-        obs_ref = db.reference(f'conferencias/{conferencia_id}/observacoes')
+        ref = db.reference(f'conferencias/{conferencia_id}')
+        if not ref.get():
+            return jsonify({'error': 'Conferência não encontrada.'}), 404
+
+        obs_ref = ref.child('observacoes')
         nova_observacao = {
-            'texto': dados.get('texto', ''),
+            'texto': texto_obs,
             'autor': autor_nome,
             'timestamp': datetime.now(tz_cuiaba).isoformat()
         }
         obs_ref.push(nova_observacao)
         
-        registrar_log(conferencia_id, autor_nome, 'NOVA OBSERVAÇÃO', detalhes={'info': dados.get('texto')}, log_type='conferencias')
+        registrar_log(conferencia_id, autor_nome, 'NOVA_ATUALIZACAO', detalhes={'info': texto_obs}, log_type='conferencias')
         return jsonify({'status': 'success'}), 201
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
+        
 @conferencias_bp.route('/<string:conferencia_id>', methods=['DELETE'])
 def deletar_conferencia(conferencia_id):
     dados = request.get_json()
@@ -219,10 +231,12 @@ def deletar_conferencia(conferencia_id):
             
         nf = conferencia.get('numero_nota_fiscal', 'N/A')
         log_detalhes = f"Excluiu a conferência da NF '{nf}'."
-        registrar_log(conferencia_id, editor_nome, 'EXCLUSÃO', detalhes={'info': log_detalhes}, log_type='conferencias')
+        
+        registrar_log(conferencia_id, editor_nome, 'EXCLUSAO', detalhes={'info': log_detalhes}, log_type='conferencias')
         
         ref.delete()
         db.reference(f'logs_conferencias/{conferencia_id}').delete()
+        
         return jsonify({'status': 'success'}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500

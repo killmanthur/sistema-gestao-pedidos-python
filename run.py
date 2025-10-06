@@ -37,4 +37,4 @@ if __name__ == '__main__':
     api.set_window(window)
     
     # MUDANÇA: Voltamos ao webview.start() original, sem o argumento 'gui'
-    webview.start(debug=True)  # Remova 'gui' para usar o padrão do sistema operacional 
+    webview.start()  # Remova 'gui' para usar o padrão do sistema operacional 

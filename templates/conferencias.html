@@ -1,3 +1,4 @@
+<!-- conferencias.html -->
 {% extends "base.html" %}
 
 {% block title %}Conferência de Espelhos{% endblock %}
@@ -23,7 +24,8 @@
     <div class="modal-content" style="max-width: 400px;">
         <div class="modal-header">
             <h2>Adicionar Conferentes</h2>
-            <button class="close-modal">×</button>
+            <!-- CORREÇÃO AQUI -->
+            <button class="close-modal close-modal-icon">×</button>
         </div>
         <form id="form-add-conferente">
             <div class="modal-body">
@@ -33,39 +35,58 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <!-- CORREÇÃO: O botão agora é um 'button' padrão com um ID para o JavaScript -->
-                <button type="button" id="btn-cancel-add-conferente" class="btn btn--secondary">Cancelar</button>
-                <button type="submit" class="btn btn--primary">Confirmar e Iniciar</button>
+                <!-- CORREÇÃO AQUI (já estava certo, mas confirmando) -->
+                <button type="button" id="btn-cancel-add-conferente"
+                    class="btn btn--secondary close-modal">Cancelar</button>
+                <!-- ID CORRIGIDO AQUI -->
+                <button type="submit" id="btn-confirmar-add-conferente" class="btn btn--primary">Confirmar e
+                    Iniciar</button>
             </div>
         </form>
     </div>
 </div>
 
-<!-- Modal de Finalização (existente) -->
+<!-- Modal de Finalização -->
 <div id="finalize-modal-overlay" class="modal-overlay" style="display:none;">
     <div class="modal-content" style="max-width: 500px;">
         <div class="modal-header">
-            <h2>Finalizar Conferência</h2>
-            <button class="close-modal">×</button>
+            <h2 id="finalize-modal-title">Finalizar Conferência</h2>
+            <!-- CORREÇÃO AQUI -->
+            <button class="close-modal close-modal-icon">×</button>
         </div>
-        <form id="form-finalize">
+        <form id="form-finalize-conferencia"> <!-- ID ÚNICO -->
             <div class="modal-body">
-                <p>Se houver alguma divergência (ex: item quebrado, quantidade errada), finalize com pendência e
-                    descreva o problema.</p>
-                <div class="form-group">
-                    <label for="finalize-observacao">Observação da Pendência (Obrigatório se houver pendência)</label>
-                    <textarea id="finalize-observacao" rows="4"></textarea>
+                <p>Selecione uma opção abaixo. Se houver qualquer divergência, a observação é
+                    <strong>obrigatória</strong>.
+                </p>
+                <hr style="margin: 1rem 0;">
+
+                <div class="form-group" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                    <label style="display: flex; align-items: center; gap: 0.75rem; margin: 0;">
+                        <input type="checkbox" id="checkbox-pendencia-fornecedor-conferencia"
+                            style="width: auto; height: auto;"> <!-- ID ÚNICO -->
+                        Há pendências com o Fornecedor? (Ex: item faltante, avariado)
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.75rem; margin: 0;">
+                        <input type="checkbox" id="checkbox-solicitar-alteracao-conferencia"
+                            style="width: auto; height: auto;"> <!-- ID ÚNICO -->
+                        Há erro de lançamento? (Ex: código/quantidade errada no sistema)
+                    </label>
+                </div>
+
+                <div class="form-group" style="margin-top: 1.5rem;">
+                    <label for="finalize-observacao-conferencia">Observação da Divergência</label>
+                    <textarea id="finalize-observacao-conferencia" rows="4"></textarea> <!-- ID ÚNICO -->
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" id="btn-finalize-ok" class="btn btn--success">Finalizar OK</button>
-                <button type="submit" id="btn-finalize-pendencia" class="btn btn--danger">Finalizar com
-                    Pendência</button>
+                <!-- CORREÇÃO AQUI (já estava certo, mas confirmando) -->
+                <button type="button" class="btn btn--secondary close-modal">Cancelar</button>
+                <button type="submit" id="btn-confirmar-finalizacao-conferencia" class="btn btn--primary">Confirmar
+                    Finalização</button> <!-- ID ÚNICO -->
             </div>
         </form>
     </div>
 </div>
 
-
-<!-- Outros modais que possam ser necessários -->
 {% endblock %}

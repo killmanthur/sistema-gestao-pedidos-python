@@ -145,6 +145,7 @@ a:hover {
 }
 
 /* --- 4. Components --- */
+
 /* Header & Navegação */
 header {
     position: sticky;
@@ -152,7 +153,6 @@ header {
     z-index: 1000;
     background: var(--clr-primary-gradient);
     color: white;
-    /* Revertendo para um padding mais confortável */
     padding: 0.5rem 2rem;
     box-shadow: var(--shadow-md);
     transition: var(--transition-main);
@@ -176,20 +176,17 @@ header {
     flex-grow: 1;
 }
 
-.header__nav ul {
+#main-nav {
     list-style: none;
     display: flex;
     justify-content: center;
     align-items: center;
-    /* MODIFICAÇÃO: Revertido para permitir quebra de linha se necessário, mas não vai mais quebrar */
     flex-wrap: wrap;
     gap: 0.5rem;
 }
 
-.header__nav a {
-    color: rgba(255, 255, 255, 0.85);
+#main-nav a {
     font-weight: 500;
-    /* MODIFICAÇÃO: Revertido para o tamanho original */
     padding: 0.6rem 1rem;
     font-size: 1rem;
     border-radius: 6px;
@@ -197,100 +194,117 @@ header {
     display: block;
 }
 
-.header__nav a:hover {
-    color: white;
+#main-nav a:hover {
+    text-decoration: none;
     background: rgba(255, 255, 255, 0.15);
 }
 
-/* CORREÇÃO PARA O PISQUE DO BOTÃO SAIR */
-#li-logout {
-    display: none;
-    /* JavaScript vai controlar isso agora */
-}
-
-body.user-logged-in #li-logout {
-    display: list-item;
-    /* Mostra o botão quando logado */
-}
-
-
 #li-logout a {
     background: var(--clr-danger);
-    color: white !important;
-}
-
-/* ==========================================================================
-    NOVOS ESTILOS PARA O MENU DROPDOWN
-   ========================================================================== */
-
-.nav-item--dropdown {
-    position: relative;
-}
-
-.dropdown-menu {
-    display: none;
-    /* Começa escondido */
-    position: absolute;
-    top: 100%;
-    left: 0;
-    background-color: var(--clr-primary);
-    /* Fundo igual ao header */
-    border-radius: 0 0 8px 8px;
-    box-shadow: var(--shadow-md);
-    min-width: 220px;
-    /* Largura mínima do dropdown */
-    z-index: 1100;
-    flex-direction: column;
-    /* Itens empilhados verticalmente */
-    align-items: stretch;
-    /* Itens ocupam toda a largura */
-    padding: 0.5rem 0;
-}
-
-.nav-item--dropdown:hover .dropdown-menu {
-    display: flex;
-    /* Mostra o dropdown ao passar o mouse */
-}
-
-.dropdown-menu .nav-item {
-    width: 100%;
-}
-
-.dropdown-menu a {
-    padding: 0.75rem 1.5rem;
-    font-size: 0.95rem;
-    border-radius: 0;
-    white-space: nowrap;
-}
-
-/* Garante que a badge de notificação fique correta dentro do dropdown */
-.dropdown-menu .nav-item a {
-    position: relative;
-}
-
-.dropdown-menu .notification-badge {
-    right: 1rem;
-    /* Ajusta posição da badge */
-    top: 50%;
-    transform: translateY(-50%);
-}
-
-body.user-logged-in #li-logout {
-    /* Quando o usuário está logado, o botão se torna visível suavemente */
-    visibility: visible;
-    opacity: 1;
-}
-
-#li-logout a {
-    background: var(--clr-danger);
-    color: white !important;
 }
 
 .header__actions {
     display: flex;
     align-items: center;
     gap: 0.75rem;
+    position: relative;
 }
+
+/* ================================== */
+/*          ESTILOS DROPDOWN (CORREÇÃO FINAL)    */
+/* ================================== */
+
+/* Regra principal para os links do menu de topo */
+#main-nav>.nav-item>a,
+#main-nav>#li-logout>a {
+    color: #FFFFFF !important;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+#main-nav>.nav-item>a:hover {
+    color: #FFFFFF !important;
+}
+
+/* Título de um dropdown */
+.nav-item--dropdown {
+    position: relative;
+    padding-bottom: 0.5rem;
+}
+
+.nav-item--dropdown>a {
+    cursor: default;
+}
+
+/* Seta do dropdown */
+.dropdown-arrow {
+    font-size: 0.6em;
+    transform: translateY(1px);
+    transition: transform 0.2s ease-in-out;
+}
+
+.nav-item--dropdown:hover .dropdown-arrow {
+    transform: translateY(1px) rotate(180deg);
+}
+
+/* O container do menu suspenso */
+.dropdown-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 1000;
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-main);
+    border-radius: 8px;
+    box-shadow: var(--shadow-lg);
+    list-style: none;
+    padding: 0.5rem 0;
+    margin-top: 0;
+    min-width: 220px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out, visibility 0.2s;
+}
+
+/* Mostra o menu no hover */
+.nav-item--dropdown:hover>.dropdown-menu {
+    display: block;
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+/* Itens dentro do menu suspenso */
+.dropdown-menu .nav-item {
+    width: 100%;
+    padding-bottom: 0;
+}
+
+.dropdown-menu .nav-item a {
+    display: block;
+    padding: 0.75rem 1.25rem;
+    white-space: nowrap;
+    color: var(--text-primary);
+    background-color: transparent;
+    transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+}
+
+/* Efeito hover nos itens do menu suspenso */
+.dropdown-menu .nav-item a:hover {
+    background-color: var(--bg-muted);
+    color: var(--clr-primary);
+}
+
+.dropdown-menu .nav-item.active a {
+    color: var(--clr-primary);
+    font-weight: 500;
+}
+
+/* --- Componentes do Header --- */
 
 .btn-icon {
     background: transparent;
@@ -482,7 +496,7 @@ textarea:focus {
 /* Cards */
 .card {
     background: var(--bg-surface);
-    border-radius: var(--border-radius-md);
+    border-radius: 10px;
     box-shadow: var(--shadow-md);
     border-left: 5px solid var(--border-main);
     display: flex;
@@ -549,43 +563,6 @@ textarea:focus {
     flex-wrap: wrap;
 }
 
-.card__actions .btn {
-    padding: 0.5rem;
-    font-size: 0.85rem;
-    flex-grow: 1;
-    background: transparent;
-}
-
-.btn--success {
-    color: var(--clr-success);
-    border-color: var(--clr-success);
-}
-
-.btn--success:hover {
-    background: var(--clr-success);
-    color: white;
-}
-
-.btn--warning {
-    color: var(--clr-warning);
-    border-color: var(--clr-warning);
-}
-
-.btn--warning:hover {
-    background: var(--clr-warning);
-    color: white;
-}
-
-.btn--edit {
-    color: var(--clr-secondary);
-    border-color: var(--clr-secondary);
-}
-
-.btn--edit:hover {
-    background: var(--clr-secondary);
-    color: white;
-}
-
 .card__header-actions {
     display: flex;
     align-items: center;
@@ -600,6 +577,10 @@ textarea:focus {
 
 .card__header-actions .btn-icon:hover {
     background: var(--bg-muted);
+}
+
+body.dark-mode .card__header-actions .btn-icon img {
+    filter: invert(80%);
 }
 
 .card__header-actions .btn--danger {
@@ -649,7 +630,6 @@ textarea:focus {
 .modal-body {
     padding: 1.5rem;
     overflow-y: auto;
-    flex: 1;
 }
 
 .modal-footer {
@@ -660,6 +640,10 @@ textarea:focus {
     border-top: 1px solid var(--border-main);
     background: var(--bg-muted);
 }
+
+/*
+   ****** ESTE BLOCO ABAIXO FOI REMOVIDO ******
+   ****** ELE É O CAUSADOR DO CONFLITO ********
 
 .close-modal {
     background: transparent;
@@ -676,6 +660,7 @@ textarea:focus {
     color: var(--clr-danger);
     transform: rotate(90deg);
 }
+*/
 
 /* --- 5. Pages --- */
 /* Página de Separações */
@@ -702,7 +687,7 @@ textarea:focus {
 
 .admin-table th,
 .admin-table td {
-    padding: 0.8rem 1rem;
+    padding: 0.6rem 0.8rem;
     border: 1px solid var(--border-main);
     text-align: left;
     vertical-align: middle;
@@ -737,14 +722,15 @@ textarea:focus {
     opacity: 1;
 }
 
-.admin-table .card__actions .btn {
-    padding: 0.4rem 0.8rem;
+.admin-table .linha-finalizada {
+    background-color: var(--bg-success-soft) !important;
+    border-left: 4px solid var(--clr-success);
 }
 
-/* Dashboard */
-#dashboard-container .layout-grid-3-cols {
-    align-items: start;
+.admin-table .linha-finalizada:hover {
+    background-color: rgba(92, 184, 92, 0.2) !important;
 }
+
 
 /* --- 6. Utilities --- */
 @keyframes spin {
@@ -784,70 +770,12 @@ body.tv-mode main {
     margin-top: 1.5rem;
 }
 
-@media (max-width: 1200px) {
+/* --- 7. Card Component Overrides --- */
 
-    .layout-grid-3-cols,
-    .layout-grid-4-cols {
-        grid-template-columns: 1fr 1fr;
-    }
-}
-
-@media (max-width: 992px) {
-    .header__nav {
-        display: none;
-    }
-}
-
-@media (max-width: 768px) {
-
-    .layout-grid-2-cols,
-    .layout-grid-3-cols,
-    .layout-grid-4-cols {
-        grid-template-columns: 1fr;
-    }
-}
-
-/* ==========================================================================
-    7. Card Component Overrides & Fixes (v2.3)
-   ========================================================================== */
-
-/* --- Estrutura e Corpo do Card --- */
-.card {
-    border-radius: 10px;
-}
-
-.card__header,
-.card__body,
 .card__footer {
-    padding: 1rem 1.25rem;
-}
-
-.card__header-actions .btn-icon img {
-
-    /* Mantém os ícones de log visíveis no modo escuro */
-    body.dark-mode & {
-        filter: invert(80%);
-    }
-}
-
-/* --- Rodapé e Ações --- */
-.card__footer {
-    padding: 1rem 1.25rem;
     background-color: var(--bg-muted);
 }
 
-.card__actions {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-}
-
-.card__footer p {
-    font-weight: 700;
-    margin-bottom: 0.75rem;
-}
-
-/* --- Botões de Ação Dentro do Card --- */
 .card__actions .btn {
     flex-grow: 1;
     padding: 0.5rem;
@@ -866,7 +794,6 @@ body.tv-mode main {
     background-color: var(--bg-surface);
 }
 
-/* --- Cores dos Botões de Ação --- */
 .btn--edit {
     color: var(--clr-secondary);
     border-color: var(--clr-secondary);
@@ -897,38 +824,16 @@ body.tv-mode main {
     color: white;
 }
 
-/* --- Status e Badge de Finalizado --- */
-.card__footer .status-value,
-.finalizado-badge {
-    padding: 0.2rem 0.5rem;
-    border-radius: 4px;
-    font-size: 0.85rem;
-}
-
-.card--status-awaiting .status-value {
-    color: var(--clr-danger);
-    background: var(--bg-danger-soft);
-}
-
-.card--status-progress .status-value {
-    color: var(--clr-warning);
-    background: var(--bg-warning-soft);
-}
-
-.card--status-done .status-value {
-    color: var(--clr-success);
-    background: var(--bg-success-soft);
-}
-
 .finalizado-badge {
     width: 100%;
     text-align: center;
     font-weight: 700;
     color: var(--clr-success);
     background: var(--bg-success-soft);
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
 }
 
-/* --- Seletor de Comprador --- */
 .comprador-select-wrapper {
     margin-top: 10px;
     padding-top: 10px;
@@ -956,19 +861,13 @@ body.tv-mode main {
     background-color: var(--bg-muted);
 }
 
-/* ==========================================================================
-    8. Component Hotfixes & Refinements (v2.4)
-   ========================================================================== */
 
 /* --- Card de Sugestões: Barra de Rolagem e Status do Item --- */
 .sugestoes-coluna .card__body {
     flex-grow: 1;
     overflow-y: auto;
-    /* Habilita a barra de rolagem se o conteúdo for maior */
     max-height: 280px;
-    /* Limita a altura máxima do conteúdo */
     padding-right: 10px;
-    /* Espaço para a barra de rolagem não colar no texto */
 }
 
 .item-list-selectable li {
@@ -992,14 +891,12 @@ body.tv-mode main {
 .item-status-badge--pendente {
     background-color: var(--clr-warning);
     color: #212529;
-    /* Texto escuro para melhor contraste com amarelo */
 }
 
 .item-status-badge--atendido {
     background-color: var(--clr-success);
 }
 
-/* --- Correção do Botão Excluir (Sugestões) --- */
 .card__actions .btn--danger {
     background-color: transparent;
     color: var(--clr-danger);
@@ -1011,48 +908,32 @@ body.tv-mode main {
     color: white;
 }
 
-/* Garante que o botão Excluir fique visível mesmo desabilitado (se for o caso) */
 .card__actions .btn--danger:disabled {
     opacity: 0.4;
     color: var(--clr-danger);
     background-color: transparent;
 }
 
-/* ==========================================================================
-    9. Hotfix: Alinhamento de Itens em Sugestões (v2.5)
-   ========================================================================== */
-
 .item-list-selectable .item-content {
     display: flex;
     align-items: center;
-    /* Alinha verticalmente os itens */
     gap: 0.75rem;
-    /* Espaço entre o checkbox/bullet e o texto */
 }
 
 .item-list-selectable .item-checkbox-wrapper {
     flex-shrink: 0;
-    /* Impede que o container do checkbox encolha */
     width: 20px;
-    /* Largura fixa para alinhar o texto independentemente do conteúdo */
     text-align: center;
-    /* Centraliza o bullet point (•) quando o checkbox não está presente */
 }
 
 .item-list-selectable .item-text-wrapper {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    /* Permite que a badge quebre a linha em telas pequenas */
     gap: 0.5rem;
-    /* Espaço entre o texto e a badge */
 }
 
-/* ==========================================================================
-    10. Hotfix: Estilos do Modal de Log e Botões (v2.6)
-   ========================================================================== */
-
-/* --- Estilos do Modal de Histórico/Log --- */
+/* --- Modal de Histórico/Log --- */
 .log-entry-body ul {
     list-style: none;
     padding-left: 10px;
@@ -1085,34 +966,23 @@ body.tv-mode main {
     font-weight: bold;
 }
 
-/* CORREÇÃO: Adiciona a cor azul para os detalhes do log */
 .log-entry-body .log-detail {
     color: var(--clr-primary);
     font-style: italic;
 }
 
-/* ==========================================================================
-    11. Hotfix: Estilo do Modal de Permissões de Usuário (v2.7)
-   ========================================================================== */
-
-/* Container que usa Grid para criar colunas responsivas */
+/* --- Modal de Permissões de Usuário --- */
 .permissions-grid {
     display: grid;
-    /* Cria colunas que têm no mínimo 220px, preenchendo o espaço disponível */
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 0.75rem;
-    /* Espaçamento entre os itens */
     margin-bottom: 1rem;
 }
 
-/* Estilo para cada item de permissão (o <label>) */
 .permissions-grid label {
     display: flex;
-    /* Usa flexbox para alinhar o checkbox e o texto */
     align-items: center;
-    /* Alinha verticalmente ao centro */
     gap: 0.75rem;
-    /* Espaço entre o checkbox e o texto */
     padding: 0.6rem 0.8rem;
     background-color: var(--bg-muted);
     border: 1px solid var(--border-main);
@@ -1126,55 +996,26 @@ body.tv-mode main {
     border-color: var(--clr-primary);
 }
 
-/* Garante que o checkbox não tenha margens estranhas */
 .permissions-grid input[type="checkbox"] {
     margin: 0;
     width: auto;
-    /* Reseta a largura padrão de 100% */
 }
 
-/* ==========================================================================
-    13. Hotfix: Layout Definitivo do Modal de Usuário (v2.9)
-   ========================================================================== */
-
-/* 1. Torna o FORM o elemento que cresce para preencher o espaço vertical */
 #user-modal-overlay #form-user {
     display: flex;
-    /* O próprio formulário se torna um container flex */
     flex-direction: column;
-    /* Para empilhar o body e o footer */
     flex: 1;
-    /* Faz o formulário crescer e preencher o espaço */
     min-height: 0;
-    /* Truque de CSS para evitar problemas de overflow em flex containers */
 }
 
-/* 2. Remove a regra genérica 'flex: 1' do modal-body, pois agora ela será mais específica */
-.modal-body {
-    padding: 1.5rem;
-    overflow-y: auto;
-    /* REMOVA a linha 'flex: 1;' daqui se você a adicionou globalmente antes */
-}
-
-/* 3. Aplica a regra 'flex: 1' APENAS ao modal-body que está DENTRO do formulário do usuário */
 #user-modal-overlay #form-user .modal-body {
     flex: 1;
-    /* Faz o corpo do formulário crescer, empurrando o footer para baixo */
 }
 
-/* ==========================================================================
-    14. Estilos do Painel de Notificações (v3.0)
-   ========================================================================== */
-
-/* Torna o container dos botões um ponto de referência para o painel */
-.header__actions {
-    position: relative;
-}
-
+/* --- Painel de Notificações --- */
 #notification-panel {
     position: absolute;
     top: 120%;
-    /* Posiciona abaixo do sino */
     right: 0;
     width: 380px;
     max-height: 400px;
@@ -1211,7 +1052,6 @@ body.tv-mode main {
     padding: 0;
     margin: 0;
     overflow-y: auto;
-    /* Adiciona scroll se a lista for longa */
 }
 
 #notification-list li {
@@ -1240,11 +1080,7 @@ body.tv-mode main {
     margin-top: 0.25rem;
 }
 
-/* ==========================================================================
-    15. Hotfix: Estilo dos Botões da Tabela de Admin (v3.1)
-   ========================================================================== */
-
-/* Container da célula para alinhar os botões */
+/* --- Botões da Tabela de Admin --- */
 .actions-cell {
     display: flex;
     gap: 0.5rem;
@@ -1252,7 +1088,6 @@ body.tv-mode main {
     align-items: center;
 }
 
-/* Estilo base para todos os botões de ação na tabela */
 .btn-action {
     padding: 0.4rem 0.8rem;
     font-size: 0.8rem;
@@ -1267,8 +1102,6 @@ body.tv-mode main {
     letter-spacing: 0.5px;
 }
 
-/* MUDANÇA: A classe .btn-reset-pass foi combinada com .btn-set-pass */
-/* Estilo para os botões "Editar", "Definir Senha" */
 .btn-action.btn-edit,
 .btn-action.btn-set-pass {
     background-color: var(--clr-secondary);
@@ -1281,7 +1114,6 @@ body.tv-mode main {
     border-color: #545b62;
 }
 
-/* Estilo para o botão "Excluir" */
 .btn-action.btn-delete {
     background-color: var(--clr-danger);
     border-color: var(--clr-danger);
@@ -1292,11 +1124,7 @@ body.tv-mode main {
     border-color: #ac2925;
 }
 
-/* ==========================================================================
-    16. Hotfix: Estilos da Observação e Botão Secundário (v3.2)
-   ========================================================================== */
-
-/* Garante que o botão secundário seja visível no tema claro */
+/* --- Observação e Botão Secundário --- */
 .card__actions .btn--secondary {
     color: var(--clr-secondary);
     border-color: var(--clr-secondary);
@@ -1307,12 +1135,9 @@ body.tv-mode main {
     color: white;
 }
 
-/* Novo container para o log de observações */
 .obs-log-container {
     max-height: 120px;
-    /* Limita a altura */
     overflow-y: auto;
-    /* Adiciona scroll se necessário */
     background-color: var(--bg-muted);
     border: 1px solid var(--border-main);
     border-radius: var(--border-radius-md);
@@ -1337,16 +1162,11 @@ body.tv-mode main {
     margin-top: 0.2rem;
 }
 
-/* ==========================================================================
-    17. Badge de Notificação no Menu (v3.3)
-   ========================================================================== */
-
-/* Posiciona a <li> como referência para a badge */
+/* --- Badge de Notificação no Menu --- */
 .nav-item {
     position: relative;
 }
 
-/* Estilo da badge de notificação */
 .notification-badge {
     position: absolute;
     top: 2px;
@@ -1364,10 +1184,7 @@ body.tv-mode main {
     border: 2px solid var(--clr-primary-hover);
 }
 
-/* ==========================================================================
-    18. Estilos da Fila de Separação (v3.4)
-   ========================================================================== */
-
+/* --- Fila de Separação --- */
 .fila-separadores {
     display: flex;
     flex-wrap: wrap;
@@ -1382,10 +1199,9 @@ body.tv-mode main {
 .fila-separadores li {
     background-color: var(--bg-muted);
     border: 1px solid var(--border-main);
-    /* MODIFICAÇÃO: Padding e fonte aumentados ainda mais */
-    padding: 0.75rem 1.5rem;
-    font-size: 1.3rem;
-    border-radius: 30px;
+    padding: 0.25rem 0.8rem;
+    font-size: 0.8rem;
+    border-radius: 15px;
     font-weight: 500;
     transition: var(--transition-main);
 }
@@ -1399,61 +1215,61 @@ body.tv-mode main {
     box-shadow: var(--shadow-md);
 }
 
-/* ==========================================================================
-    19. Estilos Compactos para Cards de Separação
-   ========================================================================== */
-
+/* --- Cards de Separação Compactos --- */
 .separacao-card .card__body {
     padding-top: 0.75rem;
     padding-bottom: 0.75rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
 }
 
-/* Cria o grid para as informações principais do card */
+.separacao-card .card__header {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    padding-top: 0.1rem;
+    padding-bottom: 0.1rem;
+}
+
+.separacao-card .card__header h3 {
+    font-size: 1rem;
+    font-weight: 700;
+}
+
 .separacao-card .card-info-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    /* Duas colunas de largura igual */
-    gap: 0.2rem 1rem;
-    /* Espaçamento vertical pequeno, horizontal maior */
+    gap: 0 1rem;
     margin-bottom: 0.5rem;
+    font-size: 0.85rem;
 }
 
-/* Remove a margem padrão dos parágrafos dentro do grid */
 .separacao-card .card-info-grid p {
     margin-bottom: 0;
     white-space: nowrap;
-    /* Impede que o texto quebre linha */
     overflow: hidden;
-    /* Esconde o texto que transbordar */
     text-overflow: ellipsis;
-    /* Adiciona "..." ao texto cortado */
+    line-height: 1.2;
 }
 
-/* Diminui a altura e o preenchimento do log de observações */
 .separacao-card .obs-log-container {
     max-height: 65px;
-    /* Altura máxima menor */
     padding: 0.5rem;
 }
 
 .separacao-card .obs-entry {
     font-size: 0.8rem;
-    /* Fonte menor para as observações */
 }
 
-/* Diminui o espaçamento entre os botões de ação */
 .separacao-card .card__actions {
     gap: 0.3rem;
 }
 
-/* Estilo para botões de ação menores */
 .separacao-card .card__actions .btn {
     padding: 0.3rem 0.6rem;
     font-size: 0.75rem;
     font-weight: 500;
 }
 
-/* Estilo para o dropdown de conferente menor */
 .separacao-card .comprador-select-wrapper select {
     padding: 4px;
     font-size: 0.8rem;
@@ -1465,142 +1281,51 @@ body.tv-mode main {
     padding-top: 0.5rem;
 }
 
-/* ==========================================================================
-    20. Estilos Ultra-Compactos (Refinamento)
-   ========================================================================== */
-
-/* --- Otimização da Fila de Separação --- */
-.fila-separadores li {
-    padding: 0.25rem 0.8rem;
-    /* Pílulas da fila menores */
-    font-size: 0.8rem;
-    border-radius: 15px;
-}
-
-/* --- Compactação Máxima dos Cards de Separação --- */
-
-/* Diminui o preenchimento do cabeçalho e corpo do card */
-.separacao-card .card__header,
-.separacao-card .card__body {
-    padding-left: 0.5rem;
-    padding-right: 0.5rem;
-}
-
-.separacao-card .card__header {
-    padding-top: 0.1rem;
-    padding-bottom: 0.1rem;
-}
-
-.separacao-card .card__body {
-    padding-top: 0.75rem;
-    padding-bottom: 0.75rem;
-}
-
-/* Diminui a fonte do título do card (Mov. XXXXXX) */
-.separacao-card .card__header h3 {
-    font-size: 1rem;
-    font-weight: 700;
-}
-
-/* Otimização crucial: remove o espaçamento vertical do grid e diminui a fonte */
-.separacao-card .card-info-grid {
-    gap: 0 1rem;
-    /* Zera o espaçamento vertical (entre linhas) */
-    font-size: 0.85rem;
-    /* Diminui a fonte de todo o grid */
-}
-
-/* Força os parágrafos dentro do grid a serem ainda mais compactos */
-.separacao-card .card-info-grid p {
-    line-height: 1.2;
-    /* Reduz a altura da linha */
-}
-
-/* ==========================================================================
-    21. Compactação Final da Interface de Controle
-   ========================================================================== */
-
-/* Reduz o espaçamento geral do container da barra de busca */
+/* --- Interface de Controle Compacta --- */
 .filtro-container-actions {
     margin-bottom: 1rem;
-    /* Menos espaço abaixo da barra */
 }
 
-/* Reduz a altura do campo de busca */
-.filtro-container-actions input {
-    padding-top: 0.3rem;
-    padding-bottom: 0.3rem;
-    font-size: 0.9rem;
-}
-
-/* Reduz a altura do botão "Atualizar" para corresponder à busca */
+.filtro-container-actions input,
 .filtro-container-actions button {
     padding-top: 0.3rem;
     padding-bottom: 0.3rem;
     font-size: 0.9rem;
 }
 
-/* --- Compactação do Formulário de Criação de Separação --- */
-
-/* Reduz a altura dos campos de input e select */
 #form-separacao input,
 #form-separacao select {
     padding-top: 0.3rem;
     padding-bottom: 0.3rem;
     font-size: 0.9rem;
     height: auto;
-    /* Permite que a altura seja definida pelo padding */
 }
 
-/* Reduz o tamanho e o espaçamento das etiquetas (labels) */
 #form-separacao label {
     font-size: 0.8rem;
     margin-bottom: 0.2rem;
 }
 
-/* Reduz a altura do botão "Criar" para alinhar com os inputs */
 #form-separacao .btn--primary {
     padding-top: 0.3rem;
     padding-bottom: 0.3rem;
     font-size: 0.9rem;
 }
 
-/* ==========================================================================
-    22. Ajustes Finais de Espaçamento Vertical
-   ========================================================================== */
-
-/* Reduz o espaço abaixo dos títulos das colunas de separação */
 .quadro-coluna h2 {
     margin-bottom: 0.3rem;
-    /* O valor anterior era 1.5rem */
 }
 
-/* ==========================================================================
-    19. Ajustes na Tabela de Gerenciamento (v3.5)
-   ========================================================================== */
-
-/* Torna as linhas da tabela mais compactas */
-.admin-table th,
-.admin-table td {
-    padding: 0.6rem 0.8rem;
-    /* Diminui o padding vertical e horizontal */
-}
-
-/* Estilo para a tag colorida do separador */
 .separador-tag {
     display: inline-block;
     padding: 0.25rem 0.6rem;
     border-radius: 12px;
-    /* Deixa a tag mais arredondada */
     font-size: 0.8rem;
     font-weight: 700;
     color: white;
-    /* Cor do texto sempre branca */
     text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.2);
-    /* Sombra para legibilidade */
 }
 
-/* NOVO: Garante que o botão primário no rodapé do card seja visível */
 .card__actions .btn--primary {
     background-color: var(--clr-primary);
     color: white;
@@ -1611,11 +1336,64 @@ body.tv-mode main {
     background-color: var(--clr-primary-hover);
     border-color: var(--clr-primary-hover);
 }
-.admin-table .linha-finalizada {
-    background-color: var(--bg-success-soft) !important;
-    border-left: 4px solid var(--clr-success);
+
+@media (max-width: 1200px) {
+
+    .layout-grid-3-cols,
+    .layout-grid-4-cols {
+        grid-template-columns: 1fr 1fr;
+    }
 }
 
-.admin-table .linha-finalizada:hover {
-    background-color: rgba(92, 184, 92, 0.2) !important;
+@media (max-width: 992px) {
+    .header__nav {
+        display: none;
+    }
+}
+
+@media (max-width: 768px) {
+
+    .layout-grid-2-cols,
+    .layout-grid-3-cols,
+    .layout-grid-4-cols {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ==========================================================================
+    23. Estilos do Fluxo de Contabilidade (v3.6)
+   ========================================================================== */
+
+.card--status-info {
+    border-left-color: var(--clr-info);
+}
+
+/* --- SOLUÇÃO --- */
+/* 1. Crie uma nova classe SÓ para o ícone "X" */
+.close-modal-icon {
+    background: transparent;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    width: 32px;
+    height: 32px;
+    line-height: 1;
+    /* Alinha o "X" perfeitamente */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition-main);
+}
+
+.close-modal-icon:hover {
+    color: var(--clr-danger);
+    transform: rotate(90deg);
+}
+
+/* 2. Remova os estilos conflitantes da classe .close-modal genérica. 
+      Ela agora serve apenas para o JavaScript identificar o que fechar. */
+.close-modal {
+    cursor: pointer;
+    /* Mantenha apenas o cursor, pois a aparência virá da classe .btn ou .close-modal-icon */
 }
