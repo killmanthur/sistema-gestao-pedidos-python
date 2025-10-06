@@ -1,3 +1,5 @@
+<!-- historico.html -->
+
 {% extends "base.html" %}
 
 {% block title %}Histórico de Pedidos{% endblock %}
@@ -6,7 +8,8 @@
 <section class="form-container" style="max-width: 1200px;">
     <h2>Filtrar Histórico</h2>
     <form id="form-filtros">
-        <div class="layout-grid-4-cols" style="gap: 1rem;">
+        <!-- ALTERAÇÃO AQUI: de layout-grid-4-cols para layout-grid-5-cols -->
+        <div class="layout-grid-5-cols" style="gap: 1rem;">
             <div class="form-group"><label for="filtro-vendedor">Vendedor</label><input type="text"
                     id="filtro-vendedor"></div>
             <div class="form-group"><label for="filtro-comprador">Comprador</label><input type="text"
