@@ -1,100 +1,91 @@
-# Quadro de Pedidos - Sistema de Gestão Interna
+# Quadro de Pedidos e Logística
 
-## 📜 Visão Geral
+![Quadro de Pedidos](https://img.shields.io/badge/Status-Em_Desenvolvimento-yellow)
+![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)
+![Flask](https://img.shields.io/badge/Flask-2.x-green.svg)
+![Firebase](https://img.shields.io/badge/Firebase-Realtime_DB-orange.svg)
 
-O **Quadro de Pedidos** é uma aplicação web completa, construída com Flask e Firebase, projetada para otimizar e digitalizar os fluxos de trabalho internos de uma empresa. O sistema gerencia desde a criação de requisições de compra e sugestões até o complexo processo logístico de recebimento, conferência, separação e resolução de pendências.
+O **Quadro de Pedidos e Logística** é uma aplicação web completa desenvolvida para otimizar e digitalizar o fluxo de trabalho de uma empresa, desde a criação de requisições de compra até a expedição de produtos. A ferramenta centraliza informações, melhora a comunicação entre equipes (Vendas, Compras, Estoque, Logística) e fornece dados para análise de desempenho.
 
-A interface é reativa e em tempo real, fornecendo aos usuários uma visão sempre atualizada do status das operações, com um robusto sistema de permissões para garantir que cada colaborador acesse apenas as funcionalidades relevantes ao seu cargo.
+## 📋 Funcionalidades Principais
 
-## ✨ Funcionalidades Principais
+A plataforma é dividida em módulos que cobrem todo o ciclo de vida de um pedido:
 
--   **Módulo de Compras:**
-    -   Criação de **Pedidos de Rua** (múltiplos itens) e **Atualizações de Orçamento**.
-    -   Quadro ativo com visualização em tempo real do status dos pedidos (`Aguardando`, `Em Cotação`, `OK`).
-    -   Sistema de **Sugestão de Compras** com fluxo de status (`Pendente`, `Cogitado`, `Parcialmente Atendido`, `Finalizado`).
-    -   Atribuição de pedidos a compradores específicos.
+### **Compras**
+*   **Quadro Ativo:** Visualização em tempo real (Kanban) de todos os pedidos de rua e atualizações de orçamento que estão em aberto.
+*   **Criação de Pedidos:** Formulários intuitivos para que vendedores criem requisições de compra de produtos ou solicitem atualizações de orçamento.
+*   **Sugestão de Compras:** Um quadro dedicado para que vendedores sugiram itens para compra, permitindo que a equipe de compras analise, cogite e atenda as sugestões.
+*   **Histórico:** Um arquivo pesquisável de todos os pedidos finalizados, com filtros avançados e capacidade de gerar relatórios.
+*   **Dashboard (Vendas):** Gráficos e métricas sobre o volume de pedidos por vendedor, comprador e período.
 
--   **Módulo de Logística:**
-    -   **Recebimento de Mercadorias:** Registro detalhado de notas fiscais de fornecedores e da rua, com campo "Recebido por".
-    -   **Conferência:** Fluxo para conferentes verificarem as mercadorias recebidas.
-    -   **Pendências e Alterações:** Uma área dedicada para a contabilidade e o estoque resolverem divergências (itens faltantes, erros de lançamento), com ordenação por data e paginação.
-    -   **Separações:** Sistema de separação de mercadorias com uma **fila de prioridade** gerenciável para os separadores.
+### **Logística**
+*   **Recebimento de Mercadorias:** Registro de entrada de notas fiscais de fornecedores e da rua, iniciando o fluxo de conferência.
+*   **Conferência de Espelhos:** Um quadro para a equipe de estoque gerenciar a conferência de produtos recebidos.
+*   **Pendências e Alterações:** Painel centralizado para resolver divergências encontradas na conferência, separando problemas de fornecedor e problemas de lançamento (contabilidade).
+*   **Separações:** Um quadro Kanban para gerenciar o processo de separação de produtos para expedição, com um sistema de fila de prioridade para os separadores.
+*   **Dashboard de Logística:** Métricas de desempenho da equipe, incluindo contagem de separações/conferências e tempo médio de execução por colaborador.
 
--   **Gestão e Análise:**
-    -   **Dashboard Analítico:** Gráficos que exibem atividade mensal, pedidos por vendedor e atendimentos por comprador, com filtros por data e usuário.
-    -   **Histórico Completo:** Arquivo de todos os pedidos finalizados com filtros avançados e capacidade de gerar relatórios em texto.
-    -   **Gerenciamento de Usuários:** Interface de administrador para criar, editar, excluir e definir permissões granulares para cada usuário e role.
-
--   **Recursos da Plataforma:**
-    -   **Autenticação Segura** via Firebase.
-    -   **Notificações em Tempo Real** no sistema (ícone de sino) e no navegador.
-    -   **Interface Responsiva** com tema claro e escuro (Dark Mode).
-    -   Empacotado como uma aplicação de desktop usando **PyWebView** para fácil distribuição.
+### **Gestão**
+*   **Gerenciamento de Usuários:** Painel de administração para criar, editar, excluir usuários e gerenciar permissões detalhadas de acesso a cada página e funcionalidade do sistema.
 
 ## 🛠️ Tecnologias Utilizadas
 
--   **Backend:** Python com **Flask**
--   **Frontend:** HTML5, CSS3, JavaScript (Vanilla JS, modularizado)
--   **Templating:** Jinja2
--   **Banco de Dados e Realtime:** Firebase Realtime Database
--   **Autenticação:** Firebase Authentication
--   **Aplicação Desktop:** PyWebView
+*   **Backend:**
+    *   **Python 3** com o micro-framework **Flask**.
+    *   **PyWebView** para encapsular a aplicação Flask em um executável desktop para Windows.
+*   **Frontend:**
+    *   **HTML5**, **CSS3** (Vanilla) e **JavaScript (ES6 Modules)**.
+    *   **Jinja2** para template rendering.
+    *   **Chart.js** para a visualização de gráficos nos dashboards.
+*   **Banco de Dados:**
+    *   **Firebase Realtime Database** para armazenamento de dados e sincronização em tempo real (onde aplicável).
+    *   **Firebase Authentication** para gerenciamento de login e autenticação de usuários.
 
-## 🚀 Configuração e Instalação
+## 🚀 Como Executar o Projeto
 
-1.  **Pré-requisitos:**
-    -   Python 3.8+
-    -   `pip` e `venv`
+### Pré-requisitos
 
-2.  **Clonar o Repositório:**
+-   Python 3.9 ou superior.
+-   `pip` (gerenciador de pacotes do Python).
+-   Uma conta no Firebase com um projeto Realtime Database e Authentication configurados.
+
+### Passos para Instalação
+
+1.  **Clone o repositório:**
     ```bash
-    git clone https://[URL_DO_SEU_REPOSITORIO].git
-    cd quadro-de-pedidos
+    git clone https://[URL-DO-SEU-REPOSITORIO].git
+    cd quadro-de-pedidos-e-logistica
     ```
 
-3.  **Criar e Ativar um Ambiente Virtual:**
+2.  **Crie e ative um ambiente virtual:**
     ```bash
-    python -m venv venv
     # Windows
+    python -m venv venv
     .\venv\Scripts\activate
-    # macOS/Linux
+
+    # macOS / Linux
+    python3 -m venv venv
     source venv/bin/activate
     ```
 
-4.  **Instalar as Dependências:**
+3.  **Instale as dependências:**
     ```bash
-    pip install Flask firebase-admin pywebview
+    pip install -r requirements.txt
     ```
+    *(Nota: Se o arquivo `requirements.txt` não existir, você precisará instalar as bibliotecas manualmente: `pip install Flask firebase-admin pywebview`)*
 
-5.  **Configurar o Firebase:**
-    -   Crie um projeto no [Firebase Console](https://console.firebase.google.com/).
-    -   Ative o **Realtime Database** e o **Authentication** (com E-mail/Senha).
-    -   Vá em "Configurações do Projeto" > "Contas de serviço".
-    -   Clique em "Gerar nova chave privada" e baixe o arquivo JSON.
-    -   Renomeie este arquivo para `serviceAccountKey.json` e coloque-o na raiz do projeto.
+4.  **Configure o Firebase:**
+    *   Faça o download do seu arquivo de credenciais `serviceAccountKey.json` do console do Firebase.
+    *   Coloque este arquivo na pasta raiz do projeto (`quadro_app/`).
 
-6.  **Executar a Aplicação:**
+5.  **Execute a aplicação:**
     ```bash
     python run.py
     ```
-    - Para iniciar em modo tela cheia (modo TV), use o argumento `--tv`:
-    ```bash
-    python run.py --tv
-    ```
+    Isso iniciará o servidor Flask e abrirá a janela do PyWebView com a aplicação rodando.
 
-## 📂 Estrutura do Projeto
+### Modo TV
 
-```
-.
-├── quadro_app/
-│   ├── blueprints/       # Organização das rotas da API e views
-│   ├── static/
-│   │   ├── css/
-│   │   └── js/           # Scripts modulares (auth, ui, pages, etc.)
-│   ├── templates/        # Arquivos HTML com Jinja2
-│   ├── __init__.py       # Inicialização da aplicação Flask
-│   └── utils.py          # Funções utilitárias (logs, notificações)
-├── run.py                # Ponto de entrada para iniciar a aplicação
-├── serviceAccountKey.json # Chave de serviço do Firebase (NÃO versionar)
-└── README.md
-```
+Para iniciar a aplicação em tela cheia sem os menus de navegação (ideal para monitores em áreas de trabalho), execute com o argumento `--tv`:
+```bash
+python run.py --tv
