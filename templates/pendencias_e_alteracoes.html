@@ -21,12 +21,12 @@
         <div id="quadro-resolvidos" class="quadro-container"></div>
     </div>
 
-<div id="pagination-resolvidos" class="pagination-container">
-    <div id="loading-spinner-resolvidos" class="spinner" style="display: none;"></div>
-    <button id="btn-carregar-mais-resolvidos" class="btn btn--secondary" style="display: none;">Carregar mais
-        antigos</button>
-</div>
-</div>
+    <div id="pagination-resolvidos" class="pagination-container">
+        <div id="loading-spinner-resolvidos" class="spinner" style="display: none;"></div>
+        <button id="btn-carregar-mais-resolvidos" class="btn btn--secondary" style="display: none;">Carregar mais
+            antigos</button>
+    </div>
+    </div>
 </section>
 
 <!-- Modal para Resolver Pendências/Alterações -->
@@ -34,7 +34,6 @@
     <div class="modal-content" style="max-width: 600px;">
         <div class="modal-header">
             <h2 id="resolver-modal-title">Resolver Item</h2>
-            <!-- CORREÇÃO AQUI -->
             <button class="close-modal close-modal-icon">×</button>
         </div>
         <form id="form-resolver">
@@ -47,7 +46,6 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <!-- CORREÇÃO AQUI (já estava certo, mas confirmando) -->
                 <button type="button" class="btn btn--secondary close-modal">Cancelar</button>
                 <button type="button" id="btn-add-update" class="btn btn--secondary">Adicionar Atualização</button>
                 <button type="submit" class="btn btn--primary">Marcar como Resolvido</button>
@@ -61,12 +59,10 @@
     <div class="modal-content">
         <div class="modal-header">
             <h2 id="edit-recebimento-modal-title">Editar Recebimento</h2>
-            <!-- Este está correto, continua com -icon -->
             <button class="close-modal close-modal-icon">×</button>
         </div>
         <form id="form-edit-recebimento" novalidate>
             <div class="modal-body">
-                <!-- ... (form groups) ... -->
                 <div class="form-group">
                     <label for="edit-numero-nota-fiscal">Nº Nota Fiscal</label>
                     <input type="text" id="edit-numero-nota-fiscal" required>
@@ -87,14 +83,34 @@
             <div class="modal-footer">
                 <button type="button" id="btn-excluir-recebimento" class="btn btn--danger"
                     style="margin-right: auto; display: none;">Excluir</button>
-
-                <!-- ****** A CORREÇÃO ESTÁ AQUI ****** -->
-                <!-- Troquei 'close-modal-icon' por 'close-modal' -->
                 <button type="button" class="btn btn--secondary close-modal">Cancelar</button>
-
                 <button type="submit" class="btn btn--primary">Salvar Alterações</button>
             </div>
         </form>
     </div>
 </div>
+
+<!-- ****** NOVO MODAL ADICIONADO AQUI ****** -->
+<div id="solicitar-alteracao-modal-overlay" class="modal-overlay" style="display:none;">
+    <div class="modal-content" style="max-width: 600px;">
+        <div class="modal-header">
+            <h2>Solicitar Alteração</h2>
+            <button class="close-modal close-modal-icon">×</button>
+        </div>
+        <form id="form-solicitar-alteracao">
+            <div class="modal-body">
+                <p>Descreva abaixo qual alteração é necessária. Esta informação será enviada para a Contabilidade.</p>
+                <div class="form-group">
+                    <label for="solicitar-alteracao-observacao">Observação da Solicitação</label>
+                    <textarea id="solicitar-alteracao-observacao" rows="4" required></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn--secondary close-modal">Cancelar</button>
+                <button type="submit" class="btn btn--primary">Confirmar Solicitação</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 {% endblock %}

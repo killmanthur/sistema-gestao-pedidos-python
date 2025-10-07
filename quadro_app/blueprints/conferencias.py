@@ -39,6 +39,56 @@ def editar_conferencia(conferencia_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# ****** ROTA MODIFICADA AQUI ******
+@conferencias_bp.route('/<string:conferencia_id>/solicitar-alteracao', methods=['PUT'])
+def solicitar_alteracao_posterior(conferencia_id):
+    dados = request.get_json()
+    editor_nome = dados.get('editor_nome', 'N/A')
+    observacao = dados.get('observacao')
+
+    # Validação da observação
+    if not observacao or not observacao.strip():
+        return jsonify({'error': 'A observação é obrigatória para solicitar alteração.'}), 400
+
+    try:
+        ref = db.reference(f'conferencias/{conferencia_id}')
+        item_atual = ref.get()
+        if not item_atual:
+            return jsonify({'error': 'Item não encontrado'}), 404
+
+        status_atual = item_atual.get('status')
+        novo_status = status_atual
+        
+        if status_atual == 'Pendente (Fornecedor)':
+            novo_status = 'Pendente (Ambos)'
+        elif status_atual == 'Finalizado':
+            novo_status = 'Pendente (Alteração)'
+        else:
+            return jsonify({'status': 'success', 'message': 'Nenhuma alteração necessária.'}), 200
+
+        updates = {
+            'status': novo_status,
+            'resolvido_contabilidade': False
+        }
+        ref.update(updates)
+
+        # Adiciona a observação ao histórico do item
+        obs_ref = ref.child('observacoes')
+        obs_ref.push({
+            'texto': f"[SOLICITAÇÃO DE ALTERAÇÃO] {observacao}",
+            'autor': editor_nome,
+            'timestamp': datetime.now(tz_cuiaba).isoformat()
+        })
+
+        log_info = f"Item movido de '{status_atual}' para '{novo_status}' com a observação: '{observacao}'"
+        registrar_log(conferencia_id, editor_nome, 'SOLICITACAO_ALTERACAO_POSTERIOR', detalhes={'info': log_info}, log_type='conferencias')
+        
+        return jsonify({'status': 'success'}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+# ****** FIM DA MODIFICAÇÃO ******
+
+
 @conferencias_bp.route('/recebimento-rua', methods=['POST'])
 def criar_recebimento_rua():
     dados = request.get_json()

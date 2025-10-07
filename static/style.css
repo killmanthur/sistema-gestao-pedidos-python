@@ -694,6 +694,7 @@ body.dark-mode .card__header-actions .btn-icon img {
     text-align: left;
     vertical-align: middle;
 }
+
 .admin-table th {
     background-color: var(--bg-muted);
 }
@@ -1405,3 +1406,25 @@ body.tv-mode main {
     cursor: pointer;
     /* Mantenha apenas o cursor, pois a aparência virá da classe .btn ou .close-modal-icon */
 }
+
+/* ****** INÍCIO DA ALTERAÇÃO ****** */
+/*
+ * Regra genérica para habilitar a rolagem em modais onde o <form>
+ * envolve o .modal-body e .modal-footer.
+ */
+.modal-content>form {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    /* Faz o formulário ocupar o espaço disponível */
+    min-height: 0;
+    /* Hack de flexbox para permitir que o conteúdo encolha e role */
+}
+
+/* Garante que, dentro do formulário flexível, o .modal-body seja o
+   elemento que cresce e encolhe, ativando sua propriedade 'overflow-y: auto' */
+.modal-content>form>.modal-body {
+    flex: 1;
+}
+
+/* ****** FIM DA ALTERAÇÃO ****** */

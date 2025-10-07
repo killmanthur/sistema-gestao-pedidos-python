@@ -19,6 +19,53 @@ function resetState() {
     };
 }
 
+// ****** FUNÇÃO MODIFICADA: AGORA APENAS ABRE O MODAL ******
+function handleSolicitarAlteracao(item) {
+    const modal = state.elementos.solicitarAlteracaoModal;
+    modal.form.reset(); // Limpa o formulário
+    modal.form.dataset.id = item.id; // Armazena o ID no formulário
+    modal.overlay.style.display = 'flex';
+    setTimeout(() => modal.obsInput.focus(), 100);
+}
+
+// ****** NOVA FUNÇÃO PARA LIDAR COM O SUBMIT DO MODAL ******
+async function handleSolicitarAlteracaoSubmit(event) {
+    event.preventDefault();
+    const modal = state.elementos.solicitarAlteracaoModal;
+    const form = event.target;
+    const id = form.dataset.id;
+    const observacao = modal.obsInput.value.trim();
+    const submitBtn = form.querySelector('button[type="submit"]');
+
+    if (!observacao) {
+        showToast('A observação é obrigatória.', 'error');
+        return;
+    }
+
+    toggleButtonLoading(submitBtn, true, 'Enviando...');
+    try {
+        const response = await fetch(`/api/conferencias/${id}/solicitar-alteracao`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                editor_nome: AppState.currentUser.nome,
+                observacao: observacao // Envia a observação
+            })
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Falha ao solicitar alteração.');
+        }
+        showToast('Item enviado para revisão da Contabilidade!', 'success');
+        modal.overlay.style.display = 'none';
+    } catch (error) {
+        showToast(`Erro: ${error.message}`, 'error');
+    } finally {
+        toggleButtonLoading(submitBtn, false, 'Confirmar Solicitação');
+    }
+}
+
+
 function criarCardPendencia(item, tipoPendencia) {
     const card = document.createElement('div');
     card.className = 'card';
@@ -38,13 +85,17 @@ function criarCardPendencia(item, tipoPendencia) {
         footerAction = `<button class="btn btn--primary" data-action="resolver">Resolver</button>`;
     }
 
-    // BOTÕES DO HEADER (INCLUINDO O DE LOG)
     let headerActions = `<button class="btn-icon" data-action="log" title="Ver Histórico"><img src="/static/history.svg" alt="Histórico"></button>`;
     if (perms.pode_editar_pendencia) {
         headerActions += `<button class="btn-icon" data-action="edit" title="Editar Informações da NF"><img src="/static/edit.svg" alt="Editar"></button>`;
     }
+
+    if (item.status === 'Pendente (Fornecedor)' || item.status === 'Finalizado') {
+        headerActions += `<button class="btn-icon" data-action="solicitar-alteracao" title="Solicitar Alteração para Contabilidade"><img src="/static/exclamacao.png" alt="Solicitar Alteração"></button>`;
+    }
+
     if (perms.pode_deletar_conferencia) {
-        headerActions += `<button class="btn-icon" data-action="delete" title="Excluir"><img src="/static/delete.svg" alt="Excluir"></button>`;
+        headerActions += `<button class="btn-icon" data-action="delete" title="Excluir"><img src="/static/cancelar.png" alt="Excluir"></button>`;
     }
 
     let observacoesHTML = '';
@@ -58,7 +109,6 @@ function criarCardPendencia(item, tipoPendencia) {
         observacoesHTML += '</div>';
     }
 
-    // NOVO: Adiciona informações de data para itens finalizados
     let finalizadoInfoHTML = '';
     if (item.status === 'Finalizado') {
         finalizadoInfoHTML = `
@@ -87,6 +137,8 @@ function criarCardPendencia(item, tipoPendencia) {
     card.querySelector('[data-action="resolver"]')?.addEventListener('click', () => openResolverModal(item));
     card.querySelector('[data-action="edit"]')?.addEventListener('click', () => openEditModal(item));
     card.querySelector('[data-action="delete"]')?.addEventListener('click', () => handleDelete(item.id));
+    card.querySelector('[data-action="solicitar-alteracao"]')?.addEventListener('click', () => handleSolicitarAlteracao(item));
+
 
     return card;
 }
@@ -105,11 +157,8 @@ function renderizarColunas() {
         }
     };
 
-    // As colunas de pendências continuam sendo renderizadas por completo
     if (state.elementos.quadroFornecedor) render(state.elementos.quadroFornecedor, state.pend_fornecedor, 'fornecedor');
     if (state.elementos.quadroAlteracao) render(state.elementos.quadroAlteracao, state.pend_alteracao, 'alteracao');
-
-    // A renderização dos resolvidos agora é feita pela função de paginação
 }
 
 function renderizarPaginaResolvidos(itens) {
@@ -123,13 +172,11 @@ function renderizarPaginaResolvidos(itens) {
         itensFiltrados.forEach(item => quadroResolvidos.appendChild(criarCardPendencia(item, 'finalizado')));
     }
 
-    // Só mostra a mensagem de vazio se for a primeira página e não houver nada
     if (quadroResolvidos.children.length === 0) {
         quadroResolvidos.innerHTML = `<p class="quadro-vazio-msg">Nenhum item resolvido encontrado.</p>`;
     }
 }
 
-// ****** NOVA FUNÇÃO PARA CARREGAR UMA PÁGINA DE ITENS RESOLVIDOS ******
 function carregarPaginaResolvidos() {
     if (state.carregandoResolvidos || !state.temMaisResolvidos) return;
 
@@ -195,7 +242,7 @@ async function handleAddUpdate() {
         modal.obsInput.value = '';
         const snapshot = await db.ref(`conferencias/${id}`).once('value');
         const updatedItem = { id, ...snapshot.val() };
-        openResolverModal(updatedItem); // Reabre o modal com a info atualizada
+        openResolverModal(updatedItem);
 
     } catch (error) {
         showToast(`Erro: ${error.message}`, 'error');
@@ -321,13 +368,21 @@ export function initPendenciasEAlteracoesPage() {
             overlay: document.getElementById('edit-recebimento-modal-overlay'),
             form: document.getElementById('form-edit-recebimento'),
             deleteButton: document.getElementById('btn-excluir-recebimento')
+        },
+        // ****** NOVOS ELEMENTOS DO MODAL ******
+        solicitarAlteracaoModal: {
+            overlay: document.getElementById('solicitar-alteracao-modal-overlay'),
+            form: document.getElementById('form-solicitar-alteracao'),
+            obsInput: document.getElementById('solicitar-alteracao-observacao'),
         }
     };
+
+    // ****** NOVO EVENT LISTENER ******
+    state.elementos.solicitarAlteracaoModal.form.addEventListener('submit', handleSolicitarAlteracaoSubmit);
 
     state.elementos.paginacaoResolvidos.btnCarregarMais.addEventListener('click', carregarPaginaResolvidos);
 
     state.elementos.filtroInput.addEventListener('input', () => {
-        // Para o filtro, renderizamos as colunas ativas e reiniciamos a paginação dos resolvidos
         renderizarColunas();
         state.elementos.quadroResolvidos.innerHTML = '';
         state.paginaResolvidos = 0;
@@ -349,26 +404,17 @@ export function initPendenciasEAlteracoesPage() {
         const lista = Object.entries(data).map(([id, itemData]) => ({ id, ...itemData }));
         const userRole = AppState.currentUser.role;
 
-        // ****** ORDENAÇÃO ADICIONADA AQUI ******
-        // Ordena por data de finalização da conferência, do mais novo para o mais antigo
         const sortFn = (a, b) => new Date(b.data_finalizacao) - new Date(a.data_finalizacao);
 
         state.pend_fornecedor = lista.filter(c => ['Pendente (Fornecedor)', 'Pendente (Ambos)'].includes(c.status) && !c.resolvido_gestor).sort(sortFn);
         state.pend_alteracao = lista.filter(c => ['Pendente (Alteração)', 'Pendente (Ambos)'].includes(c.status) && !c.resolvido_contabilidade).sort(sortFn);
-
-        // ****** LÓGICA DE PAGINAÇÃO IMPLEMENTADA AQUI ******
-        // 1. A lista completa de resolvidos é armazenada e ordenada
         state.todosOsResolvidos = lista.filter(c => c.status === 'Finalizado').sort(sortFn);
 
-        // 2. Reseta o estado da paginação
         state.paginaResolvidos = 0;
         state.temMaisResolvidos = true;
-        state.elementos.quadroResolvidos.innerHTML = ''; // Limpa a exibição atual
+        state.elementos.quadroResolvidos.innerHTML = '';
 
-        // 3. Renderiza as colunas de pendências
         renderizarColunas();
-
-        // 4. Carrega a primeira página dos resolvidos
         carregarPaginaResolvidos();
 
 
