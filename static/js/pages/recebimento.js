@@ -6,19 +6,53 @@ import { toggleButtonLoading, formatarData, showConfirmModal } from '../ui.js';
 let elementos = {};
 let todosOsRecebimentos = [];
 let debounceTimer;
-let dadosFormularioAtual = {};
+let listaDeVendedores = [];
+
+async function fetchAndPopulateVendors(selectElement) {
+    if (listaDeVendedores.length === 0) {
+        try {
+            const response = await fetch('/api/usuarios/vendedor-nomes');
+            if (!response.ok) throw new Error('Falha ao buscar vendedores.');
+            listaDeVendedores = await response.json();
+        } catch (error) {
+            showToast(error.message, 'error');
+            return;
+        }
+    }
+    selectElement.innerHTML = '<option value="" disabled selected>Selecione um vendedor</option>';
+    listaDeVendedores.forEach(nome => {
+        selectElement.innerHTML += `<option value="${nome}">${nome}</option>`;
+    });
+}
 
 function openEditModal(item) {
     const modal = elementos.editModal;
     modal.form.dataset.id = item.id;
     modal.form.querySelector('#edit-numero-nota-fiscal').value = item.numero_nota_fiscal;
     modal.form.querySelector('#edit-nome-fornecedor').value = item.nome_fornecedor;
-    modal.form.querySelector('#edit-nome-transportadora').value = item.nome_transportadora;
     modal.form.querySelector('#edit-qtd-volumes').value = item.qtd_volumes;
+    modal.form.querySelector('#edit-recebido-por').value = item.recebido_por || '';
+
+
+    const transportadoraGroup = document.getElementById('edit-transportadora-group');
+    const vendedorGroup = document.getElementById('edit-vendedor-group');
+
+    // Mostra/esconde campos baseados no tipo de nota
+    if (item.vendedor_nome) { // É nota da rua
+        transportadoraGroup.style.display = 'none';
+        vendedorGroup.style.display = 'block';
+        const vendedorSelect = document.getElementById('edit-nome-vendedor');
+        fetchAndPopulateVendors(vendedorSelect).then(() => {
+            vendedorSelect.value = item.vendedor_nome;
+        });
+    } else { // É nota de fornecedor
+        transportadoraGroup.style.display = 'block';
+        vendedorGroup.style.display = 'none';
+        modal.form.querySelector('#edit-nome-transportadora').value = item.nome_transportadora;
+    }
 
     const perms = AppState.currentUser.permissions || {};
     modal.btnExcluir.style.display = perms.pode_deletar_conferencia ? 'inline-block' : 'none';
-
     modal.overlay.style.display = 'flex';
 }
 
@@ -27,15 +61,25 @@ async function handleEditFormSubmit(event) {
     const modal = elementos.editModal;
     const id = modal.form.dataset.id;
     const saveButton = modal.saveButton;
-
     toggleButtonLoading(saveButton, true, 'Salvando...');
+
     const dados = {
         numero_nota_fiscal: modal.form.querySelector('#edit-numero-nota-fiscal').value,
         nome_fornecedor: modal.form.querySelector('#edit-nome-fornecedor').value,
-        nome_transportadora: modal.form.querySelector('#edit-nome-transportadora').value,
         qtd_volumes: modal.form.querySelector('#edit-qtd-volumes').value,
+        // ****** NOVA LINHA ADICIONADA AQUI ******
+        recebido_por: modal.form.querySelector('#edit-recebido-por').value,
         editor_nome: AppState.currentUser.nome,
     };
+
+    // Adiciona o campo correto (transportadora ou vendedor)
+    const isRua = document.getElementById('edit-vendedor-group').style.display === 'block';
+    if (isRua) {
+        dados.vendedor_nome = document.getElementById('edit-nome-vendedor').value;
+    } else {
+        dados.nome_transportadora = document.getElementById('edit-nome-transportadora').value;
+    }
+
     try {
         const response = await fetch(`/api/conferencias/${id}`, {
             method: 'PUT',
@@ -61,7 +105,6 @@ const handleDelete = (id) => {
                 body: JSON.stringify({ editor_nome: AppState.currentUser.nome })
             });
             showToast('Recebimento excluído!', 'success');
-            // Fecha qualquer modal que esteja aberto
             const openModal = document.querySelector('.modal-overlay[style*="display: flex"]');
             if (openModal) openModal.style.display = 'none';
         } catch (error) {
@@ -71,7 +114,6 @@ const handleDelete = (id) => {
 };
 
 function renderizarTabela() {
-    // ... (função renderizarTabela permanece a mesma)
     const filtrosColunas = {};
     document.querySelectorAll('.filtro-coluna').forEach(input => {
         const colKey = input.dataset.col === 'transportadora_ou_vendedor' ? ['nome_transportadora', 'vendedor_nome'] : [input.dataset.col];
@@ -99,7 +141,8 @@ function renderizarTabela() {
 
     elementos.tabelaBody.innerHTML = '';
     if (recebimentosFiltrados.length === 0) {
-        elementos.tabelaBody.innerHTML = `<tr><td colspan="7">Nenhum recebimento encontrado.</td></tr>`;
+        // ****** COLSPAN ATUALIZADO PARA 8 ******
+        elementos.tabelaBody.innerHTML = `<tr><td colspan="8">Nenhum recebimento encontrado.</td></tr>`;
         return;
     }
 
@@ -118,7 +161,9 @@ function renderizarTabela() {
         }
 
         if (perms.pode_deletar_conferencia) {
-            actionsHTML += `<button class="btn-action btn-delete" data-id="${item.id}">Excluir</button>`;
+            // ****** ALTERAÇÃO AQUI ******
+            // Troquei o botão de texto por um 'X' com title e uma nova classe CSS.
+            actionsHTML += `<button class="btn-action btn-delete btn-delete--icon" data-id="${item.id}" title="Excluir">X</button>`;
         }
 
         const transportadoraCell = item.vendedor_nome
@@ -131,6 +176,7 @@ function renderizarTabela() {
             <td>${item.nome_fornecedor}</td>
             <td>${transportadoraCell}</td>
             <td>${item.qtd_volumes}</td>
+            <td>${item.recebido_por || ''}</td>
             <td>${item.status}</td>
             <td class="actions-cell">${actionsHTML}</td>
         `;
@@ -140,56 +186,43 @@ function renderizarTabela() {
     });
 }
 
-async function handleFormSubmit(event) {
+async function handleFornecedorFormSubmit(event) {
     event.preventDefault();
-    dadosFormularioAtual = {
-        numero_nota_fiscal: document.getElementById('numero-nota-fiscal').value,
-        nome_fornecedor: document.getElementById('nome-fornecedor').value,
-        qtd_volumes: document.getElementById('qtd-volumes').value,
+    const modal = elementos.modalFornecedor;
+    const submitBtn = modal.form.querySelector('button[type="submit"]');
+    toggleButtonLoading(submitBtn, true, 'Registrando...');
+
+    const dados = {
+        numero_nota_fiscal: document.getElementById('fornecedor-numero-nota').value,
+        nome_fornecedor: document.getElementById('fornecedor-nome').value,
+        nome_transportadora: document.getElementById('fornecedor-transportadora').value,
+        qtd_volumes: document.getElementById('fornecedor-qtd-volumes').value,
+        recebido_por: document.getElementById('fornecedor-recebido-por').value,
         editor_nome: AppState.currentUser.nome
     };
 
-    if (elementos.notaDaRuaCheckbox.checked) {
-        dadosFormularioAtual.vendedor_nome = document.getElementById('nome-vendedor').value;
-        const modal = elementos.finalizeModal;
-
-        // CORREÇÃO: Limpamos as referências aos checkboxes inexistentes
-        modal.title.textContent = "Finalizar Nota da Rua";
-        modal.obsInput.value = '';
-        modal.overlay.style.display = 'flex';
-
-    } else { // Lógica para nota normal (não da rua)
-        dadosFormularioAtual.nome_transportadora = document.getElementById('nome-transportadora').value;
-        const submitBtn = elementos.form.querySelector('button[type="submit"]');
-        toggleButtonLoading(submitBtn, true, 'Registrando...');
-        try {
-            const response = await fetch('/api/conferencias/recebimento', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(dadosFormularioAtual),
-            });
-            if (!response.ok) throw new Error((await response.json()).error);
-            showToast('Recebimento registrado com sucesso!', 'success');
-            elementos.form.reset();
-            // Dispara o evento change para resetar a UI do checkbox
-            elementos.notaDaRuaCheckbox.checked = false;
-            elementos.notaDaRuaCheckbox.dispatchEvent(new Event('change'));
-            document.getElementById('numero-nota-fiscal').focus();
-        } catch (error) {
-            showToast(`Erro: ${error.message}`, 'error');
-        } finally {
-            toggleButtonLoading(submitBtn, false, 'Registrar Entrada');
-        }
+    try {
+        const response = await fetch('/api/conferencias/recebimento', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(dados),
+        });
+        if (!response.ok) throw new Error((await response.json()).error);
+        showToast('Recebimento de fornecedor registrado!', 'success');
+        modal.form.reset();
+        modal.overlay.style.display = 'none';
+    } catch (error) {
+        showToast(`Erro: ${error.message}`, 'error');
+    } finally {
+        toggleButtonLoading(submitBtn, false, 'Registrar Entrada');
     }
 }
 
-// NOVA FUNÇÃO para lidar com as ações do modal da Nota da Rua
-async function handleFinalizeRuaAction(actionType) {
-    const modal = elementos.finalizeModal;
+async function handleRuaFormAction(actionType) {
+    const modal = elementos.modalRua;
+    const btn = actionType === 'ok' ? modal.btnFinalizeOk : modal.btnSolicitarAlteracao;
     const observacao = modal.obsInput.value.trim();
-    const btn = (actionType === 'ok') ? modal.btnFinalizeOk : modal.btnSolicitarAlteracao;
 
-    // Se for 'solicitar alteração', a observação é obrigatória
     if (actionType === 'alteracao' && !observacao) {
         showToast('A observação é obrigatória para solicitar alteração.', 'error');
         return;
@@ -197,29 +230,28 @@ async function handleFinalizeRuaAction(actionType) {
 
     toggleButtonLoading(btn, true, 'Salvando...');
 
-    const dadosCompletos = {
-        ...dadosFormularioAtual,
+    const dados = {
+        numero_nota_fiscal: document.getElementById('rua-numero-nota').value,
+        nome_fornecedor: document.getElementById('rua-nome-fornecedor').value,
+        vendedor_nome: document.getElementById('rua-nome-vendedor').value,
+        qtd_volumes: document.getElementById('rua-qtd-volumes').value,
+        recebido_por: document.getElementById('rua-recebido-por').value,
+        editor_nome: AppState.currentUser.nome,
         observacao: observacao,
-        // Define as flags com base no botão clicado
-        tem_pendencia_fornecedor: false, // Nota da rua não tem pendência de fornecedor neste fluxo
-        solicita_alteracao: actionType === 'alteracao'
+        solicita_alteracao: actionType === 'alteracao',
+        tem_pendencia_fornecedor: false,
     };
 
     try {
         const response = await fetch('/api/conferencias/recebimento-rua', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(dadosCompletos),
+            body: JSON.stringify(dados),
         });
         if (!response.ok) throw new Error((await response.json()).error);
-
         showToast('Nota da Rua registrada com sucesso!', 'success');
+        modal.form.reset();
         modal.overlay.style.display = 'none';
-        elementos.form.reset();
-        elementos.notaDaRuaCheckbox.checked = false;
-        elementos.notaDaRuaCheckbox.dispatchEvent(new Event('change'));
-        document.getElementById('numero-nota-fiscal').focus();
-
     } catch (error) {
         showToast(`Erro: ${error.message}`, 'error');
     } finally {
@@ -227,76 +259,51 @@ async function handleFinalizeRuaAction(actionType) {
     }
 }
 
-async function fetchAndPopulateVendors() {
-    try {
-        const response = await fetch('/api/usuarios/vendedor-nomes');
-        if (!response.ok) throw new Error('Falha ao buscar vendedores.');
-        const nomes = await response.json();
-        const select = document.getElementById('nome-vendedor');
-        select.innerHTML = '<option value="" disabled selected>Selecione um vendedor</option>';
-        nomes.forEach(nome => {
-            select.innerHTML += `<option value="${nome}">${nome}</option>`;
-        });
-    } catch (error) {
-        showToast(error.message, 'error');
-    }
-}
 
 export function initRecebimentoPage() {
     elementos = {
-        form: document.getElementById('form-recebimento'),
+        btnAbrirModalFornecedor: document.getElementById('btn-abrir-modal-fornecedor'),
+        btnAbrirModalRua: document.getElementById('btn-abrir-modal-rua'),
+        modalFornecedor: {
+            overlay: document.getElementById('modal-fornecedor-overlay'),
+            form: document.getElementById('form-nota-fornecedor'),
+        },
+        modalRua: {
+            overlay: document.getElementById('modal-rua-overlay'),
+            form: document.getElementById('form-nota-rua'),
+            obsInput: document.getElementById('rua-observacao'),
+            btnFinalizeOk: document.getElementById('btn-rua-finalize-ok'),
+            btnSolicitarAlteracao: document.getElementById('btn-rua-solicitar-alteracao'),
+        },
         tabela: document.getElementById('tabela-recebimentos'),
         tabelaBody: document.getElementById('tabela-recebimentos-body'),
         spinner: document.getElementById('loading-spinner-tabela'),
         filtroGeral: document.getElementById('filtro-geral-recebimentos'),
-        notaDaRuaCheckbox: document.getElementById('nota-da-rua-checkbox'),
-        transportadoraGroup: document.getElementById('transportadora-group'),
-        transportadoraInput: document.getElementById('nome-transportadora'),
-        vendedorGroup: document.getElementById('vendedor-group'),
-        vendedorSelect: document.getElementById('nome-vendedor'),
-        finalizeModal: {
-            overlay: document.getElementById('finalize-modal-overlay'),
-            form: document.getElementById('form-finalize'),
-            title: document.getElementById('finalize-modal-title'),
-            obsInput: document.getElementById('finalize-observacao'),
-            btnFinalizeOk: document.getElementById('btn-finalize-ok'),
-            btnSolicitarAlteracao: document.getElementById('btn-solicitar-alteracao'),
-        },
         editModal: {
             overlay: document.getElementById('edit-recebimento-modal-overlay'),
             form: document.getElementById('form-edit-recebimento'),
             saveButton: document.getElementById('btn-save-edit-recebimento'),
-            cancelButton: document.getElementById('btn-cancel-edit-recebimento'),
             btnExcluir: document.getElementById('btn-excluir-recebimento'),
         }
     };
 
-    if (!elementos.form) return;
+    if (!elementos.btnAbrirModalFornecedor) return;
 
-    // Listeners do formulário principal
-    elementos.notaDaRuaCheckbox.addEventListener('change', (e) => {
-        const isChecked = e.target.checked;
-        elementos.transportadoraGroup.style.display = isChecked ? 'none' : 'block';
-        elementos.transportadoraInput.required = !isChecked;
-        elementos.vendedorGroup.style.display = isChecked ? 'block' : 'block';
-        elementos.vendedorSelect.required = isChecked;
+    elementos.btnAbrirModalFornecedor.addEventListener('click', () => {
+        elementos.modalFornecedor.overlay.style.display = 'flex';
     });
-    fetchAndPopulateVendors();
-    elementos.form.addEventListener('submit', handleFormSubmit);
+    elementos.btnAbrirModalRua.addEventListener('click', () => {
+        fetchAndPopulateVendors(document.getElementById('rua-nome-vendedor'));
+        elementos.modalRua.overlay.style.display = 'flex';
+    });
 
-    // REMOVIDO o listener antigo do form do modal
-    // ADICIONADO listeners para os botões específicos do modal "Nota da Rua"
-    if (elementos.finalizeModal.form) {
-        elementos.finalizeModal.form.addEventListener('submit', (e) => {
-            e.preventDefault();
-            handleFinalizeRuaAction('alteracao');
-        });
-        elementos.finalizeModal.btnFinalizeOk.addEventListener('click', () => {
-            handleFinalizeRuaAction('ok');
-        });
-    }
+    elementos.modalFornecedor.form.addEventListener('submit', handleFornecedorFormSubmit);
+    elementos.modalRua.form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        handleRuaFormAction('alteracao');
+    });
+    elementos.modalRua.btnFinalizeOk.addEventListener('click', () => handleRuaFormAction('ok'));
 
-    // Listeners para o modal de edição
     if (elementos.editModal.form) {
         elementos.editModal.form.addEventListener('submit', handleEditFormSubmit);
         elementos.editModal.btnExcluir.addEventListener('click', () => {
@@ -305,7 +312,6 @@ export function initRecebimentoPage() {
         });
     }
 
-    // Listeners dos filtros da tabela
     const filtros = document.querySelectorAll('.filtro-coluna, #filtro-geral-recebimentos');
     filtros.forEach(input => {
         input.addEventListener('input', () => {
@@ -314,7 +320,6 @@ export function initRecebimentoPage() {
         });
     });
 
-    // Listener do Firebase para atualizar a tabela
     const recebimentosRef = db.ref('conferencias').orderByChild('data_recebimento');
     recebimentosRef.on('value', (snapshot) => {
         elementos.spinner.style.display = 'none';

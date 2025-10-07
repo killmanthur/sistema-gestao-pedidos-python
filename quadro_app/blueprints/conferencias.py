@@ -6,32 +6,59 @@ from quadro_app.utils import registrar_log
 
 conferencias_bp = Blueprint('conferencias', __name__, url_prefix='/api/conferencias')
 
+@conferencias_bp.route('/<string:conferencia_id>', methods=['PUT'])
+def editar_conferencia(conferencia_id):
+    dados = request.get_json()
+    editor_nome = dados.get('editor_nome', 'N/A')
+    
+    try:
+        ref = db.reference(f'conferencias/{conferencia_id}')
+        item_antigo = ref.get()
+        if not item_antigo:
+            return jsonify({'error': 'Item de conferência não encontrado'}), 404
+        
+        # Log de alterações ANTES de atualizar
+        alteracoes = []
+        # ****** CAMPO ADICIONADO À LISTA DE LOG ******
+        campos_principais = ['numero_nota_fiscal', 'nome_fornecedor', 'nome_transportadora', 'qtd_volumes', 'vendedor_nome', 'recebido_por']
+        for campo in campos_principais:
+            valor_antigo = item_antigo.get(campo, '')
+            valor_novo = dados.get(campo)
+
+            # Apenas registra se o novo valor foi enviado e é diferente do antigo
+            if valor_novo is not None and str(valor_antigo) != str(valor_novo):
+                alteracoes.append(f"'{campo}' de '{valor_antigo or 'Nenhum'}' para '{valor_novo or 'Nenhum'}'")
+        
+        if alteracoes:
+            log_info = f"Editou: {', '.join(alteracoes)}."
+            registrar_log(conferencia_id, editor_nome, 'EDICAO_GERAL', detalhes={'info': log_info}, log_type='conferencias')
+
+        ref.update(dados)
+        return jsonify({'status': 'success'}), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @conferencias_bp.route('/recebimento-rua', methods=['POST'])
 def criar_recebimento_rua():
-    """
-    Cria um registro para uma Nota da Rua. Esta função tem duas responsabilidades:
-    1. Criar o objeto base da conferência no Firebase.
-    2. Chamar a função de finalização para aplicar imediatamente o status
-       (Finalizado, Pendente, etc.) com base nos dados do modal.
-    """
     dados = request.get_json()
     editor_nome = dados.get('editor_nome', 'Sistema')
     
     try:
         now_iso = datetime.now(tz_cuiaba).isoformat()
         
-        # 1. Cria o objeto base da "conferência" para a Nota da Rua
         novo_recebimento = {
             'data_recebimento': now_iso,
             'numero_nota_fiscal': dados.get('numero_nota_fiscal'),
             'nome_fornecedor': dados.get('nome_fornecedor'),
-            'nome_transportadora': 'NOTA DA RUA', # Identificador claro
+            'nome_transportadora': 'NOTA DA RUA',
             'qtd_volumes': dados.get('qtd_volumes'),
             'vendedor_nome': dados.get('vendedor_nome'),
-            'status': 'Aguardando Conferência', # Status inicial temporário
-            'data_inicio_conferencia': now_iso, # Inicia e finaliza no mesmo instante
-            'data_finalizacao': None, # Será preenchido pela função de finalização
-            'conferentes': [editor_nome], # O registrador é o "conferente"
+            'recebido_por': dados.get('recebido_por'),
+            'status': 'Aguardando Conferência',
+            'data_inicio_conferencia': now_iso,
+            'data_finalizacao': None,
+            'conferentes': [editor_nome],
             'resolvido_gestor': False,
             'resolvido_contabilidade': False
         }
@@ -42,7 +69,6 @@ def criar_recebimento_rua():
         log_detalhes_info = f"Registro de Nota da Rua (NF: '{dados.get('numero_nota_fiscal')}') para o vendedor '{dados.get('vendedor_nome')}'."
         registrar_log(nova_ref.key, editor_nome, 'RECEBIMENTO_RUA_CRIADO', detalhes={'info': log_detalhes_info}, log_type='conferencias')
 
-        # 2. Agora, chama a função de finalização passando o ID recém-criado
         return finalizar_conferencia_nova_logica(nova_ref.key)
 
     except Exception as e:
@@ -158,6 +184,7 @@ def criar_recebimento():
             'nome_fornecedor': dados.get('nome_fornecedor'),
             'nome_transportadora': dados.get('nome_transportadora'),
             'qtd_volumes': dados.get('qtd_volumes'),
+            'recebido_por': dados.get('recebido_por'),
             'status': 'Aguardando Conferência',
             'data_inicio_conferencia': None,
             'data_finalizacao': None,

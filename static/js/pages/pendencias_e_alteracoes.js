@@ -1,16 +1,21 @@
 import { AppState } from '../state.js';
 import { db } from '../firebase.js';
 import { showToast } from '../toasts.js';
-import { toggleButtonLoading, formatarData, showConfirmModal } from '../ui.js';
+import { toggleButtonLoading, formatarData, showConfirmModal, openLogModal } from '../ui.js';
 
 let state = {};
+
+const TAMANHO_PAGINA_RESOLVIDOS = 15;
 
 function resetState() {
     state = {
         elementos: {},
         pend_fornecedor: [],
         pend_alteracao: [],
-        resolvidos: [],
+        todosOsResolvidos: [], // Guarda a lista completa
+        paginaResolvidos: 0,
+        temMaisResolvidos: true,
+        carregandoResolvidos: false,
     };
 }
 
@@ -18,17 +23,13 @@ function criarCardPendencia(item, tipoPendencia) {
     const card = document.createElement('div');
     card.className = 'card';
     card.dataset.id = item.id;
-
-    // CORREÇÃO AQUI: Obtenha as permissões do usuário logado
     const perms = AppState.currentUser.permissions || {};
 
     let corBorda = 'danger';
     if (tipoPendencia === 'alteracao') corBorda = 'info';
     if (item.status === 'Finalizado') corBorda = 'done';
-
     card.classList.add(`card--status-${corBorda}`);
 
-    // ... (lógica do footerAction permanece a mesma)
     let footerAction = '';
     const gestorPodeResolver = (['Admin', 'Estoque'].includes(AppState.currentUser.role)) && tipoPendencia === 'fornecedor';
     const contabilidadePodeResolver = (['Admin', 'Contabilidade'].includes(AppState.currentUser.role)) && tipoPendencia === 'alteracao';
@@ -37,15 +38,11 @@ function criarCardPendencia(item, tipoPendencia) {
         footerAction = `<button class="btn btn--primary" data-action="resolver">Resolver</button>`;
     }
 
-    // CORREÇÃO AQUI: Monta os botões do header condicionalmente
-    let headerActions = '';
-
-    // Adiciona o botão de editar SOMENTE se o usuário tiver a permissão
+    // BOTÕES DO HEADER (INCLUINDO O DE LOG)
+    let headerActions = `<button class="btn-icon" data-action="log" title="Ver Histórico"><img src="/static/history.svg" alt="Histórico"></button>`;
     if (perms.pode_editar_pendencia) {
         headerActions += `<button class="btn-icon" data-action="edit" title="Editar Informações da NF"><img src="/static/edit.svg" alt="Editar"></button>`;
     }
-
-    // A lógica para o botão de deletar permanece a mesma
     if (perms.pode_deletar_conferencia) {
         headerActions += `<button class="btn-icon" data-action="delete" title="Excluir"><img src="/static/delete.svg" alt="Excluir"></button>`;
     }
@@ -61,6 +58,16 @@ function criarCardPendencia(item, tipoPendencia) {
         observacoesHTML += '</div>';
     }
 
+    // NOVO: Adiciona informações de data para itens finalizados
+    let finalizadoInfoHTML = '';
+    if (item.status === 'Finalizado') {
+        finalizadoInfoHTML = `
+            <p><small><strong>Início Conf.:</strong> ${formatarData(item.data_inicio_conferencia)}</small></p>
+            <p><small><strong>Fim Conf.:</strong> ${formatarData(item.data_finalizacao)}</small></p>
+        `;
+    }
+
+
     card.innerHTML = `
         <div class="card__header">
             <h3>NF: ${item.numero_nota_fiscal}</h3>
@@ -70,11 +77,13 @@ function criarCardPendencia(item, tipoPendencia) {
             <p><strong>Fornecedor:</strong> ${item.nome_fornecedor}</p>
             <p><strong>Responsável:</strong> ${item.conferentes ? item.conferentes.join(', ') : 'N/A'}</p>
             ${observacoesHTML}
+            ${finalizadoInfoHTML}
         </div>
         <div class="card__footer">
             <div class="card__actions">${footerAction}</div>
         </div>`;
 
+    card.querySelector('[data-action="log"]')?.addEventListener('click', () => openLogModal(item.id, 'conferencias'));
     card.querySelector('[data-action="resolver"]')?.addEventListener('click', () => openResolverModal(item));
     card.querySelector('[data-action="edit"]')?.addEventListener('click', () => openEditModal(item));
     card.querySelector('[data-action="delete"]')?.addEventListener('click', () => handleDelete(item.id));
@@ -96,9 +105,50 @@ function renderizarColunas() {
         }
     };
 
+    // As colunas de pendências continuam sendo renderizadas por completo
     if (state.elementos.quadroFornecedor) render(state.elementos.quadroFornecedor, state.pend_fornecedor, 'fornecedor');
     if (state.elementos.quadroAlteracao) render(state.elementos.quadroAlteracao, state.pend_alteracao, 'alteracao');
-    render(state.elementos.quadroResolvidos, state.resolvidos, 'finalizado');
+
+    // A renderização dos resolvidos agora é feita pela função de paginação
+}
+
+function renderizarPaginaResolvidos(itens) {
+    const { quadroResolvidos } = state.elementos;
+    const termo = state.elementos.filtroInput.value.toLowerCase().trim();
+    const filterFn = item => String(item.numero_nota_fiscal).toLowerCase().includes(termo) || String(item.nome_fornecedor).toLowerCase().includes(termo);
+
+    const itensFiltrados = itens.filter(filterFn);
+
+    if (itensFiltrados.length > 0) {
+        itensFiltrados.forEach(item => quadroResolvidos.appendChild(criarCardPendencia(item, 'finalizado')));
+    }
+
+    // Só mostra a mensagem de vazio se for a primeira página e não houver nada
+    if (quadroResolvidos.children.length === 0) {
+        quadroResolvidos.innerHTML = `<p class="quadro-vazio-msg">Nenhum item resolvido encontrado.</p>`;
+    }
+}
+
+// ****** NOVA FUNÇÃO PARA CARREGAR UMA PÁGINA DE ITENS RESOLVIDOS ******
+function carregarPaginaResolvidos() {
+    if (state.carregandoResolvidos || !state.temMaisResolvidos) return;
+
+    state.carregandoResolvidos = true;
+    const { spinnerResolvidos, btnCarregarMais } = state.elementos.paginacaoResolvidos;
+    spinnerResolvidos.style.display = 'block';
+    btnCarregarMais.style.display = 'none';
+
+    const offset = state.paginaResolvidos * TAMANHO_PAGINA_RESOLVIDOS;
+    const itensDaPagina = state.todosOsResolvidos.slice(offset, offset + TAMANHO_PAGINA_RESOLVIDOS);
+
+    renderizarPaginaResolvidos(itensDaPagina);
+
+    state.paginaResolvidos++;
+    state.temMaisResolvidos = (state.paginaResolvidos * TAMANHO_PAGINA_RESOLVIDOS) < state.todosOsResolvidos.length;
+
+    spinnerResolvidos.style.display = 'none';
+    btnCarregarMais.style.display = state.temMaisResolvidos ? 'block' : 'none';
+    state.carregandoResolvidos = false;
 }
 
 function openResolverModal(item) {
@@ -232,7 +282,6 @@ async function handleEditFormSubmit(event) {
 }
 
 const handleDelete = (id) => {
-    // A função showConfirmModal já existe em ui.js, então podemos chamá-la diretamente.
     showConfirmModal('Tem certeza que deseja excluir esta conferência? Esta ação é irreversível.', async () => {
         try {
             const response = await fetch(`/api/conferencias/${id}`, {
@@ -257,6 +306,11 @@ export function initPendenciasEAlteracoesPage() {
         colunaAlteracao: document.getElementById('coluna-solicitacao-alteracao'),
         quadroAlteracao: document.getElementById('quadro-solicitacao-alteracao'),
         quadroResolvidos: document.getElementById('quadro-resolvidos'),
+        paginacaoResolvidos: {
+            container: document.getElementById('pagination-resolvidos'),
+            spinnerResolvidos: document.getElementById('loading-spinner-resolvidos'),
+            btnCarregarMais: document.getElementById('btn-carregar-mais-resolvidos'),
+        },
         resolverModal: {
             overlay: document.getElementById('resolver-modal-overlay'),
             form: document.getElementById('form-resolver'),
@@ -270,7 +324,17 @@ export function initPendenciasEAlteracoesPage() {
         }
     };
 
-    state.elementos.filtroInput.addEventListener('input', renderizarColunas);
+    state.elementos.paginacaoResolvidos.btnCarregarMais.addEventListener('click', carregarPaginaResolvidos);
+
+    state.elementos.filtroInput.addEventListener('input', () => {
+        // Para o filtro, renderizamos as colunas ativas e reiniciamos a paginação dos resolvidos
+        renderizarColunas();
+        state.elementos.quadroResolvidos.innerHTML = '';
+        state.paginaResolvidos = 0;
+        state.temMaisResolvidos = true;
+        carregarPaginaResolvidos();
+    });
+
     state.elementos.resolverModal.form.addEventListener('submit', handleResolverSubmit);
     state.elementos.resolverModal.btnAddUpdate.addEventListener('click', handleAddUpdate);
     state.elementos.editModal.form.addEventListener('submit', handleEditFormSubmit);
@@ -285,14 +349,31 @@ export function initPendenciasEAlteracoesPage() {
         const lista = Object.entries(data).map(([id, itemData]) => ({ id, ...itemData }));
         const userRole = AppState.currentUser.role;
 
-        state.pend_fornecedor = lista.filter(c => ['Pendente (Fornecedor)', 'Pendente (Ambos)'].includes(c.status) && !c.resolvido_gestor);
-        state.pend_alteracao = lista.filter(c => ['Pendente (Alteração)', 'Pendente (Ambos)'].includes(c.status) && !c.resolvido_contabilidade);
-        state.resolvidos = lista.filter(c => c.status === 'Finalizado');
+        // ****** ORDENAÇÃO ADICIONADA AQUI ******
+        // Ordena por data de finalização da conferência, do mais novo para o mais antigo
+        const sortFn = (a, b) => new Date(b.data_finalizacao) - new Date(a.data_finalizacao);
+
+        state.pend_fornecedor = lista.filter(c => ['Pendente (Fornecedor)', 'Pendente (Ambos)'].includes(c.status) && !c.resolvido_gestor).sort(sortFn);
+        state.pend_alteracao = lista.filter(c => ['Pendente (Alteração)', 'Pendente (Ambos)'].includes(c.status) && !c.resolvido_contabilidade).sort(sortFn);
+
+        // ****** LÓGICA DE PAGINAÇÃO IMPLEMENTADA AQUI ******
+        // 1. A lista completa de resolvidos é armazenada e ordenada
+        state.todosOsResolvidos = lista.filter(c => c.status === 'Finalizado').sort(sortFn);
+
+        // 2. Reseta o estado da paginação
+        state.paginaResolvidos = 0;
+        state.temMaisResolvidos = true;
+        state.elementos.quadroResolvidos.innerHTML = ''; // Limpa a exibição atual
+
+        // 3. Renderiza as colunas de pendências
+        renderizarColunas();
+
+        // 4. Carrega a primeira página dos resolvidos
+        carregarPaginaResolvidos();
+
 
         const isAdmin = userRole === 'Admin';
         state.elementos.colunaFornecedor.style.display = (isAdmin || userRole === 'Estoque') ? 'block' : 'none';
-        state.elementos.colunaAlteracao.style.display = (isAdmin || userRole === 'Estoque','Contabilidade') ? 'block' : 'none';
-
-        renderizarColunas();
+        state.elementos.colunaAlteracao.style.display = (isAdmin || userRole === 'Estoque' || userRole === 'Contabilidade') ? 'block' : 'none';
     });
 }

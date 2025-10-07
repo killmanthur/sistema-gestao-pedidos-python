@@ -42,28 +42,21 @@ export function formatarData(dataString) {
     });
 }
 
-// =========================================================================
-// CORREÇÃO AQUI: Adiciona a palavra 'export' para que a função seja visível
-// =========================================================================
 /**
  * Adiciona listeners de evento a todos os elementos que fecham modais.
  * Isso inclui botões 'X' e o clique no fundo escuro (overlay).
  */
 export function setupAllModalCloseHandlers() {
-    // Encontra todos os overlays de modal
     document.querySelectorAll('.modal-overlay').forEach(overlay => {
         overlay.addEventListener('click', (e) => {
-            // Fecha o modal apenas se o clique for no próprio overlay (fundo)
             if (e.target === overlay) {
                 overlay.style.display = 'none';
             }
         });
     });
 
-    // Encontra todos os botões de fechar pela classe '.close-modal'
     document.querySelectorAll('.close-modal').forEach(button => {
         button.addEventListener('click', () => {
-            // Encontra o overlay pai mais próximo e o esconde
             const overlay = button.closest('.modal-overlay');
             if (overlay) {
                 overlay.style.display = 'none';
@@ -114,29 +107,22 @@ export function setupUI() {
     }
 
     const user = AppState.currentUser;
-    // Seleciona TODOS os itens, incluindo os que estão dentro dos dropdowns
     const navItems = mainNav.querySelectorAll('.nav-item');
-    const logoutItem = document.getElementById('li-logout'); // Seleciona pelo ID
+    const logoutItem = document.getElementById('li-logout');
 
     if (user && user.isLoggedIn) {
         navItems.forEach(item => {
-            // Ignora os containers de dropdown na primeira passada
             if (item.classList.contains('nav-item--dropdown')) return;
 
             const pageKey = item.dataset.page;
-            if (pageKey) { // Garante que só vamos avaliar itens com data-page
+            if (pageKey) {
                 const canAccess = user.role === 'Admin' || (user.accessible_pages && user.accessible_pages.includes(pageKey));
                 item.style.display = canAccess ? 'list-item' : 'none';
             }
         });
 
-        // --- LÓGICA ADICIONADA ---
-        // Agora, verifica cada dropdown para ver se ele deve ser exibido
         mainNav.querySelectorAll('.nav-item--dropdown').forEach(dropdown => {
-            // Procura por pelo menos um item filho que esteja visível
             const hasVisibleItem = dropdown.querySelector('.dropdown-menu .nav-item[style*="display: list-item"]');
-
-            // Se encontrou um item visível, mostra o dropdown. Senão, esconde.
             dropdown.style.display = hasVisibleItem ? 'list-item' : 'none';
         });
 
@@ -155,14 +141,8 @@ export function setupUI() {
 
 // --- Funções do Modal de Histórico/Log ---
 
-/**
- * Formata uma ação de log e seus detalhes em uma string HTML para exibição.
- * @param {string} acao - A ação realizada.
- * @param {object} detalhes - Detalhes associados à ação.
- * @returns {string} String HTML formatada para a entrada do log.
- */
 function formatarLogAcao(acao, detalhes) {
-    let acaoFormatada = `<span class="log-action">${acao.replace('_', ' ')}</span>`;
+    let acaoFormatada = `<span class="log-action">${acao.replace(/_/g, ' ')}</span>`;
 
     if (detalhes) {
         if (detalhes.de && detalhes.para) {
@@ -175,12 +155,12 @@ function formatarLogAcao(acao, detalhes) {
             let detailsHTML = '<ul>';
             if (detalhes.adicionado) {
                 detalhes.adicionado.forEach(item => {
-                    detailsHTML += `<li><span style="color: var(--status-green);">+ Adicionado:</span> ${item}</li>`;
+                    detailsHTML += `<li><span style="color: var(--clr-success);">+ Adicionado:</span> ${item}</li>`;
                 });
             }
             if (detalhes.removido) {
                 detalhes.removido.forEach(item => {
-                    detailsHTML += `<li><span style="color: var(--status-red);">- Removido:</span> ${item}</li>`;
+                    detailsHTML += `<li><span style="color: var(--clr-danger);">- Removido:</span> ${item}</li>`;
                 });
             }
             detailsHTML += '</ul>';
@@ -190,11 +170,6 @@ function formatarLogAcao(acao, detalhes) {
     return acaoFormatada;
 }
 
-/**
- * Abre o modal de log e exibe o histórico para um determinado item.
- * @param {string} itemId - O ID do item (pedido, separação, etc.).
- * @param {string} logType - O tipo de log a ser buscado ('pedidos' ou 'separacoes').
- */
 export async function openLogModal(itemId, logType = 'pedidos') {
     const modalOverlay = document.getElementById('log-modal-overlay');
     const logBody = document.getElementById('log-body');
@@ -203,10 +178,21 @@ export async function openLogModal(itemId, logType = 'pedidos') {
 
     modalOverlay.style.display = 'flex';
     logBody.innerHTML = '<p>Carregando histórico...</p>';
-    logTitle.textContent = logType === 'separacoes' ? 'Histórico da Separação' : 'Histórico do Pedido';
+    logTitle.textContent = `Histórico (${logType.charAt(0).toUpperCase() + logType.slice(1)})`;
 
     try {
-        const logPath = logType === 'separacoes' ? `logs_separacoes/${itemId}` : `logs/${itemId}`;
+        let logPath;
+        switch (logType) {
+            case 'separacoes':
+                logPath = `logs_separacoes/${itemId}`;
+                break;
+            case 'conferencias':
+                logPath = `logs_conferencias/${itemId}`;
+                break;
+            default:
+                logPath = `logs/${itemId}`;
+        }
+
         const logRef = db.ref(logPath).orderByChild('timestamp');
         const snapshot = await logRef.once('value');
 
@@ -221,10 +207,10 @@ export async function openLogModal(itemId, logType = 'pedidos') {
         });
         logs.reverse();
 
-        let logHTML = '<ul>';
+        let logHTML = '<ul style="list-style: none; padding: 0;">';
         logs.forEach(log => {
             logHTML += `
-                <li>
+                <li style="border-bottom: 1px solid var(--border-main); padding-bottom: 0.75rem; margin-bottom: 0.75rem;">
                     <div class="log-entry-header">
                         <span class="log-author">${log.autor}</span>
                         <span class="log-timestamp">${formatarData(log.timestamp)}</span>
@@ -240,22 +226,12 @@ export async function openLogModal(itemId, logType = 'pedidos') {
     }
 }
 
-/**
- * Configura os event listeners para fechar o modal de log.
- */
 export function setupLogModal() {
-    const modalOverlay = document.getElementById('log-modal-overlay');
-    if (!modalOverlay) return;
-    // CORREÇÃO: Lógica de fechamento removida. Agora é centralizada.
+    // A lógica de fechamento agora é gerenciada por setupAllModalCloseHandlers
 }
 
 // --- Função do Modal de Confirmação ---
 
-/**
- * Exibe um modal de confirmação com uma mensagem e um callback para confirmação.
- * @param {string} message - A mensagem a ser exibida no modal de confirmação.
- * @param {function} onConfirm - A função de callback a ser executada se confirmado.
- */
 export function showConfirmModal(message, onConfirm) {
     const modalOverlay = document.getElementById('confirm-modal-overlay');
     const messageEl = document.getElementById('confirm-modal-message');
@@ -277,83 +253,58 @@ export function showConfirmModal(message, onConfirm) {
         onConfirm();
         closeModal();
     };
-
     btnCancel.onclick = closeModal;
-    // CORREÇÃO: A lógica para o botão X já foi removida daqui e está correta.
 }
 
-// --- Funções de Ação do Card ---
+// --- Funções de Ação do Card de Pedidos ---
 
-/**
- * Atualiza o status de um determinado pedido.
- * @param {string} pedidoId - O ID do pedido a ser atualizado.
- * @param {string} novoStatus - O novo status a ser definido para o pedido.
- */
 async function atualizarStatus(pedidoId, novoStatus) {
     const dadosUpdate = {
         status: novoStatus,
         editor_nome: AppState.currentUser.nome,
     };
-
     try {
         const response = await fetch(`/api/pedidos/${pedidoId}/status`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(dadosUpdate)
         });
-
         if (response.ok) {
             showToast('Status atualizado com sucesso!', 'success');
         } else {
             const errorData = await response.json();
-            showToast(`Não foi possível atualizar o status: ${errorData.message}`, 'error');
+            showToast(`Não foi possível atualizar: ${errorData.message}`, 'error');
         }
     } catch (error) {
-        console.error('Erro ao atualizar status:', error);
-        showToast('Erro de conexão ao tentar atualizar o status.', 'error');
+        showToast('Erro de conexão ao atualizar status.', 'error');
     }
 }
 
-/**
- * Atribui ou atualiza o comprador para um determinado pedido.
- * @param {string} pedidoId - O ID do pedido a ser atualizado.
- * @param {string} nomeComprador - O nome do comprador a ser atribuído.
- */
 async function atualizarComprador(pedidoId, nomeComprador) {
-    if (!nomeComprador) {
-        return;
-    }
-
+    if (!nomeComprador) return;
     const dadosUpdate = {
         comprador: nomeComprador,
         editor_nome: AppState.currentUser.nome,
     };
-
     try {
         const response = await fetch(`/api/pedidos/${pedidoId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(dadosUpdate)
         });
-
         if (response.ok) {
-            showToast('Comprador atribuído com sucesso!', 'success');
+            showToast('Comprador atribuído!', 'success');
         } else {
             const errorData = await response.json();
-            showToast(`Não foi possível atribuir o comprador: ${errorData.message}`, 'error');
+            showToast(`Falha ao atribuir: ${errorData.message}`, 'error');
         }
     } catch (error) {
-        console.error('Erro ao atribuir comprador:', error);
-        showToast('Erro de conexão ao tentar atribuir o comprador.', 'error');
+        showToast('Erro de conexão ao atribuir comprador.', 'error');
     }
 }
 
-/**
- * Exclui um determinado pedido após a confirmação do usuário.
- * @param {string} pedidoId - O ID do pedido a ser excluído.
- */
 async function excluirPedido(pedidoId) {
-    showConfirmModal('Tem certeza que deseja excluir este pedido? Esta ação é irreversível.', async () => {
+    showConfirmModal('Excluir este pedido? A ação é irreversível.', async () => {
         try {
             const response = await fetch(`/api/pedidos/${pedidoId}`, { method: 'DELETE' });
             if (!response.ok) {
@@ -364,26 +315,17 @@ async function excluirPedido(pedidoId) {
                 document.querySelector(`.pedido-card[data-id="${pedidoId}"]`)?.remove();
             }
         } catch (error) {
-            showToast('Erro de conexão ao tentar excluir o pedido.', 'error');
+            showToast('Erro de conexão ao tentar excluir.', 'error');
         }
     });
 }
 
 // --- Função Principal de Criação de Card ---
 
-/**
- * Cria e retorna um elemento HTML que representa um card de pedido.
- * @param {object} pedido - O objeto do pedido contendo todos os seus detalhes.
- * @returns {HTMLElement} O elemento do card de pedido criado.
- */
 export function criarCardPedido(pedido) {
     const isAdmin = AppState.currentUser.role === 'Admin';
-    // =========================================================================
-    // MUDANÇA 1: Adicionamos uma verificação explícita para o Comprador
-    // =========================================================================
     const isComprador = AppState.currentUser.role === 'Comprador';
     const isOwner = pedido.vendedor === AppState.currentUser.nome;
-
     const canEdit = isAdmin || isOwner || isComprador;
     const canManage = isAdmin || isComprador;
 
@@ -401,10 +343,6 @@ export function criarCardPedido(pedido) {
     });
 
     const logBtnHTML = `<button class="btn-icon" title="Ver Histórico"><img src="/static/history.svg" alt="Histórico"></button>`;
-
-    // =========================================================================
-    // MUDANÇA 2: A lógica para mostrar o botão agora inclui 'isComprador'
-    // =========================================================================
     const deleteBtn = (isAdmin || isComprador) ? `<button class="btn btn--danger" title="Excluir Pedido">Excluir</button>` : '';
 
     let footerContent = '';
@@ -412,7 +350,6 @@ export function criarCardPedido(pedido) {
         const editBtnHTML = canEdit ? `<button class="btn btn--edit">Editar</button>` : '';
         const statusActionsHTML = canManage ? `<button class="btn btn--warning">Em Cotação</button><button class="btn btn--success">OK</button>` : '';
         const selectHTML = canManage ? `<div class="comprador-select-wrapper"><label>Comprador:</label><select>${compradorOptions}</select></div>` : '';
-
         footerContent = `
             <p>Status: <span class="status-value">${pedido.status}</span></p>
             <div class="card__actions">${editBtnHTML}${statusActionsHTML}</div>
@@ -428,14 +365,14 @@ export function criarCardPedido(pedido) {
         <p><strong>Vendedor:</strong> ${pedido.vendedor}</p>
     `;
 
-    if (pedido.itens) { // Pedido de Produto
+    if (pedido.itens) {
         let itensHTML = '<ul style="list-style: none; padding-left: 0;">';
         (pedido.itens || []).forEach(item => {
             itensHTML += `<li><strong>${item.quantidade}x</strong> ${item.codigo}</li>`;
         });
         itensHTML += '</ul>';
         cardBodyContent += itensHTML;
-    } else { // Atualização de Orçamento
+    } else {
         cardBodyContent += `<p><strong>Nº Orçamento:</strong> ${pedido.codigo || pedido.código}</p>`;
     }
 
@@ -443,7 +380,6 @@ export function criarCardPedido(pedido) {
     if (observacao) {
         cardBodyContent += `<p><strong>Obs:</strong> ${observacao}</p>`;
     }
-
     cardBodyContent += `<p><strong>Comprador:</strong> ${pedido.comprador || 'Não atribuído'}</p>`;
 
     card.innerHTML = `
@@ -457,7 +393,6 @@ export function criarCardPedido(pedido) {
         <div class="card__body">${cardBodyContent}</div>
         <div class="card__footer">${footerContent}</div>`;
 
-    // Adiciona os listeners de evento
     if (pedido.status !== 'OK') {
         if (canEdit) card.querySelector('.btn--edit')?.addEventListener('click', () => openEditModal(pedido));
         if (canManage) {
@@ -467,9 +402,6 @@ export function criarCardPedido(pedido) {
         }
     }
 
-    // =========================================================================
-    // MUDANÇA 3: A lógica para anexar o evento de clique também inclui 'isComprador'
-    // =========================================================================
     if (isAdmin || isComprador) {
         card.querySelector('.btn--danger')?.addEventListener('click', () => excluirPedido(pedido.id));
     }
@@ -481,10 +413,6 @@ export function criarCardPedido(pedido) {
 
 // --- Funções do Modal de Edição ---
 
-/**
- * Abre o modal de edição e preenche-o com os dados do pedido.
- * @param {object} pedido - O objeto do pedido a ser editado.
- */
 function openEditModal(pedido) {
     const modalOverlay = document.getElementById('edit-modal-overlay');
     const modal = document.getElementById('edit-modal');
@@ -503,11 +431,10 @@ function openEditModal(pedido) {
             itensHTML += createModalItemRowHTML(index + 1, item.codigo, item.quantidade);
         });
         itensHTML += '</div>';
-
         form.innerHTML = `
             ${itensHTML}
             <div class="form-group">
-                <button type="button" id="btn-add-edit-item" class="btn btn--secondary" style="width:100%;">+ Adicionar outro item</button>
+                <button type="button" id="btn-add-edit-item" class="btn btn--secondary" style="width:100%;">+ Adicionar item</button>
             </div>
             <hr>
             <div class="form-group">
@@ -515,26 +442,20 @@ function openEditModal(pedido) {
                 <textarea id="edit-observacao-geral" rows="3">${pedido.observacao_geral || ''}</textarea>
             </div>
         `;
-        // =========================================================================
-
-        form.querySelectorAll('.close-modal').forEach(btn => { // <-- Mudado de .remove-item-btn para .close-modal
+        form.querySelectorAll('.close-modal').forEach(btn => {
             btn.onclick = () => btn.closest('.item-row').remove();
         });
         form.querySelector('#btn-add-edit-item').onclick = () => {
             const container = document.getElementById('edit-itens-container');
             const newItemIndex = container.children.length + 1;
             container.insertAdjacentHTML('beforeend', createModalItemRowHTML(newItemIndex));
-            container.lastElementChild.querySelector('.close-modal').onclick = (e) => e.target.closest('.item-row').remove(); // <-- Mudado aqui também
+            container.lastElementChild.querySelector('.close-modal').onclick = (e) => e.target.closest('.item-row').remove();
         };
-
     } else {
         const codigoOrcamento = pedido.código || pedido.codigo;
-        // =========================================================================
-        // E CORREÇÃO AQUI TAMBÉM
-        // =========================================================================
         form.innerHTML = `
             <div class="form-group">
-                <label for="edit-orcamento-nome">Número do Orçamento</label>
+                <label for="edit-orcamento-nome">Nº do Orçamento</label>
                 <input type="text" id="edit-orcamento-nome" value="${codigoOrcamento || ''}" required>
             </div>
             <div class="form-group">
@@ -542,28 +463,16 @@ function openEditModal(pedido) {
                 <textarea id="edit-observacao" rows="4">${pedido.descricao || ''}</textarea>
             </div>
         `;
-        // =========================================================================
     }
 
     modalOverlay.style.display = 'flex';
-
     setTimeout(() => {
         const firstInput = document.querySelector('#form-edit input, #form-edit textarea');
         if (firstInput) firstInput.focus();
     }, 100);
 }
 
-/**
- * Cria a string HTML para uma linha de item no modal de edição.
- * @param {number} index - O índice do item.
- * @param {string} [codigo=''] - O código do item.
- * @param {number} [quantidade=1] - A quantidade do item.
- * @returns {string} A string HTML para a linha do item.
- */
 function createModalItemRowHTML(index, codigo = '', quantidade = 1) {
-    // =========================================================================
-    // CORREÇÃO PRINCIPAL AQUI
-    // =========================================================================
     return `
         <div class="item-row">
             <div class="item-row-header">
@@ -582,22 +491,16 @@ function createModalItemRowHTML(index, codigo = '', quantidade = 1) {
             </div>
         </div>
     `;
-
 }
 
-/**
- * Configura os event listeners para o modal de edição.
- */
 export function setupEditModal() {
     const modalOverlay = document.getElementById('edit-modal-overlay');
     const btnCancel = document.getElementById('btn-cancel-edit');
     const form = document.getElementById('form-edit');
     const saveBtn = document.getElementById('btn-save-edit');
-
     if (!modalOverlay || !btnCancel || !form || !saveBtn) return;
 
     const closeModal = () => { modalOverlay.style.display = 'none'; };
-
     btnCancel.onclick = closeModal;
 
     form.onsubmit = async (e) => {
@@ -609,7 +512,6 @@ export function setupEditModal() {
         const pedidoTipo = modal.dataset.pedidoTipo;
 
         let updateData = {};
-
         if (pedidoTipo === 'Pedido Produto') {
             const itens = [];
             let hasError = false;
@@ -622,22 +524,19 @@ export function setupEditModal() {
                     hasError = true;
                 }
             });
-
             if (hasError || itens.length === 0) {
-                showToast('Preencha todos os campos dos itens ou remova os itens vazios.', 'error');
+                showToast('Preencha todos os campos ou remova itens vazios.', 'error');
                 toggleButtonLoading(saveBtn, false, 'Salvar Alterações');
                 return;
             }
-
             updateData.itens = itens;
             updateData.observacao_geral = document.getElementById('edit-observacao-geral').value;
-        } else { // Atualização Orçamento
+        } else {
             updateData.codigo = document.getElementById('edit-orcamento-nome').value;
             updateData.descricao = document.getElementById('edit-observacao').value;
         }
 
         updateData.editor_nome = AppState.currentUser.nome;
-
         try {
             const response = await fetch(`/api/pedidos/${pedidoId}`, {
                 method: 'PUT',
@@ -647,18 +546,12 @@ export function setupEditModal() {
             if (response.ok) {
                 closeModal();
                 showToast('Pedido salvo com sucesso!', 'success');
-
-                // CORREÇÃO: Força a atualização da UI do quadro
-                // Verificamos se estamos na página do quadro para evitar erros em outras páginas
                 if (window.location.pathname.includes('/quadro')) {
-                    // Re-chama a função que inicializa a página, que por sua vez
-                    // re-ativa o listener do Firebase e redesenha os cards.
                     initQuadroPage();
                 }
-
             } else {
                 const errorData = await response.json();
-                showToast(`Falha ao salvar: ${errorData.error || 'Erro desconhecido'}`, 'error');
+                showToast(`Falha ao salvar: ${errorData.error || 'Erro'}`, 'error');
             }
         } catch (error) {
             showToast('Erro de conexão ao tentar salvar.', 'error');

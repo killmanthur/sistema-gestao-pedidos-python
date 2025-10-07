@@ -687,12 +687,13 @@ body.dark-mode .card__header-actions .btn-icon img {
 
 .admin-table th,
 .admin-table td {
-    padding: 0.6rem 0.8rem;
+    /* ****** ALTERAÇÃO AQUI ****** */
+    /* Reduzi o padding vertical de 0.6rem para 0.35rem para diminuir a altura da linha. */
+    padding: 0.35rem 0.8rem;
     border: 1px solid var(--border-main);
     text-align: left;
     vertical-align: middle;
 }
-
 .admin-table th {
     background-color: var(--bg-muted);
 }
@@ -1084,7 +1085,7 @@ body.tv-mode main {
 .actions-cell {
     display: flex;
     gap: 0.5rem;
-    flex-wrap: wrap;
+    /* A propriedade 'flex-wrap: wrap;' foi removida daqui */
     align-items: center;
 }
 
@@ -1122,6 +1123,13 @@ body.tv-mode main {
 .btn-action.btn-delete:hover {
     background-color: #c9302c;
     border-color: #ac2925;
+}
+
+.btn-action.btn-delete--icon {
+    font-size: 1rem;
+    font-weight: bold;
+    line-height: 1;
+    padding: 0.3rem 0.7rem;
 }
 
 /* --- Observação e Botão Secundário --- */

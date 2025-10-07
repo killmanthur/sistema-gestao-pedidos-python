@@ -40,21 +40,25 @@ def criar_notificacao_edicao(pedido_id, editor_nome):
     except Exception as e:
         print(f"ERRO ao criar notificação de edição: {e}")
 
-# MUDANÇA: Função 'registrar_log' unificada
 def registrar_log(item_id, autor, acao, detalhes=None, log_type='pedidos'):
     """
-    Registra um log para qualquer tipo de item (pedidos, separacoes, etc.).
-    Agora aceita um dicionário 'detalhes' para consistência.
+    Registra um log para qualquer tipo de item (pedidos, separacoes, conferencias).
     """
     try:
-        # Define o caminho correto com base no tipo de log
-        log_path = f'logs_separacoes/{item_id}' if log_type == 'separacoes' else f'logs/{item_id}'
+        # Mapeia o tipo de log para o caminho correto no DB
+        log_paths = {
+            'pedidos': f'logs/{item_id}',
+            'separacoes': f'logs_separacoes/{item_id}',
+            'conferencias': f'logs_conferencias/{item_id}'
+        }
+        log_path = log_paths.get(log_type, f'logs/{item_id}')
+
         log_ref = db.reference(log_path)
         
         novo_log = {
             'autor': autor,
             'acao': acao,
-            'detalhes': detalhes if detalhes is not None else {}, # Garante que 'detalhes' seja sempre um dict
+            'detalhes': detalhes if detalhes is not None else {},
             'timestamp': datetime.now(tz_cuiaba).isoformat()
         }
         log_ref.push(novo_log)
