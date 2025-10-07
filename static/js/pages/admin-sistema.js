@@ -10,6 +10,8 @@ const ALL_PAGES = {
     atualizacao_orcamento: "Atualizar Orçamento (Criar)",
     sugestoes: "Sugestão de Compras",
     dashboard: "Dashboard",
+    // ****** NOVA PÁGINA ADICIONADA AQUI ******
+    dashboard_logistica: "Dashboard de Logística",
     recebimento: "Recebimento",
     pendencias_e_alteracoes: "Pendências e Alterações",
     separacoes: "Separações",

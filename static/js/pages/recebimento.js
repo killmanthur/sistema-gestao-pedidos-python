@@ -1,5 +1,4 @@
 import { AppState } from '../state.js';
-import { db } from '../firebase.js';
 import { showToast } from '../toasts.js';
 import { toggleButtonLoading, formatarData, showConfirmModal } from '../ui.js';
 
@@ -7,6 +6,7 @@ let elementos = {};
 let todosOsRecebimentos = [];
 let debounceTimer;
 let listaDeVendedores = [];
+let intervalId = null;
 
 async function fetchAndPopulateVendors(selectElement) {
     if (listaDeVendedores.length === 0) {
@@ -37,7 +37,6 @@ function openEditModal(item) {
     const transportadoraGroup = document.getElementById('edit-transportadora-group');
     const vendedorGroup = document.getElementById('edit-vendedor-group');
 
-    // Mostra/esconde campos baseados no tipo de nota
     if (item.vendedor_nome) { // É nota da rua
         transportadoraGroup.style.display = 'none';
         vendedorGroup.style.display = 'block';
@@ -67,12 +66,10 @@ async function handleEditFormSubmit(event) {
         numero_nota_fiscal: modal.form.querySelector('#edit-numero-nota-fiscal').value,
         nome_fornecedor: modal.form.querySelector('#edit-nome-fornecedor').value,
         qtd_volumes: modal.form.querySelector('#edit-qtd-volumes').value,
-        // ****** NOVA LINHA ADICIONADA AQUI ******
         recebido_por: modal.form.querySelector('#edit-recebido-por').value,
         editor_nome: AppState.currentUser.nome,
     };
 
-    // Adiciona o campo correto (transportadora ou vendedor)
     const isRua = document.getElementById('edit-vendedor-group').style.display === 'block';
     if (isRua) {
         dados.vendedor_nome = document.getElementById('edit-nome-vendedor').value;
@@ -141,7 +138,6 @@ function renderizarTabela() {
 
     elementos.tabelaBody.innerHTML = '';
     if (recebimentosFiltrados.length === 0) {
-        // ****** COLSPAN ATUALIZADO PARA 8 ******
         elementos.tabelaBody.innerHTML = `<tr><td colspan="8">Nenhum recebimento encontrado.</td></tr>`;
         return;
     }
@@ -161,8 +157,6 @@ function renderizarTabela() {
         }
 
         if (perms.pode_deletar_conferencia) {
-            // ****** ALTERAÇÃO AQUI ******
-            // Troquei o botão de texto por um 'X' com title e uma nova classe CSS.
             actionsHTML += `<button class="btn-action btn-delete btn-delete--icon" data-id="${item.id}" title="Excluir">X</button>`;
         }
 
@@ -259,6 +253,22 @@ async function handleRuaFormAction(actionType) {
     }
 }
 
+async function fetchData() {
+    try {
+        const response = await fetch('/api/conferencias/recentes');
+        if (!response.ok) throw new Error('Falha ao buscar recebimentos.');
+
+        todosOsRecebimentos = await response.json();
+        renderizarTabela(); // A função de renderizar e filtrar que já existe é reutilizada
+
+        elementos.spinner.style.display = 'none';
+        elementos.tabela.style.display = 'table';
+    } catch (error) {
+        console.error("Erro ao buscar recebimentos:", error);
+        showToast(error.message, 'error');
+        if (intervalId) clearInterval(intervalId);
+    }
+}
 
 export function initRecebimentoPage() {
     elementos = {
@@ -320,13 +330,8 @@ export function initRecebimentoPage() {
         });
     });
 
-    const recebimentosRef = db.ref('conferencias').orderByChild('data_recebimento');
-    recebimentosRef.on('value', (snapshot) => {
-        elementos.spinner.style.display = 'none';
-        elementos.tabela.style.display = 'table';
-        const data = snapshot.val() || {};
-        todosOsRecebimentos = Object.entries(data).map(([id, value]) => ({ id, ...value }))
-            .sort((a, b) => new Date(b.data_recebimento) - new Date(a.data_recebimento));
-        renderizarTabela();
-    });
+    if (intervalId) clearInterval(intervalId);
+
+    fetchData(); // Busca inicial
+    intervalId = setInterval(fetchData, 20000); // Atualiza a cada 20 segundos
 }

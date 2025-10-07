@@ -4,6 +4,7 @@ import { showToast } from '../toasts.js';
 import { toggleButtonLoading, formatarData, showConfirmModal, openLogModal } from '../ui.js';
 
 let state = {};
+let intervalId = null;
 
 const TAMANHO_PAGINA_RESOLVIDOS = 15;
 
@@ -19,8 +20,7 @@ function resetState() {
     };
 }
 
-// ****** FUNÇÃO MODIFICADA: AGORA APENAS ABRE O MODAL ******
-function handleSolicitarAlteracao(item) {
+async function handleSolicitarAlteracao(item) {
     const modal = state.elementos.solicitarAlteracaoModal;
     modal.form.reset(); // Limpa o formulário
     modal.form.dataset.id = item.id; // Armazena o ID no formulário
@@ -28,7 +28,6 @@ function handleSolicitarAlteracao(item) {
     setTimeout(() => modal.obsInput.focus(), 100);
 }
 
-// ****** NOVA FUNÇÃO PARA LIDAR COM O SUBMIT DO MODAL ******
 async function handleSolicitarAlteracaoSubmit(event) {
     event.preventDefault();
     const modal = state.elementos.solicitarAlteracaoModal;
@@ -344,6 +343,36 @@ const handleDelete = (id) => {
     });
 };
 
+async function fetchData() {
+    try {
+        const response = await fetch('/api/conferencias/pendentes-e-resolvidas');
+        if (!response.ok) throw new Error('Falha ao buscar dados de pendências.');
+
+        const lista = await response.json();
+        const userRole = AppState.currentUser.role;
+
+        state.pend_fornecedor = lista.filter(c => ['Pendente (Fornecedor)', 'Pendente (Ambos)'].includes(c.status) && !c.resolvido_gestor);
+        state.pend_alteracao = lista.filter(c => ['Pendente (Alteração)', 'Pendente (Ambos)'].includes(c.status) && !c.resolvido_contabilidade);
+        state.todosOsResolvidos = lista.filter(c => c.status === 'Finalizado');
+
+        state.paginaResolvidos = 0;
+        state.temMaisResolvidos = true;
+        state.elementos.quadroResolvidos.innerHTML = '';
+
+        renderizarColunas();
+        carregarPaginaResolvidos();
+
+        const isAdmin = userRole === 'Admin';
+        state.elementos.colunaFornecedor.style.display = (isAdmin || userRole === 'Estoque') ? 'block' : 'none';
+        state.elementos.colunaAlteracao.style.display = (isAdmin || userRole === 'Estoque' || userRole === 'Contabilidade') ? 'block' : 'none';
+
+    } catch (error) {
+        console.error("Erro ao buscar dados de pendências:", error);
+        showToast(error.message, 'error');
+        if (intervalId) clearInterval(intervalId);
+    }
+}
+
 export function initPendenciasEAlteracoesPage() {
     resetState();
     state.elementos = {
@@ -369,7 +398,6 @@ export function initPendenciasEAlteracoesPage() {
             form: document.getElementById('form-edit-recebimento'),
             deleteButton: document.getElementById('btn-excluir-recebimento')
         },
-        // ****** NOVOS ELEMENTOS DO MODAL ******
         solicitarAlteracaoModal: {
             overlay: document.getElementById('solicitar-alteracao-modal-overlay'),
             form: document.getElementById('form-solicitar-alteracao'),
@@ -377,11 +405,8 @@ export function initPendenciasEAlteracoesPage() {
         }
     };
 
-    // ****** NOVO EVENT LISTENER ******
     state.elementos.solicitarAlteracaoModal.form.addEventListener('submit', handleSolicitarAlteracaoSubmit);
-
     state.elementos.paginacaoResolvidos.btnCarregarMais.addEventListener('click', carregarPaginaResolvidos);
-
     state.elementos.filtroInput.addEventListener('input', () => {
         renderizarColunas();
         state.elementos.quadroResolvidos.innerHTML = '';
@@ -398,28 +423,15 @@ export function initPendenciasEAlteracoesPage() {
         handleDelete(id);
     });
 
-    const ref = db.ref('conferencias');
-    ref.on('value', snapshot => {
-        const data = snapshot.val() || {};
-        const lista = Object.entries(data).map(([id, itemData]) => ({ id, ...itemData }));
-        const userRole = AppState.currentUser.role;
+    if (intervalId) clearInterval(intervalId);
 
-        const sortFn = (a, b) => new Date(b.data_finalizacao) - new Date(a.data_finalizacao);
+    const quadros = [
+        state.elementos.quadroFornecedor,
+        state.elementos.quadroAlteracao,
+        state.elementos.quadroResolvidos
+    ];
+    quadros.forEach(q => { if (q) q.innerHTML = `<div class="spinner" style="margin: 2rem auto;"></div>`; });
 
-        state.pend_fornecedor = lista.filter(c => ['Pendente (Fornecedor)', 'Pendente (Ambos)'].includes(c.status) && !c.resolvido_gestor).sort(sortFn);
-        state.pend_alteracao = lista.filter(c => ['Pendente (Alteração)', 'Pendente (Ambos)'].includes(c.status) && !c.resolvido_contabilidade).sort(sortFn);
-        state.todosOsResolvidos = lista.filter(c => c.status === 'Finalizado').sort(sortFn);
-
-        state.paginaResolvidos = 0;
-        state.temMaisResolvidos = true;
-        state.elementos.quadroResolvidos.innerHTML = '';
-
-        renderizarColunas();
-        carregarPaginaResolvidos();
-
-
-        const isAdmin = userRole === 'Admin';
-        state.elementos.colunaFornecedor.style.display = (isAdmin || userRole === 'Estoque') ? 'block' : 'none';
-        state.elementos.colunaAlteracao.style.display = (isAdmin || userRole === 'Estoque' || userRole === 'Contabilidade') ? 'block' : 'none';
-    });
+    fetchData(); // Busca inicial
+    intervalId = setInterval(fetchData, 20000); // Atualiza a cada 20 segundos
 }

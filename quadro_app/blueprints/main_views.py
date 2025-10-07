@@ -39,6 +39,10 @@ def sugestoes_page():
 def dashboard_page(): 
     return render_template('dashboard.html')
 
+@main_views_bp.route('/dashboard-logistica')
+def dashboard_logistica_page():
+    return render_template('dashboard_logistica.html')
+
 @main_views_bp.route('/separacoes')
 def separacoes_page():
     return render_template('separacoes.html')

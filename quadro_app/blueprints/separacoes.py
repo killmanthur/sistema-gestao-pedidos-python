@@ -1,12 +1,13 @@
 # quadro_app/blueprints/separacoes.py
 from flask import Blueprint, request, jsonify
-from datetime import datetime
+from datetime import datetime, timedelta
 from quadro_app import db, tz_cuiaba
 from quadro_app.utils import registrar_log
 
 separacoes_bp = Blueprint('separacoes', __name__, url_prefix='/api/separacoes')
 
 # --- FUNÇÕES AUXILIARES DA FILA (LÓGICA SIMPLIFICADA) ---
+# ... (código da fila permanece o mesmo) ...
 
 def get_todos_separadores():
     """Busca todos os usuários com a role 'Separador'."""
@@ -144,8 +145,103 @@ def get_fila_endpoint():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# O resto do arquivo (criar_separacao, editar_separacao, etc.) não precisa de alterações
-# Vou manter as funções principais aqui para garantir que o arquivo esteja completo.
+# ****** INÍCIO DA NOVA ROTA PARA O DASHBOARD ******
+def format_seconds_to_hms(seconds):
+    """Converte segundos em uma string 'HH:MM:SS'."""
+    if seconds is None or seconds < 0:
+        return "N/A"
+    hours, remainder = divmod(seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    return f"{int(hours):02}:{int(minutes):02}:{int(seconds):02}"
+
+@separacoes_bp.route('/dashboard-data', methods=['POST'])
+def get_dashboard_logistica_data():
+    filtros = request.get_json() or {}
+    data_inicio_str = filtros.get('dataInicio')
+    data_fim_str = filtros.get('dataFim')
+
+    try:
+        ref = db.reference('separacoes')
+        todas_separacoes = ref.order_by_child('status').equal_to('Finalizado').get() or {}
+
+        separacoes_filtradas = []
+        for sep_id, sep_data in todas_separacoes.items():
+            data_finalizacao = sep_data.get('data_finalizacao', '').split('T')[0]
+            if not data_finalizacao:
+                continue
+            if data_inicio_str and data_finalizacao < data_inicio_str:
+                continue
+            if data_fim_str and data_finalizacao > data_fim_str:
+                continue
+            separacoes_filtradas.append(sep_data)
+
+        separador_stats = {}
+        conferente_stats = {}
+
+        for sep in separacoes_filtradas:
+            separador_nome = sep.get('separador_nome')
+            conferente_nome = sep.get('conferente_nome')
+
+            # Processa estatísticas do separador
+            if separador_nome:
+                stats = separador_stats.setdefault(separador_nome, {'count': 0, 'total_seconds': 0, 'items_for_avg': 0})
+                stats['count'] += 1
+                
+                # Calcula tempo de separação
+                if sep.get('data_criacao') and sep.get('data_inicio_conferencia'):
+                    start = datetime.fromisoformat(sep['data_criacao'])
+                    end = datetime.fromisoformat(sep['data_inicio_conferencia'])
+                    duration = (end - start).total_seconds()
+                    if duration >= 0:
+                        stats['total_seconds'] += duration
+                        stats['items_for_avg'] += 1
+
+            # Processa estatísticas do conferente
+            if conferente_nome:
+                stats = conferente_stats.setdefault(conferente_nome, {'count': 0, 'total_seconds': 0, 'items_for_avg': 0})
+                stats['count'] += 1
+
+                # Calcula tempo de conferência
+                if sep.get('data_inicio_conferencia') and sep.get('data_finalizacao'):
+                    start = datetime.fromisoformat(sep['data_inicio_conferencia'])
+                    end = datetime.fromisoformat(sep['data_finalizacao'])
+                    duration = (end - start).total_seconds()
+                    if duration >= 0:
+                        stats['total_seconds'] += duration
+                        stats['items_for_avg'] += 1
+        
+        # Formata os resultados finais
+        resultado_separadores = []
+        for nome, data in separador_stats.items():
+            avg_seconds = data['total_seconds'] / data['items_for_avg'] if data['items_for_avg'] > 0 else 0
+            resultado_separadores.append({
+                'nome': nome,
+                'count': data['count'],
+                'avg_time_str': format_seconds_to_hms(avg_seconds)
+            })
+
+        resultado_conferentes = []
+        for nome, data in conferente_stats.items():
+            avg_seconds = data['total_seconds'] / data['items_for_avg'] if data['items_for_avg'] > 0 else 0
+            resultado_conferentes.append({
+                'nome': nome,
+                'count': data['count'],
+                'avg_time_str': format_seconds_to_hms(avg_seconds)
+            })
+            
+        # Ordena por contagem (maior primeiro)
+        resultado_separadores.sort(key=lambda x: x['count'], reverse=True)
+        resultado_conferentes.sort(key=lambda x: x['count'], reverse=True)
+
+        return jsonify({
+            'separadores': resultado_separadores,
+            'conferentes': resultado_conferentes
+        })
+
+    except Exception as e:
+        print(f"ERRO ao gerar dados do dashboard de logística: {e}")
+        return jsonify({'error': str(e)}), 500
+# ****** FIM DA NOVA ROTA ******
 
 def criar_notificacao_separacao(destinatario_nome, mensagem, autor_nome):
     try:
@@ -187,6 +283,7 @@ def criar_separacao():
             'vendedor_nome': vendedor_nome,
             'status': 'Em Separação',
             'data_criacao': datetime.now(tz_cuiaba).isoformat(),
+            'data_inicio_conferencia': None, # Campo adicionado
             'data_finalizacao': None,
             'conferente_nome': ''
         }
@@ -208,7 +305,6 @@ def criar_separacao():
 def editar_separacao(separacao_id):
     dados = request.get_json()
     editor_nome = dados.pop('editor_nome', 'N/A')
-    # Resto da função pode continuar como está...
     num_movimentacao = dados.get('numero_movimentacao')
     
     try:
@@ -229,9 +325,13 @@ def editar_separacao(separacao_id):
                 if ids_existentes[0] != separacao_id:
                      return jsonify({'error': f'O número de movimentação {num_movimentacao} já pertence a outra separação.'}), 409
 
+        # ****** INÍCIO DA MELHORIA PARA CÁLCULO DE TEMPO ******
         if 'conferente_nome' in dados and dados.get('conferente_nome'):
             if separacao_antiga.get('status') == 'Em Separação':
                 dados['status'] = 'Em Conferência'
+                # Adiciona o timestamp exato do início da conferência
+                dados['data_inicio_conferencia'] = datetime.now(tz_cuiaba).isoformat()
+        # ****** FIM DA MELHORIA ******
 
         ref.update(dados)
 
@@ -256,8 +356,8 @@ def editar_separacao(separacao_id):
         return jsonify({'status': 'success'}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-# ... (outras rotas como /paginadas, /<id>/observacao etc. permanecem iguais)
 
+# ... (Resto do arquivo: /paginadas, /<id>/observacao, etc. permanecem iguais)
 @separacoes_bp.route('/paginadas', methods=['POST'])
 def get_separacoes_paginadas():
     try:
@@ -275,10 +375,8 @@ def get_separacoes_paginadas():
         if user_role == 'Vendedor':
             todas_separacoes = [s for s in todas_separacoes if s.get('vendedor_nome') == user_name]
 
-        # --- CORREÇÃO DA ORDENAÇÃO AQUI ---
         def safe_int_convert(value):
             try:
-                # Converte para string primeiro para lidar com números e textos
                 return int(str(value))
             except (ValueError, TypeError):
                 return 0
@@ -286,9 +384,8 @@ def get_separacoes_paginadas():
         finalizadas = sorted(
             [s for s in todas_separacoes if s.get('status') == 'Finalizado'], 
             key=lambda x: safe_int_convert(x.get('numero_movimentacao')), 
-            reverse=True # Do maior para o menor
+            reverse=True
         )
-        # --- FIM DA CORREÇÃO ---
         
         if search_term:
             def check_search(s):
@@ -315,7 +412,6 @@ def get_separacoes_paginadas():
 @separacoes_bp.route('/<string:separacao_id>/observacao', methods=['POST'])
 def adicionar_observacao(separacao_id):
     dados = request.get_json()
-    # ... código ...
     autor_nome = dados.get('autor', 'N/A')
     autor_role = dados.get('role', 'N/A')
     
@@ -359,7 +455,6 @@ def adicionar_observacao(separacao_id):
 def limpar_notificacoes():
     from firebase_admin import auth
     id_token = request.headers.get('Authorization', '').split('Bearer ')[-1]
-    # ... código ...
     if not id_token:
         return jsonify({"error": "Token de autorização ausente."}), 401
     try:
@@ -375,7 +470,6 @@ def limpar_notificacoes():
 @separacoes_bp.route('/<string:separacao_id>', methods=['DELETE'])
 def deletar_separacao(separacao_id):
     dados = request.get_json()
-    # ... código ...
     editor_nome = dados.get('editor_nome', 'N/A')
     try:
         ref = db.reference(f'separacoes/{separacao_id}')
@@ -396,7 +490,6 @@ def deletar_separacao(separacao_id):
 @separacoes_bp.route('/<string:separacao_id>/status', methods=['PUT'])
 def atualizar_status_separacao(separacao_id):
     dados = request.get_json()
-    # ... código ...
     novo_status = dados.get('status')
     editor_nome = dados.get('editor_nome', 'N/A')
     try:
@@ -424,7 +517,6 @@ def atualizar_status_separacao(separacao_id):
 def get_tabela_separacoes_paginada():
     try:
         dados = request.get_json()
-        # ... código ...
         page = dados.get('page', 0)
         limit = dados.get('limit', 30)
         search_term = dados.get('search', '').lower().strip()
@@ -455,5 +547,32 @@ def get_tabela_separacoes_paginada():
         tem_mais = (offset + limit) < len(separacoes_filtradas)
         
         return jsonify({'separacoes': itens_da_pagina, 'temMais': tem_mais})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@separacoes_bp.route('/ativas', methods=['GET'])
+def get_separacoes_ativas():
+    """Retorna separações com status 'Em Separação' ou 'Em Conferência'."""
+    try:
+        user_role = request.args.get('user_role')
+        user_name = request.args.get('user_name')
+
+        ref = db.reference('separacoes')
+        todas_separacoes = ref.get() or {}
+        
+        separacoes_ativas = [
+            {'id': key, **value} for key, value in todas_separacoes.items()
+            if value.get('status') in ['Em Separação', 'Em Conferência']
+        ]
+
+        # Filtro específico para vendedores
+        if user_role == 'Vendedor' and user_name:
+            separacoes_ativas = [s for s in separacoes_ativas if s.get('vendedor_nome') == user_name]
+
+        # Ordena por número de movimentação, do maior para o menor
+        separacoes_ativas.sort(key=lambda x: int(x.get('numero_movimentacao', 0)), reverse=True)
+
+        return jsonify(separacoes_ativas)
     except Exception as e:
         return jsonify({'error': str(e)}), 500

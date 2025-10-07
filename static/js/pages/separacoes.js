@@ -145,7 +145,6 @@ async function handleSaveFila(event) {
     }
 }
 
-// O resto do arquivo pode permanecer como está...
 function criarCardElement(separacao) {
     const card = document.createElement('div');
     card.className = 'card separacao-card';
@@ -247,19 +246,7 @@ function renderizarColunaFinalizados(novosItens, limpar = false) {
     if (novosItens.length > 0) novosItens.forEach(item => state.elementos.quadroFinalizadas.appendChild(criarCardElement(item)));
     else if (limpar) state.elementos.quadroFinalizadas.innerHTML = `<p class="quadro-vazio-msg">Nenhuma separação finalizada.</p>`;
 }
-function setupRealtimeListener() {
-    const separacoesRef = db.ref('separacoes');
-    separacoesRef.on('value', (snapshot) => {
-        const todasSeparacoes = snapshot.val() || {};
-        const listaCompleta = Object.entries(todasSeparacoes).map(([id, data]) => ({ id, ...data }));
-        let separacoesAtivas = listaCompleta.filter(s => s.status !== 'Finalizado');
-        if (AppState.currentUser.role === 'Vendedor') {
-            separacoesAtivas = separacoesAtivas.filter(s => s.vendedor_nome === AppState.currentUser.nome);
-        }
-        state.todasAsSeparacoesAtivas = separacoesAtivas;
-        filtrarErenderizarColunasAtivas();
-    });
-}
+
 async function carregarFinalizados(recarregar = false) {
     if (state.carregando || (!state.temMais && !recarregar)) return;
     state.carregando = true;
@@ -477,13 +464,31 @@ async function handleObsFormSubmit(event) {
         toggleButtonLoading(modal.saveButton, false, 'Salvar Observação');
     }
 }
+
 function startAutoRefresh() {
     if (autoRefreshInterval) clearInterval(autoRefreshInterval);
     autoRefreshInterval = setInterval(async () => {
-        await carregarFinalizados(true);
+        await carregarFinalizados(true); // Recarrega os finalizados com filtros
+        await fetchActiveSeparacoes();     // Busca os ativos da nova API
         await fetchAndRenderFila();
-    }, 15000);
+    }, 15000); // 15 segundos
 }
+
+async function fetchActiveSeparacoes() {
+    try {
+        const { role, nome } = AppState.currentUser;
+        const response = await fetch(`/api/separacoes/ativas?user_role=${role}&user_name=${nome}`);
+        if (!response.ok) throw new Error('Falha ao buscar separações ativas.');
+
+        state.todasAsSeparacoesAtivas = await response.json();
+        filtrarErenderizarColunasAtivas(); // Reutiliza a função de filtragem e renderização que já existe
+
+    } catch (error) {
+        console.error("Erro ao buscar separações ativas:", error);
+        showToast(error.message, 'error');
+    }
+}
+
 export async function initSeparacoesPage() {
     resetState();
     state.elementos = {
@@ -563,7 +568,7 @@ export async function initSeparacoesPage() {
         state.elementos.obsModal.cancelButton.addEventListener('click', () => { state.elementos.obsModal.overlay.style.display = 'none'; });
     }
     await fetchInitialData();
-    setupRealtimeListener();
+    await fetchActiveSeparacoes();
     await fetchAndRenderFila();
     await carregarFinalizados(true);
     startAutoRefresh();

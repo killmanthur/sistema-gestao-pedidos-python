@@ -17,6 +17,8 @@ import { initConferenciasPage } from './pages/conferencias.js';
 import { initRecebimentoPage } from './pages/recebimento.js';
 import { initPendenciasEAlteracoesPage } from './pages/pendencias_e_alteracoes.js'; // ROTA ATUALIZADA
 import { initGerenciarSeparacoesPage } from './pages/gerenciar-separacoes.js';
+// ****** NOVA IMPORTAÇÃO ******
+import { initDashboardLogisticaPage } from './pages/dashboard-logistica.js';
 
 
 async function fetchInitialData() {
@@ -53,6 +55,7 @@ export async function initializeAuthenticatedApp() {
     else if (path.includes('/sugestoes')) initSugestoesPage();
     else if (path.includes('/criar-pedido')) initCriarPedidoPage();
     else if (path.includes('/atualizacao-orcamento')) initAtualizacaoOrcamentoPage();
+    else if (path.includes('/dashboard-logistica')) initDashboardLogisticaPage(); // ****** NOVA LINHA ******
     else if (path.includes('/dashboard')) initDashboardPage();
     else if (path.includes('/separacoes')) initSeparacoesPage();
     else if (path.includes('/conferencias')) initConferenciasPage();

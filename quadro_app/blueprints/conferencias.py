@@ -39,7 +39,6 @@ def editar_conferencia(conferencia_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# ****** ROTA MODIFICADA AQUI ******
 @conferencias_bp.route('/<string:conferencia_id>/solicitar-alteracao', methods=['PUT'])
 def solicitar_alteracao_posterior(conferencia_id):
     dados = request.get_json()
@@ -86,7 +85,54 @@ def solicitar_alteracao_posterior(conferencia_id):
         return jsonify({'status': 'success'}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-# ****** FIM DA MODIFICAÇÃO ******
+
+
+@conferencias_bp.route('/pendentes-e-resolvidas', methods=['GET'])
+def get_pendentes_e_resolvidas():
+    """Retorna itens para a página de Pendências e Alterações."""
+    try:
+        ref = db.reference('conferencias')
+        todos_itens = ref.get() or {}
+        
+        lista_itens = [{'id': key, **value} for key, value in todos_itens.items()]
+        
+        # Filtra apenas os status relevantes para esta página
+        status_relevantes = [
+            'Pendente (Fornecedor)', 
+            'Pendente (Alteração)', 
+            'Pendente (Ambos)',
+            'Finalizado'
+        ]
+        itens_filtrados = [item for item in lista_itens if item.get('status') in status_relevantes]
+
+        # Ordena do mais novo para o mais antigo
+        itens_filtrados.sort(key=lambda x: x.get('data_recebimento', ''), reverse=True)
+
+        return jsonify(itens_filtrados)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# ****** INÍCIO DA CORREÇÃO ******
+@conferencias_bp.route('/recentes', methods=['GET'])
+def get_recebimentos_recentes():
+    """Retorna todos os recebimentos para a página de Recebimento."""
+    try:
+        ref = db.reference('conferencias')
+        # MUDANÇA 1: Simplificar a busca. A ordenação será feita no Python.
+        todos_itens = ref.get() or {}
+        
+        lista_itens = [{'id': key, **value} for key, value in todos_itens.items()]
+        
+        # MUDANÇA 2: Ordenar a lista de forma explícita e segura usando a função sort.
+        # O 'key' aponta para o campo 'data_recebimento', e 'reverse=True' coloca os mais novos primeiro.
+        lista_itens.sort(key=lambda x: x.get('data_recebimento', ''), reverse=True)
+        
+        # MUDANÇA 3: Retornar a lista já ordenada.
+        return jsonify(lista_itens)
+    except Exception as e:
+        print(f"ERRO em get_recebimentos_recentes: {e}")
+        return jsonify({'error': str(e)}), 500
+# ****** FIM DA CORREÇÃO ******
 
 
 @conferencias_bp.route('/recebimento-rua', methods=['POST'])
