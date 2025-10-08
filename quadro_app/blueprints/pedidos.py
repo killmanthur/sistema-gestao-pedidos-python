@@ -139,17 +139,19 @@ def atualizar_status(pedido_id):
 
 @pedidos_bp.route('/ativos', methods=['GET'])
 def get_pedidos_ativos():
-    """Retorna apenas os pedidos que não estão com status 'OK'."""
+    """Retorna apenas os pedidos que não estão com status 'OK' (OTIMIZADO)."""
     try:
         ref = db.reference('pedidos')
-        todos_pedidos = ref.get() or {}
         
-        pedidos_ativos = [
-            {'id': key, **value} for key, value in todos_pedidos.items() 
-            if value.get('status') != 'OK'
-        ]
+        # Duas queries eficientes
+        aguardando = ref.order_by_child('status').equal_to('Aguardando').get() or {}
+        em_cotacao = ref.order_by_child('status').equal_to('Em Cotação').get() or {}
         
-        # Ordena do mais novo para o mais antigo
+        # Combina os resultados
+        pedidos_ativos_dict = {**aguardando, **em_cotacao}
+        
+        pedidos_ativos = [{'id': key, **value} for key, value in pedidos_ativos_dict.items()]
+        
         pedidos_ativos.sort(key=lambda x: x.get('data_criacao', ''), reverse=True)
         
         return jsonify(pedidos_ativos)

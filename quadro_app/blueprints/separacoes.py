@@ -7,8 +7,6 @@ from quadro_app.utils import registrar_log
 separacoes_bp = Blueprint('separacoes', __name__, url_prefix='/api/separacoes')
 
 # --- FUNÇÕES AUXILIARES DA FILA (LÓGICA SIMPLIFICADA) ---
-# ... (código da fila permanece o mesmo) ...
-
 def get_todos_separadores():
     """Busca todos os usuários com a role 'Separador'."""
     try:
@@ -25,21 +23,17 @@ def _get_fila_separadores_ativos():
     todos_separadores = get_todos_separadores()
     fila_ativa = []
     
-    # Adiciona todos os ativos à lista
     for uid, user_data in todos_separadores.items():
         if isinstance(user_data, dict) and user_data.get('ativo_na_fila') is True:
             nome = user_data.get('nome')
             if nome and nome.lower() != 'separacao':
-                # Armazena o nome e a prioridade para ordenação
                 fila_ativa.append({
                     'nome': nome,
                     'prioridade': user_data.get('prioridade_fila', 0)
                 })
     
-    # Ordena a lista: primeiro por prioridade (maior primeiro), depois por nome
     fila_ativa.sort(key=lambda x: (-x['prioridade'], x['nome']))
     
-    # Retorna apenas a lista de nomes ordenada
     return [item['nome'] for item in fila_ativa]
 
 def _atualizar_fila_separadores(separador_designado):
@@ -50,7 +44,6 @@ def _atualizar_fila_separadores(separador_designado):
         todos_separadores = get_todos_separadores()
         updates = {}
         
-        # Encontra a menor prioridade atual
         prioridades = [
             user.get('prioridade_fila', 0)
             for user in todos_separadores.values()
@@ -58,10 +51,8 @@ def _atualizar_fila_separadores(separador_designado):
         ]
         menor_prioridade = min(prioridades) if prioridades else 0
 
-        # Encontra o UID do separador designado para atualizar sua prioridade
         for uid, user_data in todos_separadores.items():
             if isinstance(user_data, dict) and user_data.get('nome') == separador_designado:
-                # Define a prioridade dele como um número abaixo da menor atual
                 updates[f'usuarios/{uid}/prioridade_fila'] = menor_prioridade - 1
                 break
         
@@ -83,7 +74,7 @@ def get_status_todos_separadores():
             if isinstance(user_data, dict):
                 nome = user_data.get('nome')
                 if nome and nome.lower() != 'separacao':
-                    is_active = user_data.get('ativo_na_fila', False) # Default é false
+                    is_active = user_data.get('ativo_na_fila', False) 
                     resultado.append({'nome': nome, 'ativo': is_active})
         
         resultado.sort(key=lambda x: x['nome'])
@@ -96,7 +87,6 @@ def get_status_todos_separadores():
 def atualizar_fila_e_status():
     """
     Recebe uma lista de nomes que devem estar ativos e atualiza o campo 'ativo_na_fila'.
-    Se um usuário está sendo reativado, sua prioridade é resetada para o topo.
     """
     try:
         nomes_ativos_recebidos = request.get_json()
@@ -106,7 +96,6 @@ def atualizar_fila_e_status():
         todos_separadores = get_todos_separadores()
         updates = {}
         
-        # Encontra a maior prioridade para colocar os reativados no topo
         prioridades = [
             user.get('prioridade_fila', 0)
             for user in todos_separadores.values()
@@ -122,7 +111,6 @@ def atualizar_fila_e_status():
 
                 if nome in nomes_ativos_recebidos:
                     updates[path_ativo] = True
-                    # Se não estava ativo antes, reseta sua prioridade para o topo
                     if not estava_ativo:
                         updates[f"/usuarios/{uid}/prioridade_fila"] = maior_prioridade + 1
                 else:
@@ -145,7 +133,6 @@ def get_fila_endpoint():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# ****** INÍCIO DA NOVA ROTA PARA O DASHBOARD ******
 def format_seconds_to_hms(seconds):
     """Converte segundos em uma string 'HH:MM:SS'."""
     if seconds is None or seconds < 0:
@@ -163,6 +150,12 @@ def get_dashboard_logistica_data():
     try:
         ref = db.reference('separacoes')
         todas_separacoes = ref.order_by_child('status').equal_to('Finalizado').get() or {}
+
+        # ****** INÍCIO DA CORREÇÃO: Data de corte para cálculo de tempo médio ******
+        # Define a "data de corte". Todas as separações criadas ANTES desta data
+        # serão ignoradas para o cálculo de tempo médio.
+        data_corte = datetime(2025, 10, 8, 0, 0, 0, tzinfo=tz_cuiaba)
+        # ****** FIM DA CORREÇÃO ******
 
         separacoes_filtradas = []
         for sep_id, sep_data in todas_separacoes.items():
@@ -182,27 +175,32 @@ def get_dashboard_logistica_data():
             separador_nome = sep.get('separador_nome')
             conferente_nome = sep.get('conferente_nome')
 
-            # Processa estatísticas do separador
             if separador_nome:
                 stats = separador_stats.setdefault(separador_nome, {'count': 0, 'total_seconds': 0, 'items_for_avg': 0})
                 stats['count'] += 1
                 
-                # Calcula tempo de separação
-                if sep.get('data_criacao') and sep.get('data_inicio_conferencia'):
-                    start = datetime.fromisoformat(sep['data_criacao'])
+                # ****** CORREÇÃO APLICADA AQUI ******
+                # Converte a data de criação para um objeto datetime ciente do fuso horário
+                data_criacao_obj = datetime.fromisoformat(sep['data_criacao']) if sep.get('data_criacao') else None
+
+                # Só calcula o tempo se a data de criação for POSTERIOR à data de corte
+                if data_criacao_obj and data_criacao_obj >= data_corte and sep.get('data_inicio_conferencia'):
+                    start = data_criacao_obj
                     end = datetime.fromisoformat(sep['data_inicio_conferencia'])
                     duration = (end - start).total_seconds()
                     if duration >= 0:
                         stats['total_seconds'] += duration
                         stats['items_for_avg'] += 1
 
-            # Processa estatísticas do conferente
             if conferente_nome:
                 stats = conferente_stats.setdefault(conferente_nome, {'count': 0, 'total_seconds': 0, 'items_for_avg': 0})
                 stats['count'] += 1
 
-                # Calcula tempo de conferência
-                if sep.get('data_inicio_conferencia') and sep.get('data_finalizacao'):
+                # ****** CORREÇÃO APLICADA AQUI ******
+                data_criacao_obj = datetime.fromisoformat(sep['data_criacao']) if sep.get('data_criacao') else None
+                
+                # Só calcula o tempo se a data de criação for POSTERIOR à data de corte
+                if data_criacao_obj and data_criacao_obj >= data_corte and sep.get('data_inicio_conferencia') and sep.get('data_finalizacao'):
                     start = datetime.fromisoformat(sep['data_inicio_conferencia'])
                     end = datetime.fromisoformat(sep['data_finalizacao'])
                     duration = (end - start).total_seconds()
@@ -210,10 +208,11 @@ def get_dashboard_logistica_data():
                         stats['total_seconds'] += duration
                         stats['items_for_avg'] += 1
         
-        # Formata os resultados finais
+        conferente_stats.pop('expedicao', None)
+        
         resultado_separadores = []
         for nome, data in separador_stats.items():
-            avg_seconds = data['total_seconds'] / data['items_for_avg'] if data['items_for_avg'] > 0 else 0
+            avg_seconds = data['total_seconds'] / data['items_for_avg'] if data['items_for_avg'] > 0 else None
             resultado_separadores.append({
                 'nome': nome,
                 'count': data['count'],
@@ -222,14 +221,13 @@ def get_dashboard_logistica_data():
 
         resultado_conferentes = []
         for nome, data in conferente_stats.items():
-            avg_seconds = data['total_seconds'] / data['items_for_avg'] if data['items_for_avg'] > 0 else 0
+            avg_seconds = data['total_seconds'] / data['items_for_avg'] if data['items_for_avg'] > 0 else None
             resultado_conferentes.append({
                 'nome': nome,
                 'count': data['count'],
                 'avg_time_str': format_seconds_to_hms(avg_seconds)
             })
             
-        # Ordena por contagem (maior primeiro)
         resultado_separadores.sort(key=lambda x: x['count'], reverse=True)
         resultado_conferentes.sort(key=lambda x: x['count'], reverse=True)
 
@@ -241,7 +239,6 @@ def get_dashboard_logistica_data():
     except Exception as e:
         print(f"ERRO ao gerar dados do dashboard de logística: {e}")
         return jsonify({'error': str(e)}), 500
-# ****** FIM DA NOVA ROTA ******
 
 def criar_notificacao_separacao(destinatario_nome, mensagem, autor_nome):
     try:
@@ -283,7 +280,7 @@ def criar_separacao():
             'vendedor_nome': vendedor_nome,
             'status': 'Em Separação',
             'data_criacao': datetime.now(tz_cuiaba).isoformat(),
-            'data_inicio_conferencia': None, # Campo adicionado
+            'data_inicio_conferencia': None,
             'data_finalizacao': None,
             'conferente_nome': ''
         }
@@ -325,13 +322,10 @@ def editar_separacao(separacao_id):
                 if ids_existentes[0] != separacao_id:
                      return jsonify({'error': f'O número de movimentação {num_movimentacao} já pertence a outra separação.'}), 409
 
-        # ****** INÍCIO DA MELHORIA PARA CÁLCULO DE TEMPO ******
         if 'conferente_nome' in dados and dados.get('conferente_nome'):
             if separacao_antiga.get('status') == 'Em Separação':
                 dados['status'] = 'Em Conferência'
-                # Adiciona o timestamp exato do início da conferência
                 dados['data_inicio_conferencia'] = datetime.now(tz_cuiaba).isoformat()
-        # ****** FIM DA MELHORIA ******
 
         ref.update(dados)
 
@@ -357,7 +351,6 @@ def editar_separacao(separacao_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# ... (Resto do arquivo: /paginadas, /<id>/observacao, etc. permanecem iguais)
 @separacoes_bp.route('/paginadas', methods=['POST'])
 def get_separacoes_paginadas():
     try:
@@ -553,26 +546,25 @@ def get_tabela_separacoes_paginada():
 
 @separacoes_bp.route('/ativas', methods=['GET'])
 def get_separacoes_ativas():
-    """Retorna separações com status 'Em Separação' ou 'Em Conferência'."""
+    """Retorna separações com status 'Em Separação' ou 'Em Conferência' (OTIMIZADO)."""
     try:
         user_role = request.args.get('user_role')
         user_name = request.args.get('user_name')
-
         ref = db.reference('separacoes')
-        todas_separacoes = ref.get() or {}
-        
-        separacoes_ativas = [
-            {'id': key, **value} for key, value in todas_separacoes.items()
-            if value.get('status') in ['Em Separação', 'Em Conferência']
-        ]
 
-        # Filtro específico para vendedores
+        # Queries separadas e eficientes
+        em_separacao = ref.order_by_child('status').equal_to('Em Separação').get() or {}
+        em_conferencia = ref.order_by_child('status').equal_to('Em Conferência').get() or {}
+
+        # Combina os resultados
+        todas_ativas_dict = {**em_separacao, **em_conferencia}
+
+        separacoes_ativas = [{'id': key, **value} for key, value in todas_ativas_dict.items()]
+
         if user_role == 'Vendedor' and user_name:
             separacoes_ativas = [s for s in separacoes_ativas if s.get('vendedor_nome') == user_name]
 
-        # Ordena por número de movimentação, do maior para o menor
         separacoes_ativas.sort(key=lambda x: int(x.get('numero_movimentacao', 0)), reverse=True)
-
         return jsonify(separacoes_ativas)
     except Exception as e:
         return jsonify({'error': str(e)}), 500

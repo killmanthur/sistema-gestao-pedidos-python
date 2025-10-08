@@ -330,8 +330,5 @@ export function initRecebimentoPage() {
         });
     });
 
-    if (intervalId) clearInterval(intervalId);
-
     fetchData(); // Busca inicial
-    intervalId = setInterval(fetchData, 20000); // Atualiza a cada 20 segundos
 }

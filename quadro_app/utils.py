@@ -64,3 +64,38 @@ def registrar_log(item_id, autor, acao, detalhes=None, log_type='pedidos'):
         log_ref.push(novo_log)
     except Exception as e:
         print(f"ERRO ao registrar log para {log_type}/{item_id}: {e}")
+    
+def criar_notificacao_por_role(autor_nome, mensagem, conferencia_id, roles_alvo):
+    """
+    Envia uma notificação para todos os usuários que pertencem a uma lista de roles.
+    """
+    try:
+        usuarios_ref = db.reference('usuarios')
+        todos_usuarios = usuarios_ref.get()
+        if not todos_usuarios:
+            print("AVISO: Nenhum usuário encontrado para enviar notificações.")
+            return
+
+        timestamp = int(time.time() * 1000)
+        notificacao_payload = {
+            'mensagem': mensagem,
+            'conferenciaId': conferencia_id,
+            'lida': False,
+            'timestamp': timestamp,
+            'autor': autor_nome
+        }
+
+        uids_notificados = []
+        for uid, user_data in todos_usuarios.items():
+            # Notifica se a role do usuário está na lista E se ele não é o autor da ação
+            if user_data.get('role') in roles_alvo and user_data.get('nome') != autor_nome:
+                # Usamos um novo caminho no DB para essas notificações
+                notificacao_ref = db.reference(f'notificacoes_pendencias/{uid}')
+                notificacao_ref.push(notificacao_payload)
+                uids_notificados.append(uid)
+        
+        if uids_notificados:
+            print(f"Notificação de pendência enviada para {len(uids_notificados)} usuários das roles: {roles_alvo}.")
+
+    except Exception as e:
+        print(f"ERRO CRÍTICO ao criar notificação por role: {e}")

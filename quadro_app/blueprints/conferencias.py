@@ -2,7 +2,8 @@
 from flask import Blueprint, request, jsonify
 from datetime import datetime
 from quadro_app import db, tz_cuiaba
-from quadro_app.utils import registrar_log
+from quadro_app.utils import registrar_log, criar_notificacao_por_role
+from firebase_admin import auth
 
 conferencias_bp = Blueprint('conferencias', __name__, url_prefix='/api/conferencias')
 
@@ -79,6 +80,16 @@ def solicitar_alteracao_posterior(conferencia_id):
             'timestamp': datetime.now(tz_cuiaba).isoformat()
         })
 
+        if novo_status != status_atual:
+            nf_numero = item_atual.get('numero_nota_fiscal', 'N/A')
+            mensagem = f"Solicitação de alteração criada para a NF {nf_numero}."
+            criar_notificacao_por_role(
+                autor_nome=editor_nome,
+                mensagem=mensagem,
+                conferencia_id=conferencia_id,
+                roles_alvo=['Contabilidade', 'Admin']
+            )
+
         log_info = f"Item movido de '{status_atual}' para '{novo_status}' com a observação: '{observacao}'"
         registrar_log(conferencia_id, editor_nome, 'SOLICITACAO_ALTERACAO_POSTERIOR', detalhes={'info': log_info}, log_type='conferencias')
         
@@ -89,50 +100,42 @@ def solicitar_alteracao_posterior(conferencia_id):
 
 @conferencias_bp.route('/pendentes-e-resolvidas', methods=['GET'])
 def get_pendentes_e_resolvidas():
-    """Retorna itens para a página de Pendências e Alterações."""
+    """Retorna itens para a página de Pendências e Alterações (OTIMIZADO)."""
     try:
         ref = db.reference('conferencias')
-        todos_itens = ref.get() or {}
         
-        lista_itens = [{'id': key, **value} for key, value in todos_itens.items()]
+        # Faz uma query para cada status relevante, muito mais eficiente!
+        pend_fornecedor = ref.order_by_child('status').equal_to('Pendente (Fornecedor)').get() or {}
+        pend_alteracao = ref.order_by_child('status').equal_to('Pendente (Alteração)').get() or {}
+        pend_ambos = ref.order_by_child('status').equal_to('Pendente (Ambos)').get() or {}
+        finalizados = ref.order_by_child('status').equal_to('Finalizado').limit_to_last(100).get() # Limita os resolvidos mais recentes
+
+        # Combina os resultados
+        todos_itens_dict = {**pend_fornecedor, **pend_alteracao, **pend_ambos, **finalizados}
         
-        # Filtra apenas os status relevantes para esta página
-        status_relevantes = [
-            'Pendente (Fornecedor)', 
-            'Pendente (Alteração)', 
-            'Pendente (Ambos)',
-            'Finalizado'
-        ]
-        itens_filtrados = [item for item in lista_itens if item.get('status') in status_relevantes]
+        lista_itens = [{'id': key, **value} for key, value in todos_itens_dict.items()]
+        lista_itens.sort(key=lambda x: x.get('data_recebimento', ''), reverse=True)
 
-        # Ordena do mais novo para o mais antigo
-        itens_filtrados.sort(key=lambda x: x.get('data_recebimento', ''), reverse=True)
-
-        return jsonify(itens_filtrados)
+        return jsonify(lista_itens)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# ****** INÍCIO DA CORREÇÃO ******
 @conferencias_bp.route('/recentes', methods=['GET'])
 def get_recebimentos_recentes():
-    """Retorna todos os recebimentos para a página de Recebimento."""
+    """Retorna todos os recebimentos para a página de Recebimento (OTIMIZADO)."""
     try:
         ref = db.reference('conferencias')
-        # MUDANÇA 1: Simplificar a busca. A ordenação será feita no Python.
-        todos_itens = ref.get() or {}
+        # Limita a busca inicial aos 200 recebimentos mais recentes.
+        # Isso evita baixar todo o histórico na tela principal.
+        recentes = ref.order_by_child('data_recebimento').limit_to_last(200).get() or {}
         
-        lista_itens = [{'id': key, **value} for key, value in todos_itens.items()]
-        
-        # MUDANÇA 2: Ordenar a lista de forma explícita e segura usando a função sort.
-        # O 'key' aponta para o campo 'data_recebimento', e 'reverse=True' coloca os mais novos primeiro.
+        lista_itens = [{'id': key, **value} for key, value in recentes.items()]
         lista_itens.sort(key=lambda x: x.get('data_recebimento', ''), reverse=True)
         
-        # MUDANÇA 3: Retornar a lista já ordenada.
         return jsonify(lista_itens)
     except Exception as e:
         print(f"ERRO em get_recebimentos_recentes: {e}")
         return jsonify({'error': str(e)}), 500
-# ****** FIM DA CORREÇÃO ******
 
 
 @conferencias_bp.route('/recebimento-rua', methods=['POST'])
@@ -199,6 +202,17 @@ def finalizar_conferencia_nova_logica(conferencia_id):
             'resolvido_contabilidade': not solicita_alteracao
         }
         ref.update(updates)
+
+        nf_numero = ref.child('numero_nota_fiscal').get() or 'N/A'
+
+        if solicita_alteracao:
+            mensagem = f"Nova solicitação de alteração na NF {nf_numero}."
+            criar_notificacao_por_role(
+                autor_nome=editor_nome,
+                mensagem=mensagem,
+                conferencia_id=conferencia_id,
+                roles_alvo=['Contabilidade', 'Admin']
+            )
         
         log_acao = f'FINALIZADO_COM_STATUS_{novo_status.upper()}'
         registrar_log(conferencia_id, editor_nome, log_acao, detalhes={'info': observacao}, log_type='conferencias')
@@ -254,6 +268,16 @@ def resolver_item_pendencia(conferencia_id):
             updates['status'] = 'Finalizado'
         elif status_atual == 'Pendente (Alteração)' and contabilidade_ok:
             updates['status'] = 'Finalizado'
+        
+        if user_role in ['Admin', 'Contabilidade'] and updates.get('status') == 'Finalizado':
+            nf_numero = item_atual.get('numero_nota_fiscal', 'N/A')
+            mensagem = f"A pendência da NF {nf_numero} foi resolvida por {editor_nome}."
+            criar_notificacao_por_role(
+                autor_nome=editor_nome,
+                mensagem=mensagem,
+                conferencia_id=conferencia_id,
+                roles_alvo=['Estoque', 'Admin']
+            )
 
         ref.update(updates)
         
@@ -359,6 +383,22 @@ def deletar_conferencia(conferencia_id):
         
         ref.delete()
         db.reference(f'logs_conferencias/{conferencia_id}').delete()
+        
+        return jsonify({'status': 'success'}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@conferencias_bp.route('/pendencias/notificacoes', methods=['DELETE'])
+def limpar_notificacoes_pendencias():
+    id_token = request.headers.get('Authorization', '').split('Bearer ')[-1]
+    if not id_token:
+        return jsonify({"error": "Token de autorização ausente."}), 401
+    try:
+        decoded_token = auth.verify_id_token(id_token)
+        uid = decoded_token['uid']
+        
+        # Aponta para o novo caminho de notificações
+        db.reference(f'notificacoes_pendencias/{uid}').delete()
         
         return jsonify({'status': 'success'}), 200
     except Exception as e:

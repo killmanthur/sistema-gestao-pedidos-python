@@ -4,6 +4,7 @@ import { setupAuthObserver, handleLogout, initLoginPage } from './auth.js';
 import { setupEditModal, initializeTheme, setupLogModal, setupAllModalCloseHandlers, setupUI } from './ui.js';
 import { setupNotifications } from './notifications.js';
 import { initSeparacaoNotifications } from './notifications-separacao.js';
+import { initPendenciasNotifications } from './notifications-pendencias.js';
 import { initQuadroPage } from './pages/quadro.js';
 import { initHistoricoPage } from './pages/historico.js';
 import { initSugestoesPage } from './pages/sugestoes.js';
@@ -15,9 +16,8 @@ import { initInicioPage } from './pages/inicio.js';
 import { initSeparacoesPage } from './pages/separacoes.js';
 import { initConferenciasPage } from './pages/conferencias.js';
 import { initRecebimentoPage } from './pages/recebimento.js';
-import { initPendenciasEAlteracoesPage } from './pages/pendencias_e_alteracoes.js'; // ROTA ATUALIZADA
+import { initPendenciasEAlteracoesPage } from './pages/pendencias_e_alteracoes.js'; 
 import { initGerenciarSeparacoesPage } from './pages/gerenciar-separacoes.js';
-// ****** NOVA IMPORTAÇÃO ******
 import { initDashboardLogisticaPage } from './pages/dashboard-logistica.js';
 
 
@@ -46,6 +46,7 @@ export async function initializeAuthenticatedApp() {
     setupNotifications();
     setupLogModal();
     initSeparacaoNotifications();
+    initPendenciasNotifications();
 
     const path = window.location.pathname;
     if (path.includes('/admin/sistema')) initAdminSistemaPage();

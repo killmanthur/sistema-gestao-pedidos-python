@@ -55,8 +55,10 @@
                             <li class="nav-item" data-page="conferencias"><a
                                     href="{{ url_for('main_views.conferencias_page') }}">Conferência</a></li>
                             <li class="nav-item" data-page="pendencias_e_alteracoes"><a
-                                    href="{{ url_for('main_views.pendencias_e_alteracoes_page') }}">Pendências e
-                                    Alterações</a></li>
+                                    href="{{ url_for('main_views.pendencias_e_alteracoes_page') }}">Pendências e Alterações
+                                 <span id="pendencias-notification-badge" class="notification-badge" style="display: none;"></span>
+                                </a>
+                            </li>
                             <li class="nav-item" data-page="separacoes">
                                 <a href="{{ url_for('main_views.separacoes_page') }}">
                                     Separações

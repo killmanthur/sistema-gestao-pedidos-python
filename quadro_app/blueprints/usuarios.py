@@ -145,13 +145,19 @@ def get_vendedor_nomes():
         return jsonify(nomes)
     except Exception as e: return jsonify({"error": str(e)}), 500
 
+# ****** INÍCIO DA CORREÇÃO ******
 @usuarios_bp.route('/expedicao-nomes', methods=['GET'])
 def get_expedicao_nomes():
     try:
         users = db.reference('usuarios').order_by_child('role').equal_to('Expedição').get() or {}
-        nomes = sorted([u['nome'] for u in users.values() if 'nome' in u])
+        # Adiciona um filtro para ignorar o usuário 'expedicao' (case-insensitive)
+        nomes = sorted([
+            u['nome'] for u in users.values() 
+            if 'nome' in u and u['nome'].lower() != 'expedicao'
+        ])
         return jsonify(nomes)
     except Exception as e: return jsonify({"error": str(e)}), 500
+# ****** FIM DA CORREÇÃO ******
 
 @usuarios_bp.route('/estoquista-nomes', methods=['GET'])
 def get_estoquista_nomes():
