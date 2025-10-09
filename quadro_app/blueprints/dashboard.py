@@ -1,5 +1,5 @@
 # quadro_app/blueprints/dashboard.py
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, Response
 from datetime import datetime
 from quadro_app import db, tz_cuiaba
 
@@ -231,3 +231,18 @@ Total de Pedidos Analisados: {stats['totalPedidos']}
 
     except Exception as e:
         return jsonify({'error': f"Erro ao gerar relatório: {e}"}), 500
+
+@dashboard_bp.route('/download-relatorio', methods=['POST'])
+def download_relatorio():
+    # Recebe o texto do relatório que o frontend gerou
+    report_content = request.data.decode('utf-8')
+    
+    # Cria um nome de arquivo com a data atual
+    filename = f"relatorio_pedidos_{datetime.now(tz_cuiaba).strftime('%Y-%m-%d')}.txt"
+    
+    # Retorna o conteúdo como um arquivo para download
+    return Response(
+        report_content,
+        mimetype="text/plain",
+        headers={"Content-disposition": f"attachment; filename={filename}"}
+    )

@@ -149,15 +149,55 @@ async function salvarRelatorio() {
         showToast("Não há relatório para salvar.", "error");
         return;
     }
-    if (window.pywebview?.api?.save_file_dialog) {
-        try {
-            const result = await window.pywebview.api.save_file_dialog(texto);
-            if (result.status === 'success') showToast('Relatório salvo com sucesso!', 'success');
-        } catch (e) {
-            showToast("Ocorreu um erro de comunicação ao tentar salvar o arquivo.", "error");
+
+    try {
+        // Usa fetch para enviar o texto para o nosso novo endpoint
+        const response = await fetch('/api/download-relatorio', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'text/plain'
+            },
+            body: texto
+        });
+
+        if (!response.ok) {
+            throw new Error('Falha ao gerar o arquivo no servidor.');
         }
-    } else {
-        showToast('A função de salvar só está disponível na aplicação desktop.', 'info');
+
+        // Pega o arquivo retornado pelo servidor
+        const blob = await response.blob();
+
+        // Cria um link temporário na memória para o arquivo
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+
+        // Pega o nome do arquivo do header da resposta
+        const contentDisposition = response.headers.get('content-disposition');
+        let filename = `relatorio-${new Date().toISOString()}.txt`;
+        if (contentDisposition && contentDisposition.indexOf('attachment') !== -1) {
+            const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+            const matches = filenameRegex.exec(contentDisposition);
+            if (matches != null && matches[1]) {
+                filename = matches[1].replace(/['"]/g, '');
+            }
+        }
+        a.download = filename;
+
+        // Adiciona o link ao corpo do documento e o clica programaticamente
+        document.body.appendChild(a);
+        a.click();
+
+        // Limpa o link da memória
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
+        showToast('Download do relatório iniciado!', 'success');
+
+    } catch (e) {
+        console.error("Erro ao salvar relatório:", e);
+        showToast("Não foi possível salvar o relatório.", "error");
     }
 }
 

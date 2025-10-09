@@ -1,40 +1,20 @@
-# run.py
-import threading
-import socket
-import webview
+# run.py (versão para servidor)
 from waitress import serve
 from quadro_app import create_app
 
-def find_free_port():
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind(('', 0))
-        return s.getsockname()[1]
-
-def run_server(app, port):
-    serve(app, host='127.0.0.1', port=port)
-
 if __name__ == '__main__':
-    PORT = find_free_port()
+    # Define a porta em que a aplicação vai rodar. 8080 é um padrão comum.
+    PORT = 8080
     
-    app, api, TV_MODE = create_app()
+    # Cria a aplicação Flask
+    app, _, _ = create_app() # Não precisamos mais da API do webview
 
-    server_thread = threading.Thread(target=run_server, args=(app, PORT,))
-    server_thread.daemon = True
-    server_thread.start()
+    print(f"--- Servidor do Quadro de Pedidos ---")
+    print(f"Iniciando na porta: {PORT}")
+    print(f"Para acessar, use http://<IP_DO_SERVIDOR>:{PORT} em um navegador.")
+    print("Pressione Ctrl+C para parar o servidor.")
     
-    window = webview.create_window(
-        'Quadro de Pedidos',
-        f'http://127.0.0.1:{PORT}',
-        width=1280,
-        height=800,
-        resizable=True,
-        min_size=(800, 600),
-        js_api=api,
-        fullscreen=TV_MODE,
-        maximized=not TV_MODE
-    )
-    
-    api.set_window(window)
-    
-    # MUDANÇA: Voltamos ao webview.start() original, sem o argumento 'gui'
-    webview.start()  # Remova 'gui' para usar o padrão do sistema operacional 
+    # Inicia o servidor Waitress
+    # host='0.0.0.0' é CRUCIAL. Significa "aceite conexões de qualquer IP na rede".
+    # Se você usar '127.0.0.1', só funcionará no próprio servidor.
+    serve(app, host='0.0.0.0', port=PORT)

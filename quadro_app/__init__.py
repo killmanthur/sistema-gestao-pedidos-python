@@ -4,7 +4,6 @@ import os
 import time
 from datetime import timezone, timedelta
 from flask import Flask
-import webview
 import firebase_admin
 from firebase_admin import credentials, db as firebase_db
 
@@ -18,35 +17,6 @@ def resource_path(relative_path):
     except Exception:
         base_path = os.path.abspath(".")
     return os.path.join(base_path, relative_path)
-
-class Api:
-    def __init__(self):
-        self._window = None
-
-    def set_window(self, window):
-        self._window = window
-    
-    def save_file_dialog(self, content):
-        try:
-            from datetime import datetime
-            default_filename = f"relatorio_pedidos_{datetime.now(tz_cuiaba).strftime('%Y-%m-%d')}.txt"
-            if not self._window:
-                raise Exception("A janela da aplicação não foi inicializada corretamente.")
-            result = self._window.create_file_dialog(
-                webview.SAVE_DIALOG, directory='/', save_filename=default_filename
-            )
-            if result and isinstance(result, tuple) and len(result) > 0 and result[0]:
-                filepath = result[0]
-            elif result and isinstance(result, str):
-                filepath = result
-            else:
-                return {'status': 'cancelled', 'message': 'Operação cancelada.'}
-            
-            with open(filepath, 'w', encoding='utf-8') as f:
-                f.write(content)
-            return {'status': 'success', 'message': f'Relatório salvo em: {filepath}'}
-        except Exception as e:
-            return {'status': 'error', 'message': str(e)}
 
 def create_app():
     global db
@@ -69,13 +39,14 @@ def create_app():
                 static_folder=resource_path('static'),
                 template_folder=resource_path('templates'))
 
-    # CORREÇÃO DEFINITIVA: Desativa o cache de arquivos estáticos do Flask
     app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 
     @app.context_processor
     def inject_global_vars():
         return dict(tv_mode=TV_MODE, cache_id=int(time.time()))
 
+    # --- INÍCIO DA CORREÇÃO ---
+    # Importe TODOS os seus blueprints aqui, antes de registrá-los.
     from .blueprints.main_views import main_views_bp
     from .blueprints.pedidos import pedidos_bp
     from .blueprints.sugestoes import sugestoes_bp
@@ -85,6 +56,7 @@ def create_app():
     from .blueprints.configuracoes import config_bp
     from .blueprints.conferencias import conferencias_bp
     
+    # Agora que foram importados, podemos registrá-los.
     app.register_blueprint(usuarios_bp)
     app.register_blueprint(main_views_bp)
     app.register_blueprint(pedidos_bp)
@@ -93,7 +65,7 @@ def create_app():
     app.register_blueprint(separacoes_bp)
     app.register_blueprint(config_bp)
     app.register_blueprint(conferencias_bp)
-
-    api_instance = Api()
+    # --- FIM DA CORREÇÃO ---
     
-    return app, api_instance, TV_MODE
+    # Retorna None para os valores que não usamos mais na versão de servidor
+    return app, None, TV_MODE
