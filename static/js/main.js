@@ -16,7 +16,7 @@ import { initRecebimentoPage } from './pages/recebimento.js';
 import { initPendenciasEAlteracoesPage } from './pages/pendencias_e_alteracoes.js'; 
 import { initGerenciarSeparacoesPage } from './pages/gerenciar-separacoes.js';
 import { initDashboardLogisticaPage } from './pages/dashboard-logistica.js';
-
+import { setupNotifications } from './notifications.js';
 
 async function fetchInitialData() {
     try {
@@ -41,6 +41,7 @@ export async function initializeAuthenticatedApp() {
     setupAllModalCloseHandlers();
     setupEditModal();
     setupLogModal();
+    setupNotifications();
 
     const path = window.location.pathname;
     if (path.includes('/admin/sistema')) initAdminSistemaPage();

@@ -92,3 +92,13 @@ class Log(db.Model):
     acao = db.Column(db.String(100))
     detalhes = db.Column(db.JSON)
     timestamp = db.Column(db.String(100))
+
+class Notificacao(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.String(100), db.ForeignKey('usuario.id'), nullable=False)
+    mensagem = db.Column(db.String(255), nullable=False)
+    link = db.Column(db.String(255))
+    lida = db.Column(db.Boolean, default=False, nullable=False)
+    timestamp = db.Column(db.String(100), nullable=False)
+
+    usuario = db.relationship('Usuario', backref=db.backref('notificacoes', lazy=True))

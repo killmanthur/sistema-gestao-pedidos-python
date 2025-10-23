@@ -73,6 +73,6 @@ export function initQuadroPage() {
     fetchActivePedidos();
 
     // Inicia a atualização periódica
-    intervalId = setInterval(fetchActivePedidos, 15000); // Atualiza a cada 15 segundos
+    intervalId = setInterval(fetchActivePedidos, 3000); // Atualiza a cada 15 segundos
     window.initQuadroPage = initQuadroPage;
 }

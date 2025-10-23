@@ -1,7 +1,8 @@
 from flask import Blueprint, request, jsonify
 from datetime import datetime
 from quadro_app import db, tz_cuiaba
-from quadro_app.models import Pedido
+from quadro_app.models import Pedido, Usuario
+from quadro_app.utils import registrar_log, criar_notificacao
 # A função de log também precisará ser adaptada para salvar em uma tabela de Log
 # from quadro_app.utils import registrar_log 
 
@@ -42,13 +43,37 @@ def criar_pedido():
     
     db.session.add(novo_pedido)
     db.session.commit()
-    # registrar_log(...)
+    
+    try:
+        # 1. Encontra todos os usuários que são Compradores
+        compradores = Usuario.query.filter_by(role='Comprador').all()
+        
+        # 2. Monta a mensagem da notificação
+        tipo_texto = "Novo pedido de rua" if novo_pedido.tipo_req == 'Pedido Produto' else "Nova atualização de orçamento"
+        codigo_texto = novo_pedido.codigo or (novo_pedido.itens[0]['codigo'] if novo_pedido.itens else 'N/A')
+        mensagem = f"{tipo_texto} de {novo_pedido.vendedor}: '{codigo_texto}'"
+        
+        # 3. Cria uma notificação para cada comprador
+        for comprador in compradores:
+            criar_notificacao(user_id=comprador.id, mensagem=mensagem, link='/quadro')
+            
+    except Exception as e:
+        # Se a notificação falhar, não impede o sucesso da criação do pedido, apenas registra o erro.
+        print(f"ERRO ao criar notificação para novo pedido: {e}")
+    # --- FIM DA LÓGICA DE NOTIFICAÇÃO ---
+
     return jsonify({'status': 'success', 'id': novo_pedido.id}), 201
+
 
 @pedidos_bp.route('/<int:pedido_id>', methods=['PUT'])
 def editar_pedido(pedido_id):
     dados = request.get_json()
     pedido = Pedido.query.get_or_404(pedido_id)
+    
+    # --- LÓGICA DE NOTIFICAÇÃO ---
+    comprador_antigo = pedido.comprador
+    comprador_novo = dados.get('comprador')
+    editor_nome = dados.get('editor_nome', 'Sistema')
     
     # --- INÍCIO DA CORREÇÃO ---
     # Lista de campos que o frontend tem permissão para atualizar nesta rota.
@@ -66,9 +91,13 @@ def editar_pedido(pedido_id):
 
     db.session.commit()
     
-    # A função de log pode ser mais detalhada agora
-    editor_nome = dados.get('editor_nome', 'N/A')
-    # registrar_log(pedido_id, editor_nome, 'EDIÇÃO', detalhes=dados)
+    if comprador_novo and comprador_novo != comprador_antigo:
+        # Encontra o ID do usuário comprador pelo nome
+        usuario_comprador = Usuario.query.filter_by(nome=comprador_novo).first()
+        if usuario_comprador:
+            codigo_pedido = pedido.codigo or (pedido.itens[0]['codigo'] if pedido.itens else 'N/A')
+            mensagem = f"{editor_nome} atribuiu o pedido '{codigo_pedido}' a você."
+            criar_notificacao(usuario_comprador.id, mensagem, link='/quadro')
 
     return jsonify({'status': 'success'})
 
