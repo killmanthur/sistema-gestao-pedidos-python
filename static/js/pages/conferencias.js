@@ -1,9 +1,9 @@
 import { AppState } from '../state.js';
-import { db } from '../firebase.js';
 import { showToast } from '../toasts.js';
 import { toggleButtonLoading, formatarData, showConfirmModal, openLogModal } from '../ui.js';
 
 let state = {};
+let intervalId = null;
 
 function resetState() {
     state = {
@@ -74,6 +74,31 @@ function renderizarColunas() {
 
     render(state.elementos.quadroAguardando, state.aguardando, 'aguardando');
     render(state.elementos.quadroEmConferencia, state.emConferencia, 'emConferencia');
+}
+
+async function fetchData() {
+    /**
+     * Busca os dados da API local e atualiza o estado e a tela.
+     */
+    try {
+        // Criaremos esta nova rota no backend
+        const response = await fetch('/api/conferencias/ativas');
+        if (!response.ok) {
+            throw new Error('Falha ao buscar dados de conferências.');
+        }
+        const todasAtivas = await response.json();
+
+        // Separa os dados nas colunas corretas
+        state.aguardando = todasAtivas.filter(c => c.status === 'Aguardando Conferência');
+        state.emConferencia = todasAtivas.filter(c => c.status === 'Em Conferência');
+
+        renderizarColunas();
+
+    } catch (error) {
+        console.error("Erro ao buscar conferências ativas:", error);
+        showToast(error.message, "error");
+        if (intervalId) clearInterval(intervalId); // Para de tentar se der erro
+    }
 }
 
 function openConferenteModal(id) {
@@ -211,12 +236,19 @@ export function initConferenciasPage() {
 
     fetchInitialData();
 
+    // --- CORREÇÃO FINAL ---
+    // Remove a lógica antiga do Firebase
+    /*
     const conferenciasRef = db.ref('conferencias').orderByChild('data_recebimento');
     conferenciasRef.on('value', snapshot => {
-        const todos = snapshot.val() || {};
-        const lista = Object.entries(todos).map(([id, data]) => ({ id, ...data })).reverse();
-        state.aguardando = lista.filter(c => c.status === 'Aguardando Conferência');
-        state.emConferencia = lista.filter(c => c.status === 'Em Conferência');
-        renderizarColunas();
+        // ... código antigo ...
     });
+    */
+
+    // Inicia a busca de dados da API local
+    fetchData();
+    // Inicia o polling para atualizações periódicas
+    if (intervalId) clearInterval(intervalId);
+    intervalId = setInterval(fetchData, 20000); // Atualiza a cada 20 segundos
+    // --- FIM DA CORREÇÃO FINAL ---
 }

@@ -4,7 +4,8 @@ from quadro_app import create_app
 
 if __name__ == '__main__':
     # Define a porta em que a aplicação vai rodar. 8080 é um padrão comum.
-    PORT = 8080
+    PORT = 52080
+
     
     # Cria a aplicação Flask
     app, _, _ = create_app() # Não precisamos mais da API do webview

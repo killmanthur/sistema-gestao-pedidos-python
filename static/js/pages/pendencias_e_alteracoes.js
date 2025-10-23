@@ -1,5 +1,4 @@
 import { AppState } from '../state.js';
-import { db } from '../firebase.js';
 import { showToast } from '../toasts.js';
 import { toggleButtonLoading, formatarData, showConfirmModal, openLogModal } from '../ui.js';
 
@@ -226,7 +225,8 @@ async function handleAddUpdate() {
 
     toggleButtonLoading(btn, true, 'Adicionando...');
     try {
-        const response = await fetch(`/api/conferencias/${id}/observacao`, {
+        // 1. Envia a nova observação para o backend (isso já estava funcionando)
+        const responsePost = await fetch(`/api/conferencias/${id}/observacao`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -234,14 +234,21 @@ async function handleAddUpdate() {
                 texto: `[ATUALIZAÇÃO] ${observacao}`
             })
         });
-        if (!response.ok) throw new Error((await response.json()).error);
+        if (!responsePost.ok) throw new Error((await responsePost.json()).error || 'Falha ao salvar observação.');
 
         showToast('Atualização adicionada com sucesso!', 'success');
-
         modal.obsInput.value = '';
-        const snapshot = await db.ref(`conferencias/${id}`).once('value');
-        const updatedItem = { id, ...snapshot.val() };
+
+        // --- INÍCIO DA CORREÇÃO ---
+        // 2. Busca os dados atualizados da nossa própria API
+        const responseGet = await fetch(`/api/conferencias/${id}`);
+        if (!responseGet.ok) throw new Error('Falha ao buscar dados atualizados.');
+
+        const updatedItem = await responseGet.json();
+
+        // 3. Reabre o modal com os dados frescos
         openResolverModal(updatedItem);
+        // --- FIM DA CORREÇÃO ---
 
     } catch (error) {
         showToast(`Erro: ${error.message}`, 'error');

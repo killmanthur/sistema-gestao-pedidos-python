@@ -1,4 +1,5 @@
 // static/js/pages/gerenciar-separacoes.js
+import { AppState } from '../state.js';
 import { showToast } from '../toasts.js';
 import { formatarData, toggleButtonLoading } from '../ui.js';
 
@@ -102,7 +103,10 @@ async function handleManagerEditFormSubmit(event) {
         vendedor_nome: document.getElementById('edit-vendedor-nome').value,
         separador_nome: document.getElementById('edit-separador-nome').value,
         conferente_nome: document.getElementById('edit-conferente-nome').value,
-        editor_nome: firebase.auth().currentUser.displayName,
+
+        // --- CORREÇÃO 2: SUBSTITUA A LINHA ABAIXO ---
+        // editor_nome: firebase.auth().currentUser.displayName,
+        editor_nome: AppState.currentUser.nome,
     };
 
     try {
@@ -124,7 +128,6 @@ async function handleManagerEditFormSubmit(event) {
         toggleButtonLoading(saveButton, false, 'Salvar Alterações');
     }
 }
-
 
 // --- LÓGICA DA TABELA E PAGINAÇÃO ---
 

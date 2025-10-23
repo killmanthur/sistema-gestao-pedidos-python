@@ -1,7 +1,7 @@
 // static/js/chat.js
 // Responsabilidade: Toda a lógica relacionada ao modal de chat em tempo real.
 
-import { db } from './firebase.js';
+
 import { AppState } from './state.js';
 import { toggleButtonLoading } from './ui.js';
 import { showToast } from './toasts.js';

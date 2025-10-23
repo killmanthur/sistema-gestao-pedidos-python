@@ -53,15 +53,28 @@ let debounceTimer;
 
 // ... (função apiCall, etc. permanecem iguais) ...
 async function apiCall(endpoint, method = 'GET', body = null) {
-    const idToken = await firebase.auth().currentUser.getIdToken();
+    // Removemos completamente a lógica de autenticação do Firebase.
+    // A segurança agora é baseada no acesso à rede.
     const options = {
         method,
-        headers: { 'Authorization': `Bearer ${idToken}`, 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' }
     };
-    if (body) options.body = JSON.stringify(body);
+    if (body) {
+        options.body = JSON.stringify(body);
+    }
+
+    // O endpoint agora aponta para a nossa API local.
     const response = await fetch(`/api/usuarios${endpoint}`, options);
+
+    // Se a resposta for vazia (ex: em um DELETE bem-sucedido), retorna um objeto de sucesso.
+    if (response.status === 204 || response.headers.get("content-length") === "0") {
+        return { status: "success" };
+    }
+
     const result = await response.json();
-    if (!response.ok) throw new Error(result.error || `Falha na requisição ${method} ${endpoint}`);
+    if (!response.ok) {
+        throw new Error(result.error || `Falha na requisição ${method} ${endpoint}`);
+    }
     return result;
 }
 

@@ -1,5 +1,5 @@
 // static/js/ui.js
-import { db } from './firebase.js';
+
 import { AppState } from './state.js';
 import { showToast } from './toasts.js';
 import { initQuadroPage } from './pages/quadro.js';
@@ -172,58 +172,31 @@ function formatarLogAcao(acao, detalhes) {
 
 export async function openLogModal(itemId, logType = 'pedidos') {
     const modalOverlay = document.getElementById('log-modal-overlay');
-    const logBody = document.getElementById('log-body');
-    const logTitle = document.getElementById('log-modal-title');
-    if (!modalOverlay || !logBody) return;
+    if (!modalOverlay) return;
 
     modalOverlay.style.display = 'flex';
+    const logBody = document.getElementById('log-body');
+
+    // --- INÍCIO DA CORREÇÃO ---
+    // A lógica original dependia do Firebase. Vamos substituí-la por uma mensagem
+    // temporária enquanto a API de logs não é criada no backend.
+    logBody.innerHTML = `<p>A funcionalidade de histórico (log) está sendo migrada para o banco de dados local.</p>`;
+    showToast('A visualização de logs será implementada na versão com banco local.', 'info');
+    // --- FIM DA CORREÇÃO ---
+
+    /* CÓDIGO ANTIGO COMENTADO:
+    const logTitle = document.getElementById('log-modal-title');
     logBody.innerHTML = '<p>Carregando histórico...</p>';
     logTitle.textContent = `Histórico (${logType.charAt(0).toUpperCase() + logType.slice(1)})`;
 
     try {
         let logPath;
-        switch (logType) {
-            case 'separacoes':
-                logPath = `logs_separacoes/${itemId}`;
-                break;
-            case 'conferencias':
-                logPath = `logs_conferencias/${itemId}`;
-                break;
-            default:
-                logPath = `logs/${itemId}`;
-        }
-
-        const logRef = db.ref(logPath).orderByChild('timestamp');
-        const snapshot = await logRef.once('value');
-
-        if (!snapshot.exists()) {
-            logBody.innerHTML = `<p>Nenhum histórico de eventos para este item.</p>`;
-            return;
-        }
-
-        const logs = [];
-        snapshot.forEach(child => {
-            logs.push(child.val());
-        });
-        logs.reverse();
-
-        let logHTML = '<ul style="list-style: none; padding: 0;">';
-        logs.forEach(log => {
-            logHTML += `
-                <li style="border-bottom: 1px solid var(--border-main); padding-bottom: 0.75rem; margin-bottom: 0.75rem;">
-                    <div class="log-entry-header">
-                        <span class="log-author">${log.autor}</span>
-                        <span class="log-timestamp">${formatarData(log.timestamp)}</span>
-                    </div>
-                    <div class="log-entry-body">${formatarLogAcao(log.acao, log.detalhes)}</div>
-                </li>`;
-        });
-        logHTML += '</ul>';
-        logBody.innerHTML = logHTML;
+        // ... (lógica antiga com db.ref(...)) ...
     } catch (error) {
         console.error('Erro ao buscar histórico:', error);
         showToast('Não foi possível carregar o histórico.', 'error');
     }
+    */
 }
 
 export function setupLogModal() {
@@ -263,6 +236,20 @@ async function atualizarStatus(pedidoId, novoStatus) {
         status: novoStatus,
         editor_nome: AppState.currentUser.nome,
     };
+
+    // --- INÍCIO DA CORREÇÃO ---
+    // Encontra o card específico pelo seu data-id
+    const cardElement = document.querySelector(`.pedido-card[data-id="${pedidoId}"]`);
+    if (cardElement) {
+        // Encontra o select de comprador dentro daquele card
+        const compradorSelect = cardElement.querySelector('.comprador-select-wrapper select');
+        // Se o select existir, adiciona seu valor à requisição
+        if (compradorSelect && compradorSelect.value) {
+            dadosUpdate.comprador = compradorSelect.value;
+        }
+    }
+    // --- FIM DA CORREÇÃO ---
+
     try {
         const response = await fetch(`/api/pedidos/${pedidoId}/status`, {
             method: 'PUT',
@@ -271,6 +258,10 @@ async function atualizarStatus(pedidoId, novoStatus) {
         });
         if (response.ok) {
             showToast('Status atualizado com sucesso!', 'success');
+            // Recarrega os dados do quadro para refletir a mudança
+            if (window.initQuadroPage) { // Verifica se a função existe para evitar erros em outras páginas
+                window.initQuadroPage();
+            }
         } else {
             const errorData = await response.json();
             showToast(`Não foi possível atualizar: ${errorData.message}`, 'error');
@@ -279,6 +270,7 @@ async function atualizarStatus(pedidoId, novoStatus) {
         showToast('Erro de conexão ao atualizar status.', 'error');
     }
 }
+
 
 async function atualizarComprador(pedidoId, nomeComprador) {
     if (!nomeComprador) return;

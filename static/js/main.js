@@ -2,9 +2,6 @@
 import { AppState } from './state.js';
 import { setupAuthObserver, handleLogout, initLoginPage } from './auth.js';
 import { setupEditModal, initializeTheme, setupLogModal, setupAllModalCloseHandlers, setupUI } from './ui.js';
-import { setupNotifications } from './notifications.js';
-import { initSeparacaoNotifications } from './notifications-separacao.js';
-import { initPendenciasNotifications } from './notifications-pendencias.js';
 import { initQuadroPage } from './pages/quadro.js';
 import { initHistoricoPage } from './pages/historico.js';
 import { initSugestoesPage } from './pages/sugestoes.js';
@@ -43,10 +40,7 @@ export async function initializeAuthenticatedApp() {
     handleLogout();
     setupAllModalCloseHandlers();
     setupEditModal();
-    setupNotifications();
     setupLogModal();
-    initSeparacaoNotifications();
-    initPendenciasNotifications();
 
     const path = window.location.pathname;
     if (path.includes('/admin/sistema')) initAdminSistemaPage();

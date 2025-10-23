@@ -1,9 +1,7 @@
 // static/js/pages/separacoes.js
 import { AppState } from '../state.js';
-import { db } from '../firebase.js';
 import { showToast } from '../toasts.js';
 import { toggleButtonLoading, formatarData, showConfirmModal, openLogModal } from '../ui.js';
-import { clearNotificationsBackend } from '../notifications-separacao.js';
 
 let state = {};
 let debounceTimer;
@@ -468,10 +466,9 @@ async function handleObsFormSubmit(event) {
 function startAutoRefresh() {
     if (autoRefreshInterval) clearInterval(autoRefreshInterval);
     autoRefreshInterval = setInterval(async () => {
-        await carregarFinalizados(true); // Recarrega os finalizados com filtros
-        await fetchActiveSeparacoes();     // Busca os ativos da nova API
-        await fetchAndRenderFila();
-    }, 15000); // 15 segundos
+        // ATUALIZA APENAS OS QUADROS ATIVOS
+        await fetchActiveSeparacoes();
+    }, 15000);
 }
 
 async function fetchActiveSeparacoes() {
@@ -554,9 +551,8 @@ export async function initSeparacoesPage() {
     state.elementos.btnReload.addEventListener('click', () => {
         state.elementos.filtroInput.value = '';
         state.termoBusca = '';
-        clearNotificationsBackend();
         carregarFinalizados(true);
-        fetchAndRenderFila();
+        
     });
     if (state.elementos.formSeparacao) state.elementos.formSeparacao.addEventListener('submit', handleFormSubmit);
     if (state.elementos.editModal.form) {

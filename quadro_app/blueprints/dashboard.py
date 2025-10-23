@@ -1,9 +1,21 @@
 # quadro_app/blueprints/dashboard.py
 from flask import Blueprint, request, jsonify, Response
 from datetime import datetime
+from sqlalchemy import or_
 from quadro_app import db, tz_cuiaba
+from quadro_app.models import Pedido, Sugestao
 
 dashboard_bp = Blueprint('dashboard', __name__, url_prefix='/api')
+
+def serialize_pedido(p):
+    """Converte um objeto Pedido do SQLAlchemy em um dicionário."""
+    return {
+        'id': p.id, 'vendedor': p.vendedor, 'status': p.status,
+        'tipo_req': p.tipo_req, 'comprador': p.comprador,
+        'data_criacao': p.data_criacao, 'data_finalizacao': p.data_finalizacao,
+        'observacao_geral': p.observacao_geral, 'itens': p.itens,
+        'codigo': p.codigo, 'descricao': p.descricao
+    }
 
 @dashboard_bp.route('/historico-paginado', methods=['POST'])
 def get_historico_paginado():
@@ -11,49 +23,33 @@ def get_historico_paginado():
         filtros = request.get_json() or {}
         page = filtros.get('page', 0)
         limit = filtros.get('limit', 20)
-        offset = page * limit
 
-        todos_pedidos_ref = db.reference('pedidos').order_by_child('status').equal_to('OK')
-        todos_pedidos_snapshot = todos_pedidos_ref.get()
+        query = Pedido.query.filter_by(status='OK')
 
-        if not todos_pedidos_snapshot:
-            return jsonify({'pedidos': [], 'temMais': False})
+        if filtros.get('vendedor'):
+            query = query.filter(Pedido.vendedor.ilike(f"%{filtros['vendedor']}%"))
+        if filtros.get('comprador'):
+            query = query.filter(Pedido.comprador.ilike(f"%{filtros['comprador']}%"))
+        if filtros.get('dataInicio'):
+            query = query.filter(Pedido.data_finalizacao >= filtros['dataInicio'])
+        if filtros.get('dataFim'):
+            query = query.filter(Pedido.data_finalizacao <= filtros['dataFim'] + 'T23:59:59')
+        if filtros.get('codigo'):
+            termo_codigo = f"%{filtros['codigo']}%"
+            query = query.filter(or_(
+                Pedido.codigo.ilike(termo_codigo),
+                Pedido.itens.cast(db.String).ilike(termo_codigo)
+            ))
 
-        pedidos_com_id = [{'id': key, **value} for key, value in todos_pedidos_snapshot.items()]
+        pagination = query.order_by(Pedido.data_finalizacao.desc()).paginate(page=page + 1, per_page=limit, error_out=False)
 
-        # --- FILTRAGEM NO SERVIDOR ---
-        vendedor_f = filtros.get('vendedor', '').lower().strip()
-        comprador_f = filtros.get('comprador', '').lower().strip()
-        codigo_f = filtros.get('codigo', '').lower().strip()
-        data_inicio_f = filtros.get('dataInicio')
-        data_fim_f = filtros.get('dataFim')
+        pedidos_da_pagina = pagination.items
+        tem_mais = pagination.has_next
 
-        pedidos_filtrados = []
-        if not any([vendedor_f, comprador_f, codigo_f, data_inicio_f, data_fim_f]):
-            pedidos_filtrados = pedidos_com_id
-        else:
-            for p in pedidos_com_id:
-                data_finalizacao = p.get('data_finalizacao', '').split('T')[0]
-                if data_inicio_f and (not data_finalizacao or data_finalizacao < data_inicio_f): continue
-                if data_fim_f and (not data_finalizacao or data_finalizacao > data_fim_f): continue
-                
-                if vendedor_f and vendedor_f not in p.get('vendedor', '').lower(): continue
-                if comprador_f and comprador_f not in p.get('comprador', '').lower(): continue
-                if codigo_f:
-                    termo = codigo_f
-                    codigo_pedido = p.get('código', p.get('codigo', '')).lower()
-                    tem_no_item = any(termo in item.get('codigo', '').lower() for item in p.get('itens', []))
-                    if termo not in codigo_pedido and not tem_no_item:
-                        continue
-                
-                pedidos_filtrados.append(p)
-        
-        pedidos_ordenados = sorted(pedidos_filtrados, key=lambda x: x.get('data_finalizacao', ''), reverse=True)
-        itens_da_pagina = pedidos_ordenados[offset : offset + limit]
-        tem_mais = (offset + limit) < len(pedidos_ordenados)
-
-        return jsonify({'pedidos': itens_da_pagina, 'temMais': tem_mais})
-
+        return jsonify({
+            'pedidos': [serialize_pedido(p) for p in pedidos_da_pagina],
+            'temMais': tem_mais
+        })
     except Exception as e:
         print(f"ERRO ao buscar histórico paginado: {e}")
         return jsonify({'error': str(e)}), 500
@@ -67,75 +63,80 @@ def get_dashboard_data():
     comprador_filtro = filtros.get('comprador', '').lower()
 
     try:
-        todos_pedidos = db.reference('pedidos').get() or {}
-        todas_sugestoes = db.reference('sugestoes').get() or {}
+        # Busca inicial de dados
+        pedidos_query = Pedido.query
+        sugestoes_query = Sugestao.query
+
+        # Aplica filtros de data
+        if data_inicio:
+            pedidos_query = pedidos_query.filter(Pedido.data_criacao >= data_inicio)
+            sugestoes_query = sugestoes_query.filter(Sugestao.data_criacao >= data_inicio)
+        if data_fim:
+            pedidos_query = pedidos_query.filter(Pedido.data_criacao <= data_fim + 'T23:59:59')
+            sugestoes_query = sugestoes_query.filter(Sugestao.data_criacao <= data_fim + 'T23:59:59')
+        
+        # Aplica filtros de texto
+        if vendedor_filtro:
+            pedidos_query = pedidos_query.filter(Pedido.vendedor.ilike(f'%{vendedor_filtro}%'))
+            sugestoes_query = sugestoes_query.filter(Sugestao.vendedor.ilike(f'%{vendedor_filtro}%'))
+        if comprador_filtro:
+            pedidos_query = pedidos_query.filter(Pedido.comprador.ilike(f'%{comprador_filtro}%'))
+            # Sugestões também podem ter comprador
+            sugestoes_query = sugestoes_query.filter(Sugestao.comprador.ilike(f'%{comprador_filtro}%'))
+
+        todos_pedidos = pedidos_query.all()
+        todas_sugestoes = sugestoes_query.all()
 
         line_chart_data = {}
         vendedor_counts = {}
         comprador_counts = {}
 
-        # --- Processar Pedidos ---
-        for pid, p in todos_pedidos.items():
-            data_pedido = p.get('data_criacao', '').split('T')[0]
-            if data_inicio and data_pedido < data_inicio: continue
-            if data_fim and data_pedido > data_fim: continue
+        # Processa Pedidos
+        for p in todos_pedidos:
+            vendedor = p.vendedor or ''
+            comprador = p.comprador or ''
             
-            vendedor = p.get('vendedor', '')
-            comprador = p.get('comprador', '')
-            if vendedor_filtro and vendedor_filtro not in vendedor.lower(): continue
-            if comprador_filtro and comprador_filtro not in comprador.lower(): continue
-
             if vendedor:
                 vendedor_counts[vendedor] = vendedor_counts.get(vendedor, 0) + 1
             if comprador:
                 comprador_counts[comprador] = comprador_counts.get(comprador, 0) + 1
             
-            mes_ano = datetime.fromisoformat(p.get('data_criacao')).strftime('%Y-%m')
-            if mes_ano not in line_chart_data:
-                line_chart_data[mes_ano] = {'pedidos_rua': 0, 'orcamentos': 0, 'sugestoes': 0}
-            
-            if p.get('tipo_req') == 'Pedido Produto':
-                line_chart_data[mes_ano]['pedidos_rua'] += 1
-            elif p.get('tipo_req') == 'Atualização Orçamento':
-                line_chart_data[mes_ano]['orcamentos'] += 1
+            try:
+                mes_ano = datetime.fromisoformat(p.data_criacao).strftime('%Y-%m')
+                if mes_ano not in line_chart_data:
+                    line_chart_data[mes_ano] = {'pedidos_rua': 0, 'orcamentos': 0, 'sugestoes': 0}
+                
+                if p.tipo_req == 'Pedido Produto':
+                    line_chart_data[mes_ano]['pedidos_rua'] += 1
+                elif p.tipo_req == 'Atualização Orçamento':
+                    line_chart_data[mes_ano]['orcamentos'] += 1
+            except (ValueError, TypeError):
+                continue # Ignora datas mal formatadas
 
-        # --- Processar Sugestões ---
-        for sid, s in todas_sugestoes.items():
-            data_sugestao = s.get('data_criacao', '').split('T')[0]
-            if data_inicio and data_sugestao < data_inicio: continue
-            if data_fim and data_sugestao > data_fim: continue
-            
-            vendedor = s.get('vendedor', '')
-            if vendedor_filtro and vendedor_filtro not in vendedor.lower(): continue
+        # Processa Sugestões
+        for s in todas_sugestoes:
+            try:
+                mes_ano = datetime.fromisoformat(s.data_criacao).strftime('%Y-%m')
+                if mes_ano not in line_chart_data:
+                    line_chart_data[mes_ano] = {'pedidos_rua': 0, 'orcamentos': 0, 'sugestoes': 0}
+                line_chart_data[mes_ano]['sugestoes'] += 1
+            except (ValueError, TypeError):
+                continue
 
-            mes_ano = datetime.fromisoformat(s.get('data_criacao')).strftime('%Y-%m')
-            if mes_ano not in line_chart_data:
-                line_chart_data[mes_ano] = {'pedidos_rua': 0, 'orcamentos': 0, 'sugestoes': 0}
-            line_chart_data[mes_ano]['sugestoes'] += 1
-
-        # --- Formatar dados para o Chart.js ---
+        # Formata dados para Chart.js
         sorted_months = sorted(line_chart_data.keys())
-        line_labels = sorted_months
-        pedidos_rua_values = [line_chart_data[m]['pedidos_rua'] for m in sorted_months]
-        orcamentos_values = [line_chart_data[m]['orcamentos'] for m in sorted_months]
-        sugestoes_values = [line_chart_data[m]['sugestoes'] for m in sorted_months]
         
-        vendedor_labels = list(vendedor_counts.keys())
-        vendedor_values = list(vendedor_counts.values())
-        comprador_labels = list(comprador_counts.keys())
-        comprador_values = list(comprador_counts.values())
-
         return jsonify({
             'lineChart': {
-                'labels': line_labels,
+                'labels': sorted_months,
                 'datasets': [
-                    {'label': 'Pedidos de Rua', 'data': pedidos_rua_values, 'borderColor': '#3B71CA', 'fill': False, 'tension': 0.1},
-                    {'label': 'Orçamentos', 'data': orcamentos_values, 'borderColor': '#5cb85c', 'fill': False, 'tension': 0.1},
-                    {'label': 'Sugestões', 'data': sugestoes_values, 'borderColor': '#f0ad4e', 'fill': False, 'tension': 0.1}
+                    {'label': 'Pedidos de Rua', 'data': [line_chart_data[m]['pedidos_rua'] for m in sorted_months], 'borderColor': '#3B71CA', 'fill': False, 'tension': 0.1},
+                    {'label': 'Orçamentos', 'data': [line_chart_data[m]['orcamentos'] for m in sorted_months], 'borderColor': '#5cb85c', 'fill': False, 'tension': 0.1},
+                    {'label': 'Sugestões', 'data': [line_chart_data[m]['sugestoes'] for m in sorted_months], 'borderColor': '#f0ad4e', 'fill': False, 'tension': 0.1}
                 ]
             },
-            'pieChartVendedores': {'labels': vendedor_labels, 'data': vendedor_values},
-            'pieChartCompradores': {'labels': comprador_labels, 'data': comprador_values}
+            'pieChartVendedores': {'labels': list(vendedor_counts.keys()), 'data': list(vendedor_counts.values())},
+            'pieChartCompradores': {'labels': list(comprador_counts.keys()), 'data': list(comprador_counts.values())}
         }), 200
 
     except Exception as e:
@@ -147,29 +148,24 @@ def gerar_relatorio_endpoint():
     filtros = request.get_json() or {}
     
     try:
-        query = db.reference('pedidos').order_by_child('data_finalizacao')
+        query = Pedido.query.filter_by(status='OK')
+
+        if filtros.get('vendedor'):
+            query = query.filter(Pedido.vendedor.ilike(f"%{filtros['vendedor']}%"))
+        if filtros.get('comprador'):
+            query = query.filter(Pedido.comprador.ilike(f"%{filtros['comprador']}%"))
         if filtros.get('dataInicio'):
-            query = query.start_at(filtros['dataInicio'])
+            query = query.filter(Pedido.data_finalizacao >= filtros['dataInicio'])
         if filtros.get('dataFim'):
-            query = query.end_at(filtros['dataFim'] + '\uf8ff')
-            
-        todos_pedidos_do_periodo = query.get() or {}
-        
-        pedidos_filtrados = []
-        for pid, p in todos_pedidos_do_periodo.items():
-            if p.get('status') != 'OK':
-                continue
-            if filtros.get('vendedor') and filtros['vendedor'].lower() not in p.get('vendedor', '').lower():
-                continue
-            if filtros.get('comprador') and filtros['comprador'].lower() not in p.get('comprador', '').lower():
-                continue
-            if filtros.get('codigo'):
-                termo = filtros['codigo'].lower()
-                codigo_pedido = p.get('código', p.get('codigo', '')).lower()
-                tem_no_item = any(termo in item.get('codigo', '').lower() for item in p.get('itens', []))
-                if termo not in codigo_pedido and not tem_no_item:
-                    continue
-            pedidos_filtrados.append(p)
+            query = query.filter(Pedido.data_finalizacao <= filtros['dataFim'] + 'T23:59:59')
+        if filtros.get('codigo'):
+            termo_codigo = f"%{filtros['codigo']}%"
+            query = query.filter(or_(
+                Pedido.codigo.ilike(termo_codigo),
+                Pedido.itens.cast(db.String).ilike(termo_codigo)
+            ))
+
+        pedidos_filtrados = query.all()
 
         if not pedidos_filtrados:
             return jsonify({'relatorio': "Nenhum dado encontrado para o relatório com os filtros aplicados."})
@@ -180,7 +176,7 @@ def gerar_relatorio_endpoint():
             'porComprador': {}
         }
         for pedido in pedidos_filtrados:
-            vendedor, comprador, tipo_req = pedido.get('vendedor'), pedido.get('comprador'), pedido.get('tipo_req')
+            vendedor, comprador, tipo_req = pedido.vendedor, pedido.comprador, pedido.tipo_req
             if vendedor:
                 stats['porVendedor'].setdefault(vendedor, {'total': 0, 'pedidosRua': 0, 'orcamentos': 0})
                 stats['porVendedor'][vendedor]['total'] += 1
@@ -234,15 +230,45 @@ Total de Pedidos Analisados: {stats['totalPedidos']}
 
 @dashboard_bp.route('/download-relatorio', methods=['POST'])
 def download_relatorio():
-    # Recebe o texto do relatório que o frontend gerou
     report_content = request.data.decode('utf-8')
-    
-    # Cria um nome de arquivo com a data atual
     filename = f"relatorio_pedidos_{datetime.now(tz_cuiaba).strftime('%Y-%m-%d')}.txt"
-    
-    # Retorna o conteúdo como um arquivo para download
     return Response(
         report_content,
         mimetype="text/plain",
         headers={"Content-disposition": f"attachment; filename={filename}"}
     )
+
+@dashboard_bp.route('/sugestoes-paginadas', methods=['GET'])
+def get_sugestoes_paginadas():
+    status = request.args.get('status', 'pendente')
+    limit = int(request.args.get('limit', 10))
+    page = int(request.args.get('page', 0))
+    search_term = request.args.get('search', '').lower().strip()
+    
+    query = Sugestao.query.filter_by(status=status)
+
+    if search_term:
+        search_filter = or_(
+            Sugestao.vendedor.ilike(f'%{search_term}%'),
+            Sugestao.comprador.ilike(f'%{search_term}%'),
+            Sugestao.itens.cast(db.String).ilike(f'%{search_term}%')
+        )
+        query = query.filter(search_filter)
+
+    pagination = query.order_by(Sugestao.data_criacao.desc()).paginate(page=page + 1, per_page=limit, error_out=False)
+    
+    # Precisamos da função serialize_sugestao aqui também
+    def serialize_sugestao_local(s):
+        return {
+            'id': s.id, 'vendedor': s.vendedor, 'status': s.status,
+            'comprador': s.comprador, 'data_criacao': s.data_criacao,
+            'itens': s.itens, 'observacao_geral': s.observacao_geral
+        }
+
+    sugestoes = pagination.items
+    tem_mais = pagination.has_next
+    
+    return jsonify({
+        'sugestoes': [serialize_sugestao_local(s) for s in sugestoes],
+        'temMais': tem_mais
+    })

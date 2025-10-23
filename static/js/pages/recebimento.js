@@ -270,6 +270,14 @@ async function fetchData() {
     }
 }
 
+function startAutoRefresh() {
+    // Limpa qualquer intervalo anterior para evitar múltiplos loops
+    if (intervalId) clearInterval(intervalId);
+
+    // Inicia um novo intervalo e armazena seu ID na variável global do módulo
+    intervalId = setInterval(fetchData, 20000); // Atualiza a cada 20 segundos
+}
+
 export function initRecebimentoPage() {
     elementos = {
         btnAbrirModalFornecedor: document.getElementById('btn-abrir-modal-fornecedor'),
@@ -331,4 +339,5 @@ export function initRecebimentoPage() {
     });
 
     fetchData(); // Busca inicial
+    startAutoRefresh();
 }
