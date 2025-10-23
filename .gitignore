@@ -31,3 +31,15 @@ dist/
 
 #regras do Firebase
 firebase_rules.txt
+
+# Logs de aplicação
+log.txt
+
+# Exportações e backups
+firebase_export.json
+
+# Atribuir senha de Admin
+set_admin_password.py
+
+#servidor nssm
+nssm-2.24/
