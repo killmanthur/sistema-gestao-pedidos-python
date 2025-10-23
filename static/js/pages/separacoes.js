@@ -256,16 +256,20 @@ async function carregarFinalizados(recarregar = false) {
     state.elementos.spinner.style.display = 'block';
     state.elementos.btnCarregarMais.style.display = 'none';
     try {
+        // --- INÍCIO DA CORREÇÃO ---
         const response = await fetch('/api/separacoes/paginadas', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 page: state.paginaAtual,
                 search: state.termoBusca,
+                // Adiciona a role e o nome do usuário ao corpo da requisição
                 user_role: AppState.currentUser.role,
                 user_name: AppState.currentUser.nome
             })
         });
+        // --- FIM DA CORREÇÃO ---
+
         const data = await response.json();
         if (!response.ok) throw new Error(data.error);
         renderizarColunaFinalizados(data.finalizadas, recarregar);
@@ -280,6 +284,7 @@ async function carregarFinalizados(recarregar = false) {
         state.elementos.btnCarregarMais.style.display = state.temMais ? 'block' : 'none';
     }
 }
+
 async function fetchInitialData() {
     try {
         const [exp, vend, sep] = await Promise.all([
@@ -473,12 +478,16 @@ function startAutoRefresh() {
 
 async function fetchActiveSeparacoes() {
     try {
+        // --- INÍCIO DA CORREÇÃO ---
         const { role, nome } = AppState.currentUser;
-        const response = await fetch(`/api/separacoes/ativas?user_role=${role}&user_name=${nome}`);
+        // Adiciona a role e o nome do usuário como parâmetros na URL
+        const response = await fetch(`/api/separacoes/ativas?user_role=${encodeURIComponent(role)}&user_name=${encodeURIComponent(nome)}`);
+        // --- FIM DA CORREÇÃO ---
+
         if (!response.ok) throw new Error('Falha ao buscar separações ativas.');
 
         state.todasAsSeparacoesAtivas = await response.json();
-        filtrarErenderizarColunasAtivas(); // Reutiliza a função de filtragem e renderização que já existe
+        filtrarErenderizarColunasAtivas();
 
     } catch (error) {
         console.error("Erro ao buscar separações ativas:", error);

@@ -189,7 +189,22 @@ def adicionar_observacao(separacao_id):
 
 @separacoes_bp.route('/ativas', methods=['GET'])
 def get_separacoes_ativas():
-    ativas = Separacao.query.filter(Separacao.status.in_(['Em Separação', 'Em Conferência'])).order_by(Separacao.data_criacao.desc()).all()
+    # --- INÍCIO DA CORREÇÃO ---
+    # Pega os parâmetros da URL enviados pelo frontend
+    user_role = request.args.get('user_role')
+    user_name = request.args.get('user_name')
+
+    # A query base continua a mesma
+    query = Separacao.query.filter(Separacao.status.in_(['Em Separação', 'Em Conferência']))
+
+    # Se o usuário logado for um Vendedor, adiciona um filtro extra à query
+    if user_role == 'Vendedor' and user_name:
+        query = query.filter_by(vendedor_nome=user_name)
+    
+    # Executa a query final (com ou sem o filtro de vendedor)
+    ativas = query.order_by(Separacao.data_criacao.desc()).all()
+    # --- FIM DA CORREÇÃO ---
+    
     return jsonify([serialize_separacao(s) for s in ativas])
 
 @separacoes_bp.route('/paginadas', methods=['POST'])
@@ -199,7 +214,17 @@ def get_separacoes_paginadas():
     limit = dados.get('limit', 15)
     search_term = dados.get('search', '').lower().strip()
     
+    # --- INÍCIO DA CORREÇÃO ---
+    user_role = dados.get('user_role')
+    user_name = dados.get('user_name')
+
+    # A query base continua a mesma
     query = Separacao.query.filter_by(status='Finalizado')
+
+    # Se o usuário for um Vendedor, adiciona o filtro
+    if user_role == 'Vendedor' and user_name:
+        query = query.filter_by(vendedor_nome=user_name)
+    # --- FIM DA CORREÇÃO ---
 
     if search_term:
         search_filter = or_(
