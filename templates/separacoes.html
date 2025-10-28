@@ -18,6 +18,9 @@
         <div style="display: flex; gap: 1rem; align-items: flex-end;">
             <div class="form-group" style="margin-bottom: 0; flex-grow: 1;"><label for="numero-movimentacao">Nº
                     Movimentação</label><input type="number" id="numero-movimentacao" required></div>
+            <!-- NOVO CAMPO -->
+            <div class="form-group" style="margin-bottom: 0; width: 120px;"><label for="qtd-pecas">Qtd.
+                    Peças</label><input type="number" id="qtd-pecas" required></div>
             <div class="form-group" style="margin-bottom: 0; flex-grow: 2;"><label for="nome-cliente">Nome do
                     Cliente</label><input type="text" id="nome-cliente" required></div>
             <div class="form-group" style="margin-bottom: 0; flex-grow: 1;"><label
@@ -36,6 +39,7 @@
     </form>
 </section>
 
+<!-- O resto do arquivo permanece igual -->
 <!-- Barra de Busca -->
 <section class="filtro-container-actions" style="margin: 0 auto 1.5rem;">
     <input type="text" id="filtro-separacoes" placeholder="🔎 Buscar por Nº Mov, Cliente, Vendedor...">
@@ -68,7 +72,6 @@
     <div class="modal-content" style="max-width: 600px;">
         <div class="modal-header">
             <h2 id="obs-separacao-modal-title">Observação da Separação</h2>
-            <!-- CORREÇÃO AQUI -->
             <button class="close-modal close-modal-icon">×</button>
         </div>
         <form id="form-obs-separacao" novalidate>
@@ -79,7 +82,6 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <!-- CORREÇÃO AQUI: Adicionando a classe 'close-modal' -->
                 <button type="button" id="btn-cancel-obs-separacao"
                     class="btn btn--secondary close-modal">Cancelar</button>
                 <button type="submit" id="btn-save-obs-separacao" class="btn btn--primary">Salvar Observação</button>
@@ -92,7 +94,6 @@
     <div class="modal-content" style="max-width: 500px;">
         <div class="modal-header">
             <h2>Gerenciar Fila de Separação</h2>
-            <!-- CORREÇÃO AQUI -->
             <button class="close-modal close-modal-icon">×</button>
         </div>
         <form id="form-gerenciar-fila">
@@ -104,7 +105,6 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <!-- CORREÇÃO AQUI: Adicionando a classe 'close-modal' -->
                 <button type="button" id="btn-cancel-fila" class="btn btn--secondary close-modal">Cancelar</button>
                 <button type="submit" id="btn-save-fila" class="btn btn--primary">Salvar Alterações</button>
             </div>

@@ -1,18 +1,13 @@
 // static/js/forms.js
-// Responsabilidade: Lógica de todos os formulários de criação
-// (criar pedido, criar orçamento, criar sugestão).
-
 import { AppState } from './state.js';
 import { toggleButtonLoading } from './ui.js';
-import { showToast } from './toasts.js'; // A importação já deve estar aqui
+import { showToast } from './toasts.js';
 
-// A função showSuccessMessage não é mais necessária, podemos removê-la.
 export function renderNewItemRow(containerId, itemLabel = 'Item') {
     const itensContainer = document.getElementById(containerId);
     if (!itensContainer) return null;
 
     const itemCounter = itensContainer.children.length + 1;
-    // CORREÇÃO: Usando a nova classe 'item-row' e 'close-modal' para o botão de fechar
     const itemRow = document.createElement('div');
     itemRow.className = 'item-row';
 
@@ -27,19 +22,19 @@ export function renderNewItemRow(containerId, itemLabel = 'Item') {
         </div>
     `;
 
+    // --- CORREÇÃO AQUI ---
+    // Adicionada a classe "close-modal-icon" ao botão
     itemRow.innerHTML = `
         <div class="item-row-header">
             <h4>${itemLabel} ${itemCounter}</h4>
-            <button type="button" class="close-modal" title="Remover Item">×</button>
+            <button type="button" class="close-modal close-modal-icon" title="Remover Item">×</button>
         </div>
         <div class="item-row-fields">${fieldsHTML}</div>
     `;
 
-    // CORREÇÃO: A lógica de fechar agora é global, mas precisamos da lógica para remover o elemento do DOM
     itemRow.querySelector('.close-modal').addEventListener('click', (e) => {
-        e.stopPropagation(); // Impede que o clique feche um modal pai, se houver
+        e.stopPropagation();
         itemRow.remove();
-        // Re-numera os itens restantes
         const allHeaders = itensContainer.querySelectorAll('.item-row-header h4');
         allHeaders.forEach((header, index) => {
             header.textContent = `${itemLabel} ${index + 1}`;
@@ -50,9 +45,7 @@ export function renderNewItemRow(containerId, itemLabel = 'Item') {
     return itemRow;
 }
 
-
-// --- Formulário de Pedido de Produto (Múltiplos Itens) ---
-
+// ... (o resto do arquivo permanece o mesmo)
 export function handleMultiItemFormSubmit() {
     const formPedido = document.getElementById('form-pedido');
     if (!formPedido) return;
@@ -81,7 +74,7 @@ export function handleMultiItemFormSubmit() {
             toggleButtonLoading(submitBtn, false, 'Salvar Pedido');
             return;
         }
-        
+
         const observacaoGeral = document.getElementById('observacao-geral').value;
 
         const dados = {
@@ -102,7 +95,6 @@ export function handleMultiItemFormSubmit() {
                 container.innerHTML = '';
                 formPedido.reset();
                 renderNewItemRow('itens-container', 'Item');
-                // MUDANÇA: Usando showToast em vez de showSuccessMessage
                 showToast('Pedido criado com sucesso!', 'success');
             } else {
                 const errorData = await response.json().catch(() => ({ message: 'Erro desconhecido' }));
@@ -116,19 +108,18 @@ export function handleMultiItemFormSubmit() {
     });
 }
 
-// --- Formulário de Atualização de Orçamento (Simples) ---
 export function handleOrcamentoFormSubmit() {
     const formOrcamento = document.getElementById('form-orcamento');
     if (!formOrcamento) return;
-    
+
     const submitBtn = formOrcamento.querySelector('button[type="submit"]');
     const originalText = submitBtn.textContent;
 
     formOrcamento.addEventListener('submit', async (event) => {
         event.preventDefault();
         toggleButtonLoading(submitBtn, true, originalText);
-        
-        const dados = { 
+
+        const dados = {
             tipo_req: 'Atualização Orçamento',
             vendedor: AppState.currentUser.nome,
             codigo: document.getElementById('orcamento-nome').value,
@@ -143,7 +134,6 @@ export function handleOrcamentoFormSubmit() {
             });
             if (response.ok) {
                 formOrcamento.reset();
-                // MUDANÇA: Usando showToast em vez de showSuccessMessage
                 showToast('Requisição de orçamento criada com sucesso!', 'success');
             } else {
                 const errorData = await response.json().catch(() => ({ message: 'Erro desconhecido' }));

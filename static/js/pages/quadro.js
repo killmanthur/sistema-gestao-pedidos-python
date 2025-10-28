@@ -2,7 +2,54 @@
 import { showToast } from '../toasts.js';
 import { criarCardPedido, setupLogModal } from '../ui.js';
 
-let quadroPedidosRua, quadroOrcamentos, filtroInput, activePedidos = [], intervalId = null;
+let quadroPedidosRua, quadroOrcamentos, filtroInput;
+let activePedidos = [];
+let pollingInterval = null;
+
+// --- LÓGICA DE SINCRONIZAÇÃO (permanece a mesma) ---
+let estadoAnterior = { total_ativos: 0, ultimo_update: null };
+let audioDesbloqueado = false;
+const notificacaoSom = new Audio('/static/notification.mp3');
+
+function tocarSomNotificacao() {
+    if (!audioDesbloqueado) return;
+    notificacaoSom.play().catch(e => console.error("Erro ao tocar som:", e));
+}
+
+function desbloquearAudio() {
+    if (audioDesbloqueado) return;
+    notificacaoSom.play().then(() => {
+        notificacaoSom.pause();
+        notificacaoSom.currentTime = 0;
+        audioDesbloqueado = true;
+        document.removeEventListener('click', desbloquearAudio);
+        document.removeEventListener('keydown', desbloquearAudio);
+    }).catch(() => { });
+}
+document.addEventListener('click', desbloquearAudio);
+document.addEventListener('keydown', desbloquearAudio);
+
+async function verificarAtualizacoesQuadro() {
+    try {
+        const response = await fetch('/api/pedidos/status-quadro');
+        if (!response.ok) return;
+        const estadoAtual = await response.json();
+
+        const mudouTotal = estadoAtual.total_ativos !== estadoAnterior.total_ativos;
+        const mudouTimestamp = estadoAtual.ultimo_update !== estadoAnterior.ultimo_update;
+
+        if (mudouTotal || mudouTimestamp) {
+            if (estadoAtual.total_ativos > estadoAnterior.total_ativos) {
+                tocarSomNotificacao();
+            }
+            estadoAnterior = estadoAtual;
+            await fetchActivePedidos();
+        }
+    } catch (error) {
+        console.error("Erro no polling do quadro:", error);
+    }
+}
+
 
 function renderizarColunasComFiltro() {
     if (!quadroPedidosRua || !quadroOrcamentos) return;
@@ -12,10 +59,7 @@ function renderizarColunasComFiltro() {
     const filtrar = (pedidos) => {
         if (!termoBusca) return pedidos;
         return pedidos.filter(p => {
-            const textoCard = [
-                p.vendedor, p.comprador, p.tipo_req, p.codigo, p.código, p.observacao_geral, p.descricao,
-                ...(p.itens || []).map(i => i.codigo)
-            ].join(' ').toLowerCase();
+            const textoCard = [p.vendedor, p.comprador, p.tipo_req, p.codigo, p.código, p.observacao_geral, p.descricao, ...(p.itens || []).map(i => i.codigo)].join(' ').toLowerCase();
             return textoCard.includes(termoBusca);
         });
     };
@@ -41,21 +85,19 @@ function renderizarColuna(container, pedidos, mensagemVazio) {
 async function fetchActivePedidos() {
     try {
         const response = await fetch('/api/pedidos/ativos');
-        if (!response.ok) {
-            throw new Error('Falha ao buscar dados do quadro.');
-        }
+        if (!response.ok) throw new Error('Falha ao buscar dados do quadro.');
         activePedidos = await response.json();
         renderizarColunasComFiltro();
     } catch (error) {
         console.error("Erro ao buscar pedidos ativos:", error);
         showToast(error.message, "error");
-        // Para de tentar se der erro para não sobrecarregar
-        if (intervalId) clearInterval(intervalId);
+        if (pollingInterval) clearInterval(pollingInterval);
     }
 }
 
 export function initQuadroPage() {
     setupLogModal();
+    // Voltando a ter apenas 2 referências
     quadroPedidosRua = document.getElementById('quadro-pedidos-rua');
     quadroOrcamentos = document.getElementById('quadro-orcamentos');
     filtroInput = document.getElementById('filtro-quadro-ativo');
@@ -64,15 +106,15 @@ export function initQuadroPage() {
 
     filtroInput.addEventListener('input', renderizarColunasComFiltro);
 
-    // Limpa qualquer intervalo anterior ao (re)iniciar a página
-    if (intervalId) clearInterval(intervalId);
+    if (pollingInterval) clearInterval(pollingInterval);
 
-    // Carregamento inicial
     quadroPedidosRua.innerHTML = `<div class="spinner" style="margin: 2rem auto;"></div>`;
     quadroOrcamentos.innerHTML = `<div class="spinner" style="margin: 2rem auto;"></div>`;
-    fetchActivePedidos();
 
-    // Inicia a atualização periódica
-    intervalId = setInterval(fetchActivePedidos, 3000); // Atualiza a cada 15 segundos
-    window.initQuadroPage = initQuadroPage;
+    fetchActivePedidos().then(() => {
+        verificarAtualizacoesQuadro();
+        pollingInterval = setInterval(verificarAtualizacoesQuadro, 3000);
+    });
+
+    window.initQuadroPage = fetchActivePedidos;
 }

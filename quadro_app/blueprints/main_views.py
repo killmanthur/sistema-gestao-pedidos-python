@@ -51,14 +51,13 @@ def separacoes_page():
 def conferencias_page():
     return render_template('conferencias.html')
 
+@main_views_bp.route('/historico-conferencias')
+def historico_conferencias_page():
+    return render_template('historico_conferencias.html')
+
 @main_views_bp.route('/recebimento')
 def recebimento_page():
     return render_template('recebimento.html')
-
-# ROTA ATUALIZADA
-@main_views_bp.route('/pendencias-e-alteracoes')
-def pendencias_e_alteracoes_page():
-    return render_template('pendencias_e_alteracoes.html')
 
 @main_views_bp.route('/gerenciar-separacoes')
 def gerenciar_separacoes_page():

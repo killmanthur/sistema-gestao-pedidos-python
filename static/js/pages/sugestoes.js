@@ -388,7 +388,7 @@ function createEditSugestaoItemRowHTML(item = { codigo: '', quantidade: 1 }) {
         <div class="item-row item-row-edit">
             <div class="item-row-header">
                 <h4>Item</h4> 
-                <button type="button" class="close-modal" title="Remover Item">×</button>
+                <button type="button" class="close-modal close-modal-icon" title="Remover Item">×</button>
             </div>
             <div class="item-row-fields">
                 <div class="form-group" style="flex-grow: 1;">

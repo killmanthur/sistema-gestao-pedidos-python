@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{% endblock %} - Quadro de Pedidos</title>
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
@@ -54,16 +55,13 @@
                                     href="{{ url_for('main_views.recebimento_page') }}">Recebimento</a></li>
                             <li class="nav-item" data-page="conferencias"><a
                                     href="{{ url_for('main_views.conferencias_page') }}">Conferência</a></li>
-                            <li class="nav-item" data-page="pendencias_e_alteracoes"><a
-                                    href="{{ url_for('main_views.pendencias_e_alteracoes_page') }}">Pendências e Alterações
-                                 <span id="pendencias-notification-badge" class="notification-badge" style="display: none;"></span>
-                                </a>
-                            </li>
+                            <!-- NOVO LINK -->
+                            <li class="nav-item" data-page="historico_conferencias"><a
+                                    href="{{ url_for('main_views.historico_conferencias_page') }}">Histórico de Conferências</a></li>
                             <li class="nav-item" data-page="separacoes">
                                 <a href="{{ url_for('main_views.separacoes_page') }}">
                                     Separações
-                                    <span id="separacoes-notification-badge" class="notification-badge"
-                                        style="display: none;"></span>
+                                    <span id="separacoes-notification-badge" class="notification-badge" style="display: none;"></span>
                                 </a>
                             </li>
                             <li class="nav-item" data-page="gerenciar_separacoes"><a
@@ -163,25 +161,27 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2 id="edit-separacao-modal-title">Editar Separação</h2>
-                <!-- CORREÇÃO AQUI -->
                 <button class="close-modal close-modal-icon">×</button>
             </div>
             <form id="form-edit-separacao" novalidate>
                 <div class="modal-body">
-                    <div class="form-group"><label for="edit-numero-movimentacao">Nº Movimentação</label><input
-                            type="number" id="edit-numero-movimentacao" required></div>
+                    <div class="layout-grid-2-cols" style="gap: 1rem;">
+                        <div class="form-group"><label for="edit-numero-movimentacao">Nº Movimentação</label><input
+                                type="number" id="edit-numero-movimentacao" required></div>
+                        <!-- NOVO CAMPO -->
+                        <div class="form-group"><label for="edit-qtd-pecas">Qtd. Peças</label><input type="number"
+                                id="edit-qtd-pecas" required></div>
+                    </div>
                     <div class="form-group"><label for="edit-nome-cliente">Nome do Cliente</label><input type="text"
                             id="edit-nome-cliente" required></div>
-                    <div class="form-group"><label for="edit-vendedor-nome">Vendedor</label><select
-                            id="edit-vendedor-nome" required data-placeholder="Selecione um Vendedor"></select></div>
+                    <div class="form-group"><label for="edit-vendedor-nome">Vendedor</label><select id="edit-vendedor-nome"
+                            required data-placeholder="Selecione um Vendedor"></select></div>
                     <div class="form-group"><label for="edit-separador-nome">Separador</label><select
                             id="edit-separador-nome" required data-placeholder="Selecione um Separador"></select></div>
-                    <!-- NOVO CAMPO DE CONFERENTE -->
                     <div class="form-group"><label for="edit-conferente-nome">Conferente</label><select
                             id="edit-conferente-nome" data-placeholder="Selecione um Conferente"></select></div>
                 </div>
                 <div class="modal-footer">
-                    <!-- CORREÇÃO AQUI: Adicionando a classe 'close-modal' -->
                     <button type="button" id="btn-cancel-edit-separacao"
                         class="btn btn--secondary close-modal">Cancelar</button>
                     <button type="submit" id="btn-save-edit-separacao" class="btn btn--primary">Salvar
@@ -219,6 +219,21 @@
                     <button type="submit" id="btn-save-set-password" class="btn btn--primary">Salvar Nova Senha</button>
                 </div>
             </form>
+        </div>
+    </div>
+    <!-- --- INÍCIO DO NOVO CÓDIGO --- -->
+    <div id="details-modal-overlay" class="modal-overlay" style="display: none;">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2 id="details-modal-title">Detalhes</h2>
+                <button class="close-modal close-modal-icon" title="Fechar">×</button>
+            </div>
+            <div id="details-modal-body" class="modal-body">
+                <!-- O conteúdo dos detalhes será inserido aqui pelo JavaScript -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn--secondary close-modal">Fechar</button>
+            </div>
         </div>
     </div>
 

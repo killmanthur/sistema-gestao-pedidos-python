@@ -33,8 +33,8 @@ function renderTable(tbodyElement, data, columns) {
  */
 async function fetchAndRenderData() {
     spinner.style.display = 'block';
-    tabelaSeparadoresBody.innerHTML = `<tr><td colspan="3">Carregando...</td></tr>`;
-    tabelaConferentesBody.innerHTML = `<tr><td colspan="3">Carregando...</td></tr>`;
+    tabelaSeparadoresBody.innerHTML = `<tr><td colspan="4">Carregando...</td></tr>`;
+    tabelaConferentesBody.innerHTML = `<tr><td colspan="4">Carregando...</td></tr>`;
 
     const filtros = {
         dataInicio: document.getElementById('filtro-data-inicio').value,
@@ -54,15 +54,15 @@ async function fetchAndRenderData() {
 
         const data = await response.json();
 
-        // Renderiza as tabelas com os dados recebidos
-        renderTable(tabelaSeparadoresBody, data.separadores, ['nome', 'count', 'avg_time_str']);
-        renderTable(tabelaConferentesBody, data.conferentes, ['nome', 'count', 'avg_time_str']);
+        // MUDANÇA: Adicionado 'total_pecas' à lista de colunas
+        renderTable(tabelaSeparadoresBody, data.separadores, ['nome', 'count', 'total_pecas', 'avg_time_str']);
+        renderTable(tabelaConferentesBody, data.conferentes, ['nome', 'count', 'total_pecas', 'avg_time_str']);
 
     } catch (error) {
         console.error(error);
         showToast(error.message, 'error');
-        tabelaSeparadoresBody.innerHTML = `<tr><td colspan="3" style="color: var(--clr-danger);">Erro ao carregar.</td></tr>`;
-        tabelaConferentesBody.innerHTML = `<tr><td colspan="3" style="color: var(--clr-danger);">Erro ao carregar.</td></tr>`;
+        tabelaSeparadoresBody.innerHTML = `<tr><td colspan="4" style="color: var(--clr-danger);">Erro ao carregar.</td></tr>`;
+        tabelaConferentesBody.innerHTML = `<tr><td colspan="4" style="color: var(--clr-danger);">Erro ao carregar.</td></tr>`;
     } finally {
         spinner.style.display = 'none';
     }

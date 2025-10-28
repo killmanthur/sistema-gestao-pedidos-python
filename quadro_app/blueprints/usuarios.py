@@ -5,9 +5,6 @@ from quadro_app.models import Usuario
 import uuid
 from werkzeug.security import generate_password_hash, check_password_hash
 
-# O decorador @admin_required foi removido. A segurança em uma aplicação real
-# seria reimplementada usando Flask-Login ou tokens JWT, verificando a role do usuário logado.
-
 usuarios_bp = Blueprint('usuarios', __name__, url_prefix='/api/usuarios')
 
 def serialize_usuario(u):
@@ -35,9 +32,7 @@ def login():
 
     usuario = Usuario.query.filter_by(email=final_email).first()
 
-    # Verifica se o usuário existe e se a senha está correta
     if usuario and check_password_hash(usuario.password_hash, password):
-        # Em uma aplicação real, aqui você criaria uma sessão ou um token JWT
         return jsonify(serialize_usuario(usuario))
     
     return jsonify({'error': 'Usuário ou senha inválidos'}), 401
@@ -115,7 +110,20 @@ def get_comprador_nomes():
 @usuarios_bp.route('/vendedor-nomes', methods=['GET'])
 def get_vendedor_nomes():
     users = Usuario.query.filter_by(role='Vendedor').all()
-    return jsonify(sorted([u.nome for u in users if u.nome]))
+    # --- MUDANÇA: REVERTIDA ---
+    # Agora esta rota retorna APENAS os vendedores, como deveria ser.
+    vendedores = [u.nome for u in users if u.nome]
+    return jsonify(sorted(vendedores))
+
+# --- NOVA ROTA ---
+@usuarios_bp.route('/destinos-rua', methods=['GET'])
+def get_destinos_rua():
+    """Retorna a lista de vendedores mais a opção 'Estoque'."""
+    users = Usuario.query.filter_by(role='Vendedor').all()
+    destinos = [u.nome for u in users if u.nome]
+    destinos.append("Estoque") # Adiciona a opção estática "Estoque"
+    return jsonify(sorted(destinos))
+# --- FIM DA NOVA ROTA ---
 
 @usuarios_bp.route('/separador-nomes', methods=['GET'])
 def get_separador_nomes():

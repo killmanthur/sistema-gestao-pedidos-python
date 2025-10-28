@@ -5,7 +5,45 @@ import { toggleButtonLoading, formatarData, showConfirmModal, openLogModal } fro
 
 let state = {};
 let debounceTimer;
-let autoRefreshInterval = null;
+let pollingInterval = null; // Renomeado de autoRefreshInterval para clareza
+
+// --- INÍCIO DA NOVA LÓGICA DE SINCRONIZAÇÃO ---
+let estadoAnterior = {
+    total_ativas: 0,
+    ultimo_update: null,
+};
+
+async function verificarAtualizacoesSeparacoes() {
+    // Não verifica se o usuário está digitando no campo de busca
+    if (document.activeElement === state.elementos.filtroInput && state.elementos.filtroInput.value !== '') {
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/separacoes/status-ativas');
+        if (!response.ok) return;
+
+        const estadoAtual = await response.json();
+
+        const mudouTotal = estadoAtual.total_ativas !== estadoAnterior.total_ativas;
+        const mudouTimestamp = estadoAtual.ultimo_update !== estadoAnterior.ultimo_update;
+
+        if (mudouTotal || mudouTimestamp) {
+            console.log("Detectada mudança nas separações. Atualizando...");
+            estadoAnterior = estadoAtual;
+
+            // Recarrega apenas a fila, os quadros ativos e o primeiro lote de finalizados.
+            // Isso é mais eficiente do que recarregar tudo sempre.
+            await Promise.all([
+                fetchAndRenderFila(),
+                fetchActiveSeparacoes(),
+            ]);
+        }
+    } catch (error) {
+        console.error("Erro no polling de separações:", error);
+    }
+}
+// --- FIM DA NOVA LÓGICA DE SINCRONIZAÇÃO ---
 
 function resetState() {
     state = {
@@ -26,6 +64,7 @@ export function openEditModal(separacao) {
     modal.form.dataset.id = separacao.id;
     modal.movimentacaoInput.value = separacao.numero_movimentacao;
     modal.clienteInput.value = separacao.nome_cliente;
+    modal.qtdPecasInput.value = separacao.qtd_pecas || '';
     populateSelect(modal.vendedorSelect, state.listasUsuarios.vendedores, separacao.vendedor_nome);
     populateSelect(modal.separadorSelect, state.listasUsuarios.separadores, separacao.separador_nome);
     const conferenteSelect = modal.conferenteSelect;
@@ -45,9 +84,8 @@ async function fetchAndRenderFila() {
     try {
         const response = await fetch('/api/separacoes/fila-separadores');
         if (!response.ok) throw new Error('Falha ao buscar fila.');
-        const filaVisivel = await response.json(); // A API já retorna a fila filtrada e ordenada
+        const filaVisivel = await response.json();
 
-        // Renderiza a fila de prioridade na tela
         listaFila.innerHTML = '';
         if (filaVisivel.length > 0) {
             filaVisivel.forEach((nome, index) => {
@@ -62,7 +100,6 @@ async function fetchAndRenderFila() {
             listaFila.innerHTML = '<li>Nenhum separador ativo na fila.</li>';
         }
 
-        // Popula o dropdown do formulário
         if (filaVisivel.length > 0) {
             populateSelect(separadorSelect, filaVisivel, filaVisivel[0]);
         } else {
@@ -116,7 +153,6 @@ async function handleSaveFila(event) {
     const saveBtn = modal.saveButton;
     toggleButtonLoading(saveBtn, true, 'Salvando...');
 
-    // A lógica simplificada apenas pega os nomes dos checkboxes marcados
     const checkboxes = modal.checkboxContainer.querySelectorAll('input[type="checkbox"]:checked');
     const nomesAtivos = Array.from(checkboxes).map(cb => cb.value);
 
@@ -124,7 +160,7 @@ async function handleSaveFila(event) {
         const response = await fetch('/api/separacoes/fila-separadores', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(nomesAtivos), // Envia apenas a lista de nomes ativos
+            body: JSON.stringify(nomesAtivos),
         });
 
         if (!response.ok) {
@@ -157,7 +193,7 @@ function criarCardElement(separacao) {
     const deleteBtn = perms.pode_deletar_separacao ? `<button class="btn btn--danger" data-action="delete" title="Excluir">Excluir</button>` : '';
 
     const hasObs = separacao.observacoes && Object.keys(separacao.observacoes).length > 0;
-    const obsBtnClass = hasObs ? 'btn--info' : 'btn--secondary';
+    const obsBtnClass = hasObs ? 'btn--edit' : 'btn--secondary';
     const obsBtn = perms.pode_gerenciar_observacao_separacao && separacao.status !== 'Finalizado'
         ? `<button class="btn ${obsBtnClass}" data-action="observation">Observação</button>`
         : '';
@@ -205,8 +241,7 @@ function criarCardElement(separacao) {
         });
         observacoesHTML += '</div>';
     }
-
-    card.innerHTML = `<div class="card__header"><h3>Mov. ${separacao.numero_movimentacao}</h3><div class="card__header-actions">${logBtn}${deleteBtn}</div></div><div class="card__body"><div class="card-info-grid"><p><strong>Cliente:</strong> ${separacao.nome_cliente}</p><p><strong>Vendedor:</strong> ${separacao.vendedor_nome}</p><p><strong>Separador:</strong> ${separacao.separador_nome || 'N/A'}</p><p><strong>Conferente:</strong> ${separacao.conferente_nome || 'N/A'}</p><p><strong>Criação:</strong> ${formatarData(separacao.data_criacao)}</p>${separacao.data_finalizacao ? `<p><strong>Finalização:</strong> ${formatarData(separacao.data_finalizacao)}</p>` : ''}</div>${observacoesHTML}</div>${footerHTML}`;
+    card.innerHTML = `<div class="card__header"><h3>Mov. ${separacao.numero_movimentacao}</h3><div class="card__header-actions">${logBtn}${deleteBtn}</div></div><div class="card__body"><div class="card-info-grid"><p><strong>Cliente:</strong> ${separacao.nome_cliente}</p><p><strong>Vendedor:</strong> ${separacao.vendedor_nome}</p><p><strong>Separador:</strong> ${separacao.separador_nome || 'N/A'}</p><p><strong>Conferente:</strong> ${separacao.conferente_nome || 'N/A'}</p><p><strong>Peças:</strong> ${separacao.qtd_pecas || '0'}</p><p><strong>Criação:</strong> ${formatarData(separacao.data_criacao)}</p>${separacao.data_finalizacao ? `<p><strong>Finalização:</strong> ${formatarData(separacao.data_finalizacao)}</p>` : ''}</div>${observacoesHTML}</div>${footerHTML}`;
 
     card.querySelector('[data-action="show-log"]')?.addEventListener('click', () => openLogModal(separacao.id, 'separacoes'));
     card.querySelector('[data-action="delete"]')?.addEventListener('click', () => handleDelete(separacao.id));
@@ -256,19 +291,16 @@ async function carregarFinalizados(recarregar = false) {
     state.elementos.spinner.style.display = 'block';
     state.elementos.btnCarregarMais.style.display = 'none';
     try {
-        // --- INÍCIO DA CORREÇÃO ---
         const response = await fetch('/api/separacoes/paginadas', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 page: state.paginaAtual,
                 search: state.termoBusca,
-                // Adiciona a role e o nome do usuário ao corpo da requisição
                 user_role: AppState.currentUser.role,
                 user_name: AppState.currentUser.nome
             })
         });
-        // --- FIM DA CORREÇÃO ---
 
         const data = await response.json();
         if (!response.ok) throw new Error(data.error);
@@ -319,6 +351,32 @@ function populateSelect(selectElement, dataList, selectedValue) {
         selectElement.selectedIndex = 0;
     }
 }
+async function handleApiAction(form, url, method, body, successMessage, btnText) {
+    const modal = form.closest('.modal-overlay');
+    const btn = form.querySelector('button[type="submit"]');
+    toggleButtonLoading(btn, true, 'Salvando...');
+    try {
+        const response = await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        if (!response.ok) throw new Error((await response.json()).error);
+        showToast(successMessage, 'success');
+        if (modal) modal.style.display = 'none';
+
+        // Força uma atualização imediata após a ação bem-sucedida
+        await verificarAtualizacoesSeparacoes();
+        // Também atualiza a fila caso uma separação seja criada/editada
+        await fetchAndRenderFila();
+
+    } catch (error) {
+        showToast(`Erro: ${error.message}`, 'error');
+    } finally {
+        toggleButtonLoading(btn, false, btnText);
+    }
+}
+
 const handleDelete = (separacaoId) => {
     showConfirmModal('EXCLUIR esta separação?', async () => {
         try {
@@ -329,9 +387,11 @@ const handleDelete = (separacaoId) => {
             });
             if (!response.ok) throw new Error((await response.json()).error);
             showToast('Separação excluída!', 'success');
+            await verificarAtualizacoesSeparacoes(); // Força atualização
         } catch (error) { showToast(`Erro: ${error.message}`, 'error'); }
     });
 };
+
 const handleFinalize = (separacaoId) => {
     showConfirmModal('Finalizar esta separação?', async () => {
         try {
@@ -342,7 +402,9 @@ const handleFinalize = (separacaoId) => {
             });
             if (!response.ok) throw new Error((await response.json()).error);
             showToast('Separação finalizada!', 'success');
+            // Recarrega os finalizados e força a atualização dos ativos
             await carregarFinalizados(true);
+            await verificarAtualizacoesSeparacoes();
         } catch (error) { showToast(`Erro: ${error.message}`, 'error'); }
     });
 };
@@ -358,6 +420,7 @@ const handleAssignConferente = (e, separacaoId) => {
             });
             if (!response.ok) throw new Error((await response.json()).error);
             showToast('Enviado para conferência!', 'success');
+            await verificarAtualizacoesSeparacoes(); // Força atualização
         } catch (error) {
             showToast(`Erro: ${error.message}`, 'error');
             e.target.value = '';
@@ -372,117 +435,64 @@ function openObservacaoModal(separacao) {
 }
 async function handleFormSubmit(event) {
     event.preventDefault();
-    const submitBtn = state.elementos.formSeparacao.querySelector('button[type="submit"]');
+    const form = state.elementos.formSeparacao;
     const movInput = document.getElementById('numero-movimentacao');
     if (movInput.value.length !== 6) {
         showToast('O Nº de Movimentação deve ter exatamente 6 dígitos.', 'error');
         movInput.focus();
         return;
     }
-    toggleButtonLoading(submitBtn, true, 'Criando...');
     const dados = {
         numero_movimentacao: movInput.value,
         nome_cliente: document.getElementById('nome-cliente').value,
         vendedor_nome: document.getElementById('vendedor-nome').value,
         separador_nome: document.getElementById('separador-nome').value,
+        qtd_pecas: document.getElementById('qtd-pecas').value,
         editor_nome: AppState.currentUser.nome
     };
-    try {
-        const response = await fetch('/api/separacoes', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(dados)
-        });
-        const result = await response.json();
-        if (!response.ok) throw new Error(result.error || 'Falha ao criar.');
-        showToast('Separação criada com sucesso!', 'success');
-        state.elementos.formSeparacao.reset();
-        await fetchAndRenderFila();
-    } catch (error) {
-        showToast(error.message, 'error');
-    } finally {
-        toggleButtonLoading(submitBtn, false, 'Criar');
-    }
+    await handleApiAction(form, '/api/separacoes', 'POST', dados, 'Separação criada!', 'Criar');
+    form.reset();
 }
 async function handleEditFormSubmit(event) {
     event.preventDefault();
-    const modal = state.elementos.editModal;
+    const form = state.elementos.editModal.form;
     const movInput = document.getElementById('edit-numero-movimentacao');
     if (movInput.value.length !== 6) {
         showToast('O Nº de Movimentação deve ter exatamente 6 dígitos.', 'error');
         movInput.focus();
         return;
     }
-    toggleButtonLoading(modal.saveButton, true, 'Salvando...');
-    const separacaoId = modal.form.dataset.id;
+    const separacaoId = form.dataset.id;
     const dados = {
         numero_movimentacao: movInput.value,
         nome_cliente: document.getElementById('edit-nome-cliente').value,
-        vendedor_nome: modal.vendedorSelect.value,
-        separador_nome: modal.separadorSelect.value,
-        conferente_nome: modal.conferenteSelect.value,
+        vendedor_nome: state.elementos.editModal.vendedorSelect.value,
+        separador_nome: state.elementos.editModal.separadorSelect.value,
+        conferente_nome: state.elementos.editModal.conferenteSelect.value,
+        qtd_pecas: document.getElementById('edit-qtd-pecas').value,
         editor_nome: AppState.currentUser.nome
     };
-    try {
-        const response = await fetch(`/api/separacoes/${separacaoId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(dados)
-        });
-        const result = await response.json();
-        if (!response.ok) throw new Error(result.error || 'Falha ao salvar.');
-        showToast('Separação salva com sucesso!', 'success');
-        modal.overlay.style.display = 'none';
-        if (window.location.pathname.includes('/gerenciar-separacoes')) window.location.reload();
-        else await fetchAndRenderFila();
-    } catch (error) {
-        showToast(error.message, 'error');
-    } finally {
-        toggleButtonLoading(modal.saveButton, false, 'Salvar Alterações');
+    await handleApiAction(form, `/api/separacoes/${separacaoId}`, 'PUT', dados, 'Separação salva!', 'Salvar Alterações');
+    if (window.location.pathname.includes('/gerenciar-separacoes')) {
+        await carregarFinalizados(true); // Recarrega a tabela na página de gerenciamento
     }
 }
 async function handleObsFormSubmit(event) {
     event.preventDefault();
-    const modal = state.elementos.obsModal;
-    toggleButtonLoading(modal.saveButton, true, 'Salvando...');
-    const separacaoId = modal.form.dataset.id;
+    const form = state.elementos.obsModal.form;
+    const separacaoId = form.dataset.id;
     const dados = {
-        texto: modal.textoInput.value,
+        texto: state.elementos.obsModal.textoInput.value,
         autor: AppState.currentUser.nome,
         role: AppState.currentUser.role
     };
-    try {
-        const response = await fetch(`/api/separacoes/${separacaoId}/observacao`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(dados)
-        });
-        if (!response.ok) throw new Error((await response.json()).error || 'Falha ao salvar.');
-        showToast('Observação adicionada com sucesso!', 'success');
-        modal.overlay.style.display = 'none';
-        await fetchAndRenderFila();
-    } catch (error) {
-        showToast(error.message, 'error');
-    } finally {
-        toggleButtonLoading(modal.saveButton, false, 'Salvar Observação');
-    }
-}
-
-function startAutoRefresh() {
-    if (autoRefreshInterval) clearInterval(autoRefreshInterval);
-    autoRefreshInterval = setInterval(async () => {
-        // ATUALIZA APENAS OS QUADROS ATIVOS
-        await fetchActiveSeparacoes();
-    }, 15000);
+    await handleApiAction(form, `/api/separacoes/${separacaoId}/observacao`, 'POST', dados, 'Observação adicionada!', 'Salvar Observação');
 }
 
 async function fetchActiveSeparacoes() {
     try {
-        // --- INÍCIO DA CORREÇÃO ---
         const { role, nome } = AppState.currentUser;
-        // Adiciona a role e o nome do usuário como parâmetros na URL
         const response = await fetch(`/api/separacoes/ativas?user_role=${encodeURIComponent(role)}&user_name=${encodeURIComponent(nome)}`);
-        // --- FIM DA CORREÇÃO ---
 
         if (!response.ok) throw new Error('Falha ao buscar separações ativas.');
 
@@ -519,6 +529,7 @@ export async function initSeparacoesPage() {
             form: document.getElementById('form-edit-separacao'),
             movimentacaoInput: document.getElementById('edit-numero-movimentacao'),
             clienteInput: document.getElementById('edit-nome-cliente'),
+            qtdPecasInput: document.getElementById('edit-qtd-pecas'),
             vendedorSelect: document.getElementById('edit-vendedor-nome'),
             separadorSelect: document.getElementById('edit-separador-nome'),
             conferenteSelect: document.getElementById('edit-conferente-nome'),
@@ -561,7 +572,6 @@ export async function initSeparacoesPage() {
         state.elementos.filtroInput.value = '';
         state.termoBusca = '';
         carregarFinalizados(true);
-        
     });
     if (state.elementos.formSeparacao) state.elementos.formSeparacao.addEventListener('submit', handleFormSubmit);
     if (state.elementos.editModal.form) {
@@ -572,9 +582,18 @@ export async function initSeparacoesPage() {
         state.elementos.obsModal.form.addEventListener('submit', handleObsFormSubmit);
         state.elementos.obsModal.cancelButton.addEventListener('click', () => { state.elementos.obsModal.overlay.style.display = 'none'; });
     }
+
+    // --- MUDANÇA: Lógica de inicialização e polling ---
+    if (pollingInterval) clearInterval(pollingInterval);
+
     await fetchInitialData();
-    await fetchActiveSeparacoes();
-    await fetchAndRenderFila();
-    await carregarFinalizados(true);
-    startAutoRefresh();
+    await Promise.all([
+        fetchAndRenderFila(),
+        fetchActiveSeparacoes(),
+        carregarFinalizados(true)
+    ]);
+
+    // Inicia o polling após a carga inicial
+    verificarAtualizacoesSeparacoes(); // Popula o estado inicial
+    pollingInterval = setInterval(verificarAtualizacoesSeparacoes, 4000); // Verifica a cada 4 segundos
 }

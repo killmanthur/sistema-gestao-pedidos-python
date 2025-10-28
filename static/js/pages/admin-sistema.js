@@ -5,21 +5,19 @@ import { showConfirmModal, toggleButtonLoading } from '../ui.js';
 // ... (constantes ALL_PAGES, etc.) ...
 const ALL_PAGES = {
     quadro: "Quadro Ativo",
-    historico: "Histórico",
+    historico: "Histórico de Pedidos", // Renomeado para clareza
+    historico_conferencias: "Histórico de Conferências", // NOVA PÁGINA
     criar_pedido: "Pedidos Rua (Criar)",
     atualizacao_orcamento: "Atualizar Orçamento (Criar)",
     sugestoes: "Sugestão de Compras",
-    dashboard: "Dashboard",
-    // ****** NOVA PÁGINA ADICIONADA AQUI ******
+    dashboard: "Dashboard de Compras", // Renomeado para clareza
     dashboard_logistica: "Dashboard de Logística",
     recebimento: "Recebimento",
-    pendencias_e_alteracoes: "Pendências e Alterações",
+    conferencias: "Quadro de Conferência", // Renomeado para clareza
     separacoes: "Separações",
-    conferencias: "Conferência",
     gerenciar_separacoes: "Gerenciar Separações",
     admin_sistema: "Gerenciar Sistema"
 };
-
 
 const SEPARACOES_PERMS = {
     pode_criar_separacao: "Pode Criar",

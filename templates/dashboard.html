@@ -1,49 +1,24 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard de Análise{% endblock %}
+{% block title %}Quadro de Requisições{% endblock %}
 
 {% block content %}
-<section class="form-container" style="max-width: 1200px;">
-    <h2>Filtros do Dashboard</h2>
-    <form id="form-filtros-dashboard">
-        <div class="layout-grid-4-cols" style="gap: 1rem;">
-            <div class="form-group"><label for="filtro-vendedor">Vendedor</label><input type="text" id="filtro-vendedor"
-                    placeholder="Filtrar por vendedor..."></div>
-            <div class="form-group"><label for="filtro-comprador">Comprador</label><input type="text"
-                    id="filtro-comprador" placeholder="Filtrar por comprador..."></div>
-            <div class="form-group"><label for="filtro-data-inicio">De:</label><input type="date"
-                    id="filtro-data-inicio"></div>
-            <div class="form-group"><label for="filtro-data-fim">Até:</label><input type="date" id="filtro-data-fim">
-            </div>
-        </div>
-        <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
-            <button type="submit" class="btn btn--primary" style="flex-grow: 1;">Aplicar Filtros</button>
-            <button type="button" id="btn-limpar-filtros" class="btn btn--secondary" style="flex-grow: 1;">Limpar
-                Filtros</button>
-        </div>
-    </form>
+<section class="form-container" style="max-width: 800px; padding: 1.5rem; margin-bottom: 2rem;">
+    <input type="text" id="filtro-quadro-ativo" placeholder="🔎 Buscar por código, orçamento, vendedor, ...">
 </section>
-<hr>
-<section id="dashboard-container">
-    <div id="loading-spinner-dashboard" class="spinner" style="display: none; margin: 3rem auto;"></div>
-    <div class="layout-grid-3-cols">
-        <div class="card">
-            <div class="card__body">
-                <h3 style="text-align: center; margin-bottom: 1.5rem;">Atividade Mensal</h3><canvas
-                    id="lineChart"></canvas>
-            </div>
+
+<!-- VOLTANDO PARA layout-grid-2-cols -->
+<section class="layout-grid-2-cols">
+    <div class="quadro-coluna">
+        <h2>Pedidos Rua</h2>
+        <div id="quadro-pedidos-rua" class="quadro-container">
+            <!-- Cards serão inseridos aqui -->
         </div>
-        <div class="card">
-            <div class="card__body">
-                <h3 style="text-align: center; margin-bottom: 1.5rem;">Pedidos por Vendedor</h3><canvas
-                    id="pieChartVendedores"></canvas>
-            </div>
-        </div>
-        <div class="card">
-            <div class="card__body">
-                <h3 style="text-align: center; margin-bottom: 1.5rem;">Pedidos por Comprador</h3><canvas
-                    id="pieChartCompradores"></canvas>
-            </div>
+    </div>
+    <div class="quadro-coluna">
+        <h2>Atualização de Orçamentos</h2>
+        <div id="quadro-orcamentos" class="quadro-container">
+            <!-- Cards serão inseridos aqui -->
         </div>
     </div>
 </section>

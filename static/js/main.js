@@ -13,9 +13,10 @@ import { initInicioPage } from './pages/inicio.js';
 import { initSeparacoesPage } from './pages/separacoes.js';
 import { initConferenciasPage } from './pages/conferencias.js';
 import { initRecebimentoPage } from './pages/recebimento.js';
-import { initPendenciasEAlteracoesPage } from './pages/pendencias_e_alteracoes.js'; 
 import { initGerenciarSeparacoesPage } from './pages/gerenciar-separacoes.js';
 import { initDashboardLogisticaPage } from './pages/dashboard-logistica.js';
+// --- IMPORTAÇÃO CORRETA ---
+import { initHistoricoConferenciasPage } from './pages/historico-conferencias.js';
 import { setupNotifications } from './notifications.js';
 
 async function fetchInitialData() {
@@ -44,21 +45,52 @@ export async function initializeAuthenticatedApp() {
     setupNotifications();
 
     const path = window.location.pathname;
-    if (path.includes('/admin/sistema')) initAdminSistemaPage();
-    else if (path.includes('/inicio')) initInicioPage();
-    else if (path.includes('/quadro')) initQuadroPage();
-    else if (path.includes('/historico')) initHistoricoPage();
-    else if (path.includes('/sugestoes')) initSugestoesPage();
-    else if (path.includes('/criar-pedido')) initCriarPedidoPage();
-    else if (path.includes('/atualizacao-orcamento')) initAtualizacaoOrcamentoPage();
-    else if (path.includes('/dashboard-logistica')) initDashboardLogisticaPage(); // ****** NOVA LINHA ******
-    else if (path.includes('/dashboard')) initDashboardPage();
-    else if (path.includes('/separacoes')) initSeparacoesPage();
-    else if (path.includes('/conferencias')) initConferenciasPage();
-    else if (path.includes('/recebimento')) initRecebimentoPage();
-    else if (path.includes('/pendencias-e-alteracoes')) initPendenciasEAlteracoesPage(); // ROTA ATUALIZADA
-    else if (path.includes('/gerenciar-separacoes')) initGerenciarSeparacoesPage();
 
+    // --- CORREÇÃO AQUI ---
+    // Adiciona a verificação para a nova página de histórico
+    if (path.includes('/historico-conferencias')) {
+        initHistoricoConferenciasPage();
+    }
+    // O resto das condições continua como estava
+    else if (path.includes('/admin/sistema')) {
+        initAdminSistemaPage();
+    }
+    else if (path.includes('/inicio')) {
+        initInicioPage();
+    }
+    else if (path.includes('/quadro')) {
+        initQuadroPage();
+    }
+    else if (path.includes('/historico')) {
+        initHistoricoPage();
+    }
+    else if (path.includes('/sugestoes')) {
+        initSugestoesPage();
+    }
+    else if (path.includes('/criar-pedido')) {
+        initCriarPedidoPage();
+    }
+    else if (path.includes('/atualizacao-orcamento')) {
+        initAtualizacaoOrcamentoPage();
+    }
+    else if (path.includes('/dashboard-logistica')) {
+        initDashboardLogisticaPage();
+    }
+    else if (path.includes('/dashboard')) {
+        initDashboardPage();
+    }
+    else if (path.includes('/separacoes')) {
+        initSeparacoesPage();
+    }
+    else if (path.includes('/conferencias')) {
+        initConferenciasPage();
+    }
+    else if (path.includes('/recebimento')) {
+        initRecebimentoPage();
+    }
+    else if (path.includes('/gerenciar-separacoes')) {
+        initGerenciarSeparacoesPage();
+    }
 }
 
 export function initializePublicApp() {

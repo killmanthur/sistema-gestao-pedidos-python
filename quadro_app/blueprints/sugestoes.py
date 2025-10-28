@@ -1,8 +1,10 @@
 # quadro_app/blueprints/sugestoes.py
 from flask import Blueprint, request, jsonify
 from datetime import datetime
+from sqlalchemy import or_ # Adicione a importação de 'or_'
 from quadro_app import db, tz_cuiaba
-from quadro_app.models import Sugestao
+from quadro_app.models import Sugestao, Usuario # Importe o modelo Usuario
+from quadro_app.utils import criar_notificacao # Importe a função de notificação
 
 sugestoes_bp = Blueprint('sugestoes', __name__, url_prefix='/api/sugestoes') 
 
@@ -29,6 +31,32 @@ def criar_sugestao():
     )
     db.session.add(nova_sugestao)
     db.session.commit()
+    
+    # --- INÍCIO DA LÓGICA DE NOTIFICAÇÃO ---
+    try:
+        # 1. Encontra todos os usuários que têm a role 'Comprador'
+        compradores = Usuario.query.filter_by(role='Comprador').all()
+        
+        # 2. Monta a mensagem da notificação
+        vendedor_nome = nova_sugestao.vendedor or "Usuário"
+        # Pega o código do primeiro item como referência
+        codigo_ref = nova_sugestao.itens[0]['codigo'] if nova_sugestao.itens else 'N/A'
+        mensagem = f"Nova sugestão de compra de {vendedor_nome}: '{codigo_ref}...'"
+        
+        # 3. Cria uma notificação no banco de dados para cada comprador
+        for comprador in compradores:
+            criar_notificacao(
+                user_id=comprador.id, 
+                mensagem=mensagem, 
+                link='/sugestoes' # Link para a página de sugestões
+            )
+            
+    except Exception as e:
+        # A falha na notificação não deve impedir a criação da sugestão.
+        # Apenas registramos o erro no console do servidor.
+        print(f"ERRO ao criar notificação para nova sugestão: {e}")
+    # --- FIM DA LÓGICA DE NOTIFICAÇÃO ---
+
     return jsonify({'status': 'success', 'id': nova_sugestao.id}), 201
 
 # Rota para editar (PUT), deletar (DELETE) ou buscar uma sugestão específica (GET)
@@ -70,17 +98,13 @@ def atender_itens_sugestao(sugestao_id):
     itens_atuais = sugestao.itens or []
     for item_db in itens_atuais:
         for item_req in itens_para_atender:
-            # Compara código e quantidade para garantir que estamos atualizando o item correto
             if (item_db.get('codigo') == item_req.get('codigo') and 
                 str(item_db.get('quantidade', '1')) == str(item_req.get('quantidade', '1'))):
                 item_db['status'] = 'atendido'
                 break
     
-    # --- CORREÇÃO AQUI ---
-    # A linha abaixo não é mais necessária, mas precisamos marcar o campo como modificado
     from sqlalchemy.orm.attributes import flag_modified
     flag_modified(sugestao, "itens")
-    # --- FIM DA CORREÇÃO ---
 
     todos_atendidos = all(item.get('status') == 'atendido' for item in itens_atuais)
     algum_atendido = any(item.get('status') == 'atendido' for item in itens_atuais)
@@ -124,7 +148,6 @@ def get_sugestoes_paginadas():
     query = Sugestao.query.filter_by(status=status)
 
     if search_term:
-        # Busca por vendedor, comprador ou código dentro do JSON de itens
         search_filter = or_(
             Sugestao.vendedor.ilike(f'%{search_term}%'),
             Sugestao.comprador.ilike(f'%{search_term}%'),
@@ -134,11 +157,18 @@ def get_sugestoes_paginadas():
 
     pagination = query.order_by(Sugestao.data_criacao.desc()).paginate(page=page + 1, per_page=limit, error_out=False)
     
+    def serialize_sugestao_local(s):
+        return {
+            'id': s.id, 'vendedor': s.vendedor, 'status': s.status,
+            'comprador': s.comprador, 'data_criacao': s.data_criacao,
+            'itens': s.itens, 'observacao_geral': s.observacao_geral
+        }
+
     sugestoes = pagination.items
     tem_mais = pagination.has_next
     
     return jsonify({
-        'sugestoes': [serialize_sugestao(s) for s in sugestoes],
+        'sugestoes': [serialize_sugestao_local(s) for s in sugestoes],
         'temMais': tem_mais
     })
 
@@ -155,7 +185,6 @@ def finalizar_sugestao_parcial(sugestao_id):
     now_iso = datetime.now(tz_cuiaba).isoformat()
 
     try:
-        # Cria uma nova sugestão para os itens que foram atendidos
         if itens_atendidos:
             nova_sugestao_atendida = Sugestao(
                 vendedor=sugestao_original.vendedor,
@@ -167,19 +196,17 @@ def finalizar_sugestao_parcial(sugestao_id):
             )
             db.session.add(nova_sugestao_atendida)
 
-        # Cria uma nova sugestão para os itens que sobraram
         if itens_pendentes:
             nova_sugestao_pendente = Sugestao(
                 vendedor=sugestao_original.vendedor,
                 comprador=sugestao_original.comprador,
                 observacao_geral=sugestao_original.observacao_geral,
                 data_criacao=now_iso,
-                status='cogitado', # Itens pendentes voltam para a coluna 'Cogitado'
+                status='cogitado',
                 itens=itens_pendentes
             )
             db.session.add(nova_sugestao_pendente)
         
-        # Remove a sugestão original "parcialmente_atendido"
         db.session.delete(sugestao_original)
         
         db.session.commit()

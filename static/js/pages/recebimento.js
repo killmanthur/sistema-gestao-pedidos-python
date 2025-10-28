@@ -1,3 +1,4 @@
+// static/js/pages/recebimento.js
 import { AppState } from '../state.js';
 import { showToast } from '../toasts.js';
 import { toggleButtonLoading, formatarData, showConfirmModal } from '../ui.js';
@@ -11,15 +12,17 @@ let intervalId = null;
 async function fetchAndPopulateVendors(selectElement) {
     if (listaDeVendedores.length === 0) {
         try {
-            const response = await fetch('/api/usuarios/vendedor-nomes');
-            if (!response.ok) throw new Error('Falha ao buscar vendedores.');
+            // --- MUDANÇA AQUI ---
+            // Chama a nova rota específica que inclui "Estoque"
+            const response = await fetch('/api/usuarios/destinos-rua');
+            if (!response.ok) throw new Error('Falha ao buscar destinos de nota da rua.');
             listaDeVendedores = await response.json();
         } catch (error) {
             showToast(error.message, 'error');
             return;
         }
     }
-    selectElement.innerHTML = '<option value="" disabled selected>Selecione um vendedor</option>';
+    selectElement.innerHTML = '<option value="" disabled selected>Selecione um destino</option>';
     listaDeVendedores.forEach(nome => {
         selectElement.innerHTML += `<option value="${nome}">${nome}</option>`;
     });
@@ -41,6 +44,7 @@ function openEditModal(item) {
         transportadoraGroup.style.display = 'none';
         vendedorGroup.style.display = 'block';
         const vendedorSelect = document.getElementById('edit-nome-vendedor');
+        // Também usa a nova função aqui para garantir consistência
         fetchAndPopulateVendors(vendedorSelect).then(() => {
             vendedorSelect.value = item.vendedor_nome;
         });
@@ -54,6 +58,8 @@ function openEditModal(item) {
     modal.btnExcluir.style.display = perms.pode_deletar_conferencia ? 'inline-block' : 'none';
     modal.overlay.style.display = 'flex';
 }
+
+// ... (O restante do arquivo permanece exatamente o mesmo, pois as outras lógicas não precisam ser alteradas)
 
 async function handleEditFormSubmit(event) {
     event.preventDefault();
@@ -161,7 +167,7 @@ function renderizarTabela() {
         }
 
         const transportadoraCell = item.vendedor_nome
-            ? `<span style="font-weight: bold; color: var(--clr-info);">[RUA] Vendedor: ${item.vendedor_nome}</span>`
+            ? `<span style="font-weight: bold; color: var(--clr-info);">[RUA] Destino: ${item.vendedor_nome}</span>`
             : item.nome_transportadora;
 
         tr.innerHTML = `
@@ -212,9 +218,9 @@ async function handleFornecedorFormSubmit(event) {
     }
 }
 
-async function handleRuaFormAction(actionType) {
+async function handleRuaFormAction(actionType, event) {
     const modal = elementos.modalRua;
-    const btn = actionType === 'ok' ? modal.btnFinalizeOk : modal.btnSolicitarAlteracao;
+    const btn = event.target;
     const observacao = modal.obsInput.value.trim();
 
     if (actionType === 'alteracao' && !observacao) {
@@ -224,23 +230,23 @@ async function handleRuaFormAction(actionType) {
 
     toggleButtonLoading(btn, true, 'Salvando...');
 
-    const dados = {
+    const dadosRecebimento = {
         numero_nota_fiscal: document.getElementById('rua-numero-nota').value,
         nome_fornecedor: document.getElementById('rua-nome-fornecedor').value,
         vendedor_nome: document.getElementById('rua-nome-vendedor').value,
         qtd_volumes: document.getElementById('rua-qtd-volumes').value,
         recebido_por: document.getElementById('rua-recebido-por').value,
         editor_nome: AppState.currentUser.nome,
-        observacao: observacao,
         solicita_alteracao: actionType === 'alteracao',
         tem_pendencia_fornecedor: false,
+        observacao: observacao,
     };
 
     try {
         const response = await fetch('/api/conferencias/recebimento-rua', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(dados),
+            body: JSON.stringify(dadosRecebimento),
         });
         if (!response.ok) throw new Error((await response.json()).error);
         showToast('Nota da Rua registrada com sucesso!', 'success');
@@ -259,7 +265,7 @@ async function fetchData() {
         if (!response.ok) throw new Error('Falha ao buscar recebimentos.');
 
         todosOsRecebimentos = await response.json();
-        renderizarTabela(); // A função de renderizar e filtrar que já existe é reutilizada
+        renderizarTabela();
 
         elementos.spinner.style.display = 'none';
         elementos.tabela.style.display = 'table';
@@ -271,11 +277,8 @@ async function fetchData() {
 }
 
 function startAutoRefresh() {
-    // Limpa qualquer intervalo anterior para evitar múltiplos loops
     if (intervalId) clearInterval(intervalId);
-
-    // Inicia um novo intervalo e armazena seu ID na variável global do módulo
-    intervalId = setInterval(fetchData, 20000); // Atualiza a cada 20 segundos
+    intervalId = setInterval(fetchData, 3000);
 }
 
 export function initRecebimentoPage() {
@@ -316,11 +319,15 @@ export function initRecebimentoPage() {
     });
 
     elementos.modalFornecedor.form.addEventListener('submit', handleFornecedorFormSubmit);
-    elementos.modalRua.form.addEventListener('submit', (e) => {
+
+    elementos.modalRua.btnSolicitarAlteracao.addEventListener('click', (e) => {
         e.preventDefault();
-        handleRuaFormAction('alteracao');
+        handleRuaFormAction('alteracao', e);
     });
-    elementos.modalRua.btnFinalizeOk.addEventListener('click', () => handleRuaFormAction('ok'));
+    elementos.modalRua.btnFinalizeOk.addEventListener('click', (e) => {
+        e.preventDefault();
+        handleRuaFormAction('ok', e);
+    });
 
     if (elementos.editModal.form) {
         elementos.editModal.form.addEventListener('submit', handleEditFormSubmit);
@@ -338,6 +345,6 @@ export function initRecebimentoPage() {
         });
     });
 
-    fetchData(); // Busca inicial
+    fetchData();
     startAutoRefresh();
 }

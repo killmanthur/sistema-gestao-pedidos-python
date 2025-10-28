@@ -1,13 +1,13 @@
 # quadro_app/models.py
 from . import db
 from datetime import datetime
-# Importações necessárias para que o SQLAlchemy monitore mudanças em listas JSON
 from sqlalchemy.ext.mutable import MutableList
 from sqlalchemy.types import JSON
 
 # --- MODELOS PRINCIPAIS ---
 
 class Pedido(db.Model):
+    # ... (sem alterações aqui)
     id = db.Column(db.Integer, primary_key=True)
     vendedor = db.Column(db.String(100))
     status = db.Column(db.String(50), default='Aguardando')
@@ -16,19 +16,18 @@ class Pedido(db.Model):
     data_criacao = db.Column(db.String(100))
     data_finalizacao = db.Column(db.String(100))
     observacao_geral = db.Column(db.Text)
-    # CORREÇÃO: Usando MutableList
     itens = db.Column(MutableList.as_mutable(JSON))
     codigo = db.Column(db.String(100))
     descricao = db.Column(db.Text)
     marca = db.Column(db.String(100))
 
 class Sugestao(db.Model):
+    # ... (sem alterações aqui)
     id = db.Column(db.Integer, primary_key=True)
     vendedor = db.Column(db.String(100))
     status = db.Column(db.String(50), default='pendente')
     comprador = db.Column(db.String(100))
     data_criacao = db.Column(db.String(100))
-    # CORREÇÃO: Usando MutableList
     itens = db.Column(MutableList.as_mutable(JSON))
     observacao_geral = db.Column(db.Text)
     codigo = db.Column(db.String(100), nullable=True)
@@ -37,6 +36,7 @@ class Sugestao(db.Model):
     quantidade = db.Column(db.Integer, nullable=True)
 
 class Separacao(db.Model):
+    # ... (sem alterações aqui)
     id = db.Column(db.Integer, primary_key=True)
     numero_movimentacao = db.Column(db.String(20), unique=True, nullable=False)
     nome_cliente = db.Column(db.String(200))
@@ -47,8 +47,8 @@ class Separacao(db.Model):
     data_inicio_conferencia = db.Column(db.String(100))
     data_finalizacao = db.Column(db.String(100))
     conferente_nome = db.Column(db.String(100))
-    # CORREÇÃO: Usando MutableList
     observacoes = db.Column(MutableList.as_mutable(JSON))
+    qtd_pecas = db.Column(db.Integer, default=0)
 
 class Conferencia(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -59,27 +59,27 @@ class Conferencia(db.Model):
     qtd_volumes = db.Column(db.Integer)
     vendedor_nome = db.Column(db.String(100))
     recebido_por = db.Column(db.String(100))
-    status = db.Column(db.String(50))
+    # MUDANÇA: Status mais detalhados
+    status = db.Column(db.String(50)) # 'Aguardando...', 'Em Conferência', 'Pendente (Fornecedor)', 'Pendente (Alteração)', 'Pendente (Ambos)', 'Finalizado'
     data_inicio_conferencia = db.Column(db.String(100))
     data_finalizacao = db.Column(db.String(100))
-    # CORREÇÃO: Usando MutableList para conferentes e observacoes
     conferentes = db.Column(MutableList.as_mutable(JSON))
     observacoes = db.Column(MutableList.as_mutable(JSON))
+    # MUDANÇA: Campos de controle de resolução reintroduzidos
     resolvido_gestor = db.Column(db.Boolean, default=False)
     resolvido_contabilidade = db.Column(db.Boolean, default=False)
     conferente_nome = db.Column(db.String(100))
     editor_nome = db.Column(db.String(100))
 
 # --- MODELOS DE SUPORTE ---
-
+# ... (Usuario, Log, Notificacao sem alterações)
 class Usuario(db.Model):
     id = db.Column(db.String(100), primary_key=True)
     email = db.Column(db.String(150), unique=True, nullable=False)
     nome = db.Column(db.String(150))
     role = db.Column(db.String(50))
-    # CORREÇÃO: Usando MutableList para listas de permissões
     accessible_pages = db.Column(MutableList.as_mutable(JSON))
-    permissions = db.Column(db.JSON) # Permissions geralmente é um Dict, não List, então db.JSON puro pode bastar, mas se for mudar muito, use MutableDict
+    permissions = db.Column(db.JSON)
     password_hash = db.Column(db.String(256))
     ativo_na_fila = db.Column(db.Boolean, default=False)
     prioridade_fila = db.Column(db.Integer, default=0)
