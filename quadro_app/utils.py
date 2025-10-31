@@ -1,6 +1,7 @@
 # quadro_app/utils.py
 from datetime import datetime
-from . import db, tz_cuiaba
+from .extensions import db
+from .extensions import tz_cuiaba
 from .models import Log, Notificacao, Usuario # Importa o modelo de Log do SQLAlchemy
 
 # As funções de notificação do Firebase foram removidas, pois a lógica de notificação

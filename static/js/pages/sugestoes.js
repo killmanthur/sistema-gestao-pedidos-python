@@ -236,7 +236,7 @@ function criarItemSugestao(sugestao) {
     return card;
 }
 
-// ... (O resto do arquivo permanece o mesmo, pois a lógica de API não precisa de alterações)
+
 // ==========================================================================
 // 3. AÇÕES DO USUÁRIO E FORMULÁRIOS (API Calls)
 // ==========================================================================
@@ -280,18 +280,53 @@ function handleAtenderParcial(event, sugestaoId) {
     handleApiAction(promise, 'Itens atendidos com sucesso!');
 }
 
+/**
+ * --- INÍCIO DA CORREÇÃO ---
+ * Função para copiar o conteúdo da sugestão para a área de transferência.
+ * Inclui um fallback para ambientes não seguros (HTTP).
+ */
 function handleCopySugestao(sugestao) {
     const textoParaCopiar = sugestao.itens.map(item => `${item.quantidade || 1}x ${item.codigo}`).join('\n');
 
-    navigator.clipboard.writeText(textoParaCopiar)
-        .then(() => {
-            showToast('Itens copiados para a área de transferência!', 'success');
-        })
-        .catch(err => {
-            console.error('Falha ao copiar:', err);
-            showToast('Não foi possível copiar os itens.', 'error');
-        });
+    // Tenta usar a API moderna (só funciona em HTTPS/localhost)
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(textoParaCopiar)
+            .then(() => {
+                showToast('Itens copiados para a área de transferência!', 'success');
+            })
+            .catch(err => {
+                console.error('Falha ao copiar (API moderna):', err);
+                showToast('Não foi possível copiar os itens.', 'error');
+            });
+    } else {
+        // Fallback para HTTP ou navegadores mais antigos
+        const textArea = document.createElement("textarea");
+        textArea.value = textoParaCopiar;
+        // Evita que o textarea pisque na tela
+        textArea.style.position = "fixed";
+        textArea.style.top = "-9999px";
+        textArea.style.left = "-9999px";
+
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+
+        try {
+            const successful = document.execCommand('copy');
+            if (successful) {
+                showToast('Itens copiados para a área de transferência!', 'success');
+            } else {
+                throw new Error('execCommand retornou false');
+            }
+        } catch (err) {
+            console.error('Falha ao copiar (fallback):', err);
+            showToast('Não foi possível copiar. Esta função pode requerer uma conexão segura (HTTPS).', 'error');
+        }
+
+        document.body.removeChild(textArea);
+    }
 }
+// --- FIM DA CORREÇÃO ---
 
 
 function changeSugestaoStatus(sugestaoId, action) {

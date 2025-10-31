@@ -66,3 +66,7 @@ def gerenciar_separacoes_page():
 @main_views_bp.route('/admin/sistema')
 def gerenciar_sistema_page():
     return render_template('gerenciar_sistema.html')
+
+@main_views_bp.route('/lixeira')
+def lixeira_page():
+    return render_template('lixeira.html')

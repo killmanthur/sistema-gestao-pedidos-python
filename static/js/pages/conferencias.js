@@ -1,7 +1,7 @@
 // static/js/pages/conferencias.js
 import { AppState } from '../state.js';
 import { showToast } from '../toasts.js';
-import { toggleButtonLoading, formatarData, showConfirmModal } from '../ui.js';
+import { toggleButtonLoading, formatarData, showConfirmModal, openLogModal } from '../ui.js';
 
 let state = {};
 let intervalId = null;
@@ -31,17 +31,16 @@ function criarCardElement(item) {
     switch (item.status) {
         case 'Aguardando Conferência':
             card.classList.add('card--status-awaiting');
-            // --- INÍCIO DA CORREÇÃO DEFINITIVA ---
-            // A lógica agora é: sempre crie o botão, mas adicione 'disabled' se não tiver permissão.
             actions = `<button class="btn btn--edit" data-action="iniciar" ${podeIniciar ? '' : 'disabled'}>Iniciar Conferência</button>`;
             break;
-        // --- FIM DA CORREÇÃO DEFINITIVA ---
 
         case 'Em Conferência':
             card.classList.add('card--status-progress');
             timeInfoHTML = `<p><small><strong>Início:</strong> ${formatarData(item.data_inicio_conferencia)}</small></p>`;
-            // Aplica a mesma lógica para outros botões, garantindo consistência
-            actions = `<button class="btn btn--success" data-action="finalizar" ${podeFinalizar ? '' : 'disabled'}>Finalizar</button>`;
+            actions = `
+                <button class="btn btn--edit" data-action="editar-conferentes" ${podeFinalizar ? '' : 'disabled'}>Editar Conferentes</button>
+                <button class="btn btn--success" data-action="finalizar" ${podeFinalizar ? '' : 'disabled'}>Finalizar</button>
+            `;
             break;
 
         case 'Pendente (Fornecedor)':
@@ -67,8 +66,14 @@ function criarCardElement(item) {
         observacoesHTML += '</div>';
     }
 
+    // --- ADIÇÃO DO BOTÃO DE LOG ---
+    const logBtnHTML = `<button class="btn-icon" data-action="show-log" title="Ver Histórico"><img src="/static/history.svg" alt="Histórico"></button>`;
+
     card.innerHTML = `
-        <div class="card__header"><h3>NF: ${item.numero_nota_fiscal}</h3></div>
+        <div class="card__header">
+            <h3>NF: ${item.numero_nota_fiscal}</h3>
+            <div class="card__header-actions">${logBtnHTML}</div>
+        </div>
         <div class="card__body">
             <p><strong>Fornecedor:</strong> ${item.nome_fornecedor}</p>
             ${conferentesHTML} ${timeInfoHTML} ${observacoesHTML}
@@ -76,19 +81,22 @@ function criarCardElement(item) {
         <div class="card__footer"><div class="card__actions">${actions}</div></div>
     `;
 
-    // Adiciona os event listeners apenas aos botões que NÃO estão desabilitados
-    const actionButton = card.querySelector('[data-action]');
-    if (actionButton && !actionButton.disabled) {
-        const actionType = actionButton.dataset.action;
-        if (actionType === 'iniciar') actionButton.addEventListener('click', () => openConferenteModal(item.id));
-        if (actionType === 'finalizar') actionButton.addEventListener('click', () => openFinalizeModal(item.id));
-        if (actionType === 'resolver') actionButton.addEventListener('click', () => openResolverModal(item));
-    }
+    // Adiciona os event listeners, incluindo o do novo botão de log
+    card.querySelectorAll('[data-action]').forEach(button => {
+        if (button.disabled) return;
+
+        const actionType = button.dataset.action;
+        if (actionType === 'iniciar') button.addEventListener('click', () => openConferenteModal(item));
+        if (actionType === 'editar-conferentes') button.addEventListener('click', () => openConferenteModal(item));
+        if (actionType === 'finalizar') button.addEventListener('click', () => openFinalizeModal(item.id));
+        if (actionType === 'resolver') button.addEventListener('click', () => openResolverModal(item));
+        // --- ADIÇÃO DO LISTENER PARA O LOG ---
+        if (actionType === 'show-log') button.addEventListener('click', () => openLogModal(item.id, 'conferencias'));
+    });
 
     return card;
 }
 
-// ... O restante do arquivo `conferencias.js` continua exatamente o mesmo que a versão anterior ...
 function renderizarColunas() {
     const termo = state.elementos.filtroInput.value.toLowerCase().trim();
     const filterFn = item => item.numero_nota_fiscal.toLowerCase().includes(termo) || item.nome_fornecedor.toLowerCase().includes(termo);
@@ -141,10 +149,18 @@ function openResolverModal(item) {
         histContainer.innerHTML += '<p>Nenhuma observação ainda.</p>';
     }
 
-    const { role } = AppState.currentUser;
-    let podeResolverFornecedor = (role === 'Admin' || role === 'Estoque') && !item.resolvido_gestor;
-    let podeResolverContabilidade = (role === 'Admin' || role === 'Contabilidade') && !item.resolvido_contabilidade;
-    modal.form.querySelector('button[type="submit"]').style.display = (podeResolverFornecedor || podeResolverContabilidade) ? 'inline-block' : 'none';
+    // --- INÍCIO DA ALTERAÇÃO ---
+    const userPermissions = AppState.currentUser.permissions || {};
+    const btnResolver = modal.form.querySelector('button[type="submit"]');
+
+    // O botão só fica visível se o usuário tiver a permissão correta
+    if (userPermissions.pode_resolver_pendencia_conferencia) {
+        btnResolver.style.display = 'inline-block';
+        btnResolver.disabled = false;
+    } else {
+        btnResolver.style.display = 'none'; // Esconde o botão completamente
+    }
+    // --- FIM DA ALTERAÇÃO ---
 
     modal.overlay.style.display = 'flex';
 }
@@ -168,6 +184,7 @@ async function handleApiCall(form, url, method, body, successMessage, btnText) {
 }
 
 export function initConferenciasPage() {
+    resetState();
     state = {
         elementos: {
             filtroInput: document.getElementById('filtro-conferencias'),
@@ -179,19 +196,32 @@ export function initConferenciasPage() {
             finalizeModal: { overlay: document.getElementById('finalize-modal-overlay'), form: document.getElementById('form-finalize-conferencia') },
             resolverModal: { overlay: document.getElementById('resolver-modal-overlay'), form: document.getElementById('form-resolver') }
         },
-        todasAtivas: [], listaEstoquistas: [],
     };
     if (!state.elementos.quadroAguardando) return;
 
     state.elementos.filtroInput.addEventListener('input', renderizarColunas);
 
+    // --- INÍCIO DA MUDANÇA ---
     state.elementos.addConferenteModal.form.addEventListener('submit', (e) => {
         e.preventDefault();
-        const form = e.target, id = form.dataset.id;
+        const form = e.target;
+        const id = form.dataset.id;
+        const mode = form.dataset.mode;
+
         const conferentes = Array.from(form.querySelectorAll('input:checked')).map(cb => cb.value);
-        if (conferentes.length === 0) return showToast('Selecione ao menos um conferente.', 'error');
-        handleApiCall(form, `/api/conferencias/${id}/iniciar`, 'PUT', { conferentes, editor_nome: AppState.currentUser.nome }, 'Conferência iniciada!', 'Confirmar e Iniciar');
+        if (conferentes.length === 0 && mode === 'iniciar') {
+            return showToast('Selecione ao menos um conferente para iniciar.', 'error');
+        }
+
+        const body = { conferentes, editor_nome: AppState.currentUser.nome };
+
+        if (mode === 'iniciar') {
+            handleApiCall(form, `/api/conferencias/${id}/iniciar`, 'PUT', body, 'Conferência iniciada!', 'Confirmar e Iniciar');
+        } else if (mode === 'atualizar') {
+            handleApiCall(form, `/api/conferencias/${id}/conferentes`, 'PUT', body, 'Conferentes atualizados!', 'Confirmar e Iniciar');
+        }
     });
+    // --- FIM DA MUDANÇA ---
 
     state.elementos.finalizeModal.form.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -254,11 +284,25 @@ export function initConferenciasPage() {
     intervalId = setInterval(fetchData, 20000);
 }
 
-function openConferenteModal(id) {
+function openConferenteModal(item) {
     const modal = state.elementos.addConferenteModal;
-    modal.form.dataset.id = id;
+    modal.form.dataset.id = item.id;
+    // Define o modo: 'iniciar' para novas conferências, 'atualizar' para as existentes
+    modal.form.dataset.mode = item.status === 'Aguardando Conferência' ? 'iniciar' : 'atualizar';
+
     const container = modal.form.querySelector('#conferentes-checkbox-container');
     container.innerHTML = state.listaEstoquistas.map(nome => `<label><input type="checkbox" name="conferente" value="${nome}"> ${nome}</label>`).join('');
+
+    // Se estiver no modo de atualização, pré-seleciona os conferentes atuais
+    if (modal.form.dataset.mode === 'atualizar') {
+        const conferentesAtuais = item.conferentes || [];
+        container.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+            if (conferentesAtuais.includes(checkbox.value)) {
+                checkbox.checked = true;
+            }
+        });
+    }
+
     modal.overlay.style.display = 'flex';
 }
 

@@ -3,6 +3,41 @@
 {% block title %}Gerenciar Sistema{% endblock %}
 
 {% block content %}
+<section class="form-container" style="max-width: 1300px; margin-bottom: 2rem; border-left: 5px solid var(--clr-info);">
+    <h3>Gerenciador de Listas Dinâmicas</h3>
+    <p>Use esta ferramenta para adicionar ou remover nomes rapidamente dos menus do sistema (ex: Vendedores, Marcas) sem
+        precisar criar contas de usuário.</p>
+
+    <div class="layout-grid-2-cols" style="align-items: start; gap: 2rem; margin-top: 1.5rem;">
+        <div>
+            <div class="form-group">
+                <label for="lista-selecionada">Selecione a Lista para Editar</label>
+                <select id="lista-selecionada">
+                    <option value="" disabled selected>Carregando listas...</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <p style="font-size: 0.9rem; color: var(--text-secondary);">
+                    <strong>Instruções:</strong><br>
+                    1. Selecione uma lista acima.<br>
+                    2. Edite os nomes na caixa ao lado (um por linha).<br>
+                    3. Clique em "Salvar Lista".
+                </p>
+            </div>
+        </div>
+        <div>
+            <div class="form-group">
+                <label for="editor-lista-itens">Itens da Lista (Um nome por linha)</label>
+                <textarea id="editor-lista-itens" rows="10"
+                    style="font-family: monospace; white-space: pre;"></textarea>
+            </div>
+            <div style="text-align: right;">
+                <button id="btn-salvar-lista" class="btn btn--primary" disabled>Salvar Lista</button>
+            </div>
+        </div>
+    </div>
+</section>
+<hr>
 <section class="form-container" style="max-width: 1300px;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
         <h2>Gerenciar Usuários e Permissões</h2>
@@ -28,6 +63,7 @@
         <tbody id="users-table-body"></tbody>
     </table>
 </section>
+
 <div id="user-modal-overlay" class="modal-overlay" style="display: none;">
     <div class="modal-content">
         <div class="modal-header">

@@ -2,7 +2,7 @@
 from flask import Blueprint, request, jsonify, Response
 from datetime import datetime
 from sqlalchemy import or_
-from quadro_app import db, tz_cuiaba
+from ..extensions import db, tz_cuiaba
 from quadro_app.models import Pedido, Sugestao
 
 dashboard_bp = Blueprint('dashboard', __name__, url_prefix='/api')

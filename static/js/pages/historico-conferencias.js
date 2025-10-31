@@ -2,7 +2,7 @@
 import { AppState } from '../state.js';
 import { showToast } from '../toasts.js';
 // --- CORREÇÃO AQUI ---
-import { formatarData, toggleButtonLoading } from '../ui.js';
+import { formatarData, toggleButtonLoading, openLogModal } from '../ui.js';
 
 // --- Estado e Constantes (sem alterações) ---
 const TAMANHO_PAGINA = 20;
@@ -74,7 +74,8 @@ async function handleReiniciarSubmit(event) {
 
     const dados = {
         autor: document.getElementById('reiniciar-autor').value,
-        motivo: document.getElementById('reiniciar-motivo').value
+        motivo: document.getElementById('reiniciar-motivo').value,
+        user_id: AppState.currentUser.data.uid
     };
 
     if (!dados.autor || !dados.motivo) {
@@ -114,8 +115,21 @@ function criarCardHistorico(item) {
     card.className = 'card card--status-done separacao-card';
     card.dataset.id = item.id;
 
+    const userPermissions = AppState.currentUser.permissions || {};
+    const logBtnHTML = `<button class="btn-icon" data-action="show-log" title="Ver Histórico"><img src="/static/history.svg" alt="Histórico"></button>`;
+
+    // --- INÍCIO DA ALTERAÇÃO ---
+    // Cria o botão "Reiniciar" apenas se o usuário tiver a permissão
+    const reiniciarBtnHTML = userPermissions.pode_reiniciar_conferencia_historico
+        ? `<button class="btn btn--danger btn-reiniciar">Reiniciar</button>`
+        : '';
+    // --- FIM DA ALTERAÇÃO ---
+
     card.innerHTML = `
-        <div class="card__header"><h3>NF: ${item.numero_nota_fiscal}</h3></div>
+        <div class="card__header">
+            <h3>NF: ${item.numero_nota_fiscal}</h3>
+            <div class="card__header-actions">${logBtnHTML}</div>
+        </div>
         <div class="card__body">
             <div class="card-info-grid">
                 <p><strong>Fornecedor:</strong> ${item.nome_fornecedor}</p>
@@ -127,13 +141,15 @@ function criarCardHistorico(item) {
         <div class="card__footer">
             <div class="card__actions">
                 <button class="btn btn--secondary btn-details">Ver Detalhes</button>
-                <button class="btn btn--danger btn-reiniciar">Reiniciar</button> 
+                ${reiniciarBtnHTML}
             </div>
         </div>
     `;
 
     card.querySelector('.btn-details').addEventListener('click', () => openDetailsModal(item));
-    card.querySelector('.btn-reiniciar').addEventListener('click', () => openReiniciarModal(item));
+    // O listener só é adicionado se o botão existir
+    card.querySelector('.btn-reiniciar')?.addEventListener('click', () => openReiniciarModal(item));
+    card.querySelector('[data-action="show-log"]').addEventListener('click', () => openLogModal(item.id, 'conferencias'));
 
     return card;
 }

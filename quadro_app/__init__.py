@@ -1,12 +1,12 @@
 import sys
 import os
 import time
-from datetime import timezone, timedelta
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
+from .blueprints.lixeira import lixeira_bp
+from .blueprints.listas_dinamicas import listas_bp, garantir_listas_padrao
+from .extensions import db
 
-tz_cuiaba = timezone(timedelta(hours=-4))
-db = SQLAlchemy()
 
 # Não precisamos mais da função 'resource_path' aqui.
 
@@ -51,6 +51,9 @@ def create_app():
     from .blueprints.configuracoes import config_bp
     from .blueprints.conferencias import conferencias_bp
     from .blueprints.notificacoes import notificacoes_bp
+    from .blueprints.logs import logs_bp
+    from .blueprints.lixeira import lixeira_bp
+    from .blueprints.listas_dinamicas import listas_bp, garantir_listas_padrao
 
     app.register_blueprint(main_views_bp)
     app.register_blueprint(pedidos_bp)
@@ -61,10 +64,14 @@ def create_app():
     app.register_blueprint(config_bp)
     app.register_blueprint(conferencias_bp)
     app.register_blueprint(notificacoes_bp)
+    app.register_blueprint(logs_bp)
+    app.register_blueprint(lixeira_bp)
+    app.register_blueprint(listas_bp) 
 
     # Cria as tabelas no banco de dados se não existirem
     with app.app_context():
         from . import models
         db.create_all()
+        garantir_listas_padrao()
 
     return app, None, TV_MODE

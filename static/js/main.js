@@ -15,7 +15,7 @@ import { initConferenciasPage } from './pages/conferencias.js';
 import { initRecebimentoPage } from './pages/recebimento.js';
 import { initGerenciarSeparacoesPage } from './pages/gerenciar-separacoes.js';
 import { initDashboardLogisticaPage } from './pages/dashboard-logistica.js';
-// --- IMPORTAÇÃO CORRETA ---
+import { initLixeiraPage } from './pages/lixeira.js';
 import { initHistoricoConferenciasPage } from './pages/historico-conferencias.js';
 import { setupNotifications } from './notifications.js';
 
@@ -91,6 +91,9 @@ export async function initializeAuthenticatedApp() {
     else if (path.includes('/gerenciar-separacoes')) {
         initGerenciarSeparacoesPage();
     }
+    else if (path.includes('/lixeira')) {
+        initLixeiraPage();
+    }
 }
 
 export function initializePublicApp() {
@@ -99,7 +102,6 @@ export function initializePublicApp() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("DEBUG: DOMContentLoaded acionado. Iniciando aplicação.");
     initializeTheme();
     setupAuthObserver();
 });

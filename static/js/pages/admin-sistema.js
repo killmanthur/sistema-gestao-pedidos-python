@@ -2,21 +2,21 @@
 import { showToast } from '../toasts.js';
 import { showConfirmModal, toggleButtonLoading } from '../ui.js';
 
-// ... (constantes ALL_PAGES, etc.) ...
 const ALL_PAGES = {
     quadro: "Quadro Ativo",
-    historico: "Histórico de Pedidos", // Renomeado para clareza
-    historico_conferencias: "Histórico de Conferências", // NOVA PÁGINA
+    historico: "Histórico de Pedidos",
+    historico_conferencias: "Histórico de Conferências",
     criar_pedido: "Pedidos Rua (Criar)",
     atualizacao_orcamento: "Atualizar Orçamento (Criar)",
     sugestoes: "Sugestão de Compras",
-    dashboard: "Dashboard de Compras", // Renomeado para clareza
+    dashboard: "Dashboard de Compras",
     dashboard_logistica: "Dashboard de Logística",
     recebimento: "Recebimento",
-    conferencias: "Quadro de Conferência", // Renomeado para clareza
+    conferencias: "Quadro de Conferência",
     separacoes: "Separações",
     gerenciar_separacoes: "Gerenciar Separações",
-    admin_sistema: "Gerenciar Sistema"
+    admin_sistema: "Gerenciar Sistema",
+    lixeira: "Lixeira" // Adicionado para completude
 };
 
 const SEPARACOES_PERMS = {
@@ -38,21 +38,79 @@ const CONFERENCIAS_PERMS = {
     pode_deletar_conferencia: "Pode Deletar Conferência"
 };
 
-// NOVA CONSTANTE PARA A NOVA PERMISSÃO
+// --- INÍCIO DA ALTERAÇÃO ---
 const PENDENCIAS_PERMS = {
-    pode_editar_pendencia: "Pode Editar Pendências"
+    pode_editar_pendencia: "Pode Editar Pendências",
+    pode_resolver_pendencia_conferencia: "Pode Resolver Pendências (Conferência)",
+    pode_reiniciar_conferencia_historico: "Pode Reiniciar Conferência (Histórico)"
+};
+// --- FIM DA ALTERAÇÃO ---
+
+
+const LISTAS_DISPONIVEIS = {
+    'vendedores': 'Vendedores',
+    'compradores': 'Compradores',
+    'separadores': 'Separadores (Lista Mestre)',
+    'conferentes_estoque': 'Conferentes (Estoque)',
+    'conferentes_expedicao': 'Conferentes (Expedição)',
 };
 
-// --- ESTADO DO MÓDULO ---
 let elements = {};
 let allUsersData = [];
 let currentSort = { key: 'nome', order: 'asc' };
 let debounceTimer;
 
-// ... (função apiCall, etc. permanecem iguais) ...
+async function carregarListasDropdown() {
+    const select = document.getElementById('lista-selecionada');
+    select.innerHTML = '<option value="" disabled selected>-- Selecione uma lista --</option>';
+    for (const [key, label] of Object.entries(LISTAS_DISPONIVEIS)) {
+        select.innerHTML += `<option value="${key}">${label}</option>`;
+    }
+}
+
+async function carregarItensDaLista(nomeLista) {
+    const textarea = document.getElementById('editor-lista-itens');
+    const btnSalvar = document.getElementById('btn-salvar-lista');
+    textarea.value = 'Carregando...';
+    textarea.disabled = true;
+    btnSalvar.disabled = true;
+    try {
+        const response = await fetch(`/api/listas/${nomeLista}`);
+        if (!response.ok) throw new Error('Erro ao buscar lista.');
+        const itens = await response.json();
+        textarea.value = itens.join('\n');
+    } catch (error) {
+        showToast('Erro ao carregar a lista.', 'error');
+        textarea.value = '';
+    } finally {
+        textarea.disabled = false;
+        btnSalvar.disabled = false;
+    }
+}
+
+async function salvarListaAtual() {
+    const nomeLista = document.getElementById('lista-selecionada').value;
+    if (!nomeLista) return;
+    const btnSalvar = document.getElementById('btn-salvar-lista');
+    const textarea = document.getElementById('editor-lista-itens');
+    toggleButtonLoading(btnSalvar, true, 'Salvando...');
+    const itens = textarea.value.split('\n').map(s => s.trim()).filter(s => s.length > 0);
+    try {
+        const response = await fetch(`/api/listas/${nomeLista}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ itens: itens })
+        });
+        if (!response.ok) throw new Error('Falha ao salvar.');
+        showToast(`Lista "${LISTAS_DISPONIVEIS[nomeLista]}" atualizada com sucesso!`, 'success');
+    } catch (error) {
+        showToast(error.message, 'error');
+    } finally {
+        toggleButtonLoading(btnSalvar, false, 'Salvar Lista');
+    }
+}
+
 async function apiCall(endpoint, method = 'GET', body = null) {
-    // Removemos completamente a lógica de autenticação do Firebase.
-    // A segurança agora é baseada no acesso à rede.
     const options = {
         method,
         headers: { 'Content-Type': 'application/json' }
@@ -60,15 +118,10 @@ async function apiCall(endpoint, method = 'GET', body = null) {
     if (body) {
         options.body = JSON.stringify(body);
     }
-
-    // O endpoint agora aponta para a nossa API local.
     const response = await fetch(`/api/usuarios${endpoint}`, options);
-
-    // Se a resposta for vazia (ex: em um DELETE bem-sucedido), retorna um objeto de sucesso.
     if (response.status === 204 || response.headers.get("content-length") === "0") {
         return { status: "success" };
     }
-
     const result = await response.json();
     if (!response.ok) {
         throw new Error(result.error || `Falha na requisição ${method} ${endpoint}`);
@@ -77,36 +130,23 @@ async function apiCall(endpoint, method = 'GET', body = null) {
 }
 
 function renderPermissionsCheckboxes(container, permissionsMap, userPermissions) {
-    if (!container) return; // Adiciona uma verificação para segurança
+    if (!container) return;
     container.innerHTML = Object.entries(permissionsMap).map(([key, name]) => {
         const isChecked = userPermissions && userPermissions[key] === true;
-        return `
-            <label>
-                <input type="checkbox" data-key="${key}" ${isChecked ? 'checked' : ''}>
-                ${name}
-            </label>
-        `;
+        return `<label><input type="checkbox" data-key="${key}" ${isChecked ? 'checked' : ''}>${name}</label>`;
     }).join('');
 }
-
 
 function openModal(mode = 'create', user = null) {
     elements.form.reset();
     elements.form.dataset.mode = mode;
-
     const userPages = user ? user.accessible_pages || [] : [];
-    const userRole = user ? user.role : document.getElementById('user-role').value;
     const allPermissions = user ? user.permissions : {};
-
-    renderPermissionsCheckboxes(elements.pagesPermissionsContainer, ALL_PAGES,
-        Object.fromEntries(userPages.map(p => [p, true]))
-    );
+    renderPermissionsCheckboxes(elements.pagesPermissionsContainer, ALL_PAGES, Object.fromEntries(userPages.map(p => [p, true])));
     renderPermissionsCheckboxes(elements.separacoesPermissionsContainer, SEPARACOES_PERMS, allPermissions);
     renderPermissionsCheckboxes(elements.sugestoesPermissionsContainer, SUGESTOES_PERMS, allPermissions);
     renderPermissionsCheckboxes(elements.conferenciasPermissionsContainer, CONFERENCIAS_PERMS, allPermissions);
-    // ADIÇÃO: Renderiza o novo checkbox
     renderPermissionsCheckboxes(elements.pendenciasPermissionsContainer, PENDENCIAS_PERMS, allPermissions);
-
     if (mode === 'edit') {
         elements.modalTitle.textContent = 'Editar Usuário';
         elements.form.dataset.uid = user.uid;
@@ -116,8 +156,7 @@ function openModal(mode = 'create', user = null) {
         document.getElementById('user-role').value = user.role;
         elements.passwordGroup.style.display = 'none';
         document.getElementById('user-password').required = false;
-
-    } else { // create
+    } else {
         elements.modalTitle.textContent = 'Criar Novo Usuário';
         elements.form.dataset.uid = '';
         elements.passwordGroup.style.display = 'block';
@@ -140,7 +179,6 @@ function openSetPasswordModal(user) {
 }
 
 function renderTable() {
-    // ... (função renderTable permanece igual) ...
     const searchTerm = elements.filtroInput.value.toLowerCase().trim();
     const filteredUsers = searchTerm
         ? allUsersData.filter(user =>
@@ -149,7 +187,6 @@ function renderTable() {
             user.role.toLowerCase().includes(searchTerm)
         )
         : allUsersData;
-
     filteredUsers.sort((a, b) => {
         const valA = a[currentSort.key]?.toLowerCase() || '';
         const valB = b[currentSort.key]?.toLowerCase() || '';
@@ -157,7 +194,6 @@ function renderTable() {
         if (valA > valB) return currentSort.order === 'asc' ? 1 : -1;
         return 0;
     });
-
     elements.tableBody.innerHTML = '';
     if (!filteredUsers || filteredUsers.length === 0) {
         elements.tableBody.innerHTML = '<tr><td colspan="4">Nenhum usuário encontrado.</td></tr>';
@@ -180,7 +216,6 @@ function renderTable() {
 }
 
 async function fetchAndRenderUsers() {
-    // ... (função fetchAndRenderUsers permanece igual) ...
     elements.spinner.style.display = 'block';
     elements.table.style.display = 'none';
     try {
@@ -197,27 +232,14 @@ async function fetchAndRenderUsers() {
 async function handleFormSubmit(event) {
     event.preventDefault();
     toggleButtonLoading(elements.btnSave, true, 'Salvando...');
-
     const mode = elements.form.dataset.mode;
     const uid = elements.form.dataset.uid;
-
-    const accessible_pages = Array.from(elements.pagesPermissionsContainer.querySelectorAll('input:checked'))
-        .map(cb => cb.dataset.key);
-
+    const accessible_pages = Array.from(elements.pagesPermissionsContainer.querySelectorAll('input:checked')).map(cb => cb.dataset.key);
     const permissions = {};
-    elements.separacoesPermissionsContainer.querySelectorAll('input:checked').forEach(cb => {
-        permissions[cb.dataset.key] = true;
-    });
-    elements.sugestoesPermissionsContainer.querySelectorAll('input:checked').forEach(cb => {
-        permissions[cb.dataset.key] = true;
-    });
-    elements.conferenciasPermissionsContainer.querySelectorAll('input:checked').forEach(cb => {
-        permissions[cb.dataset.key] = true;
-    });
-    elements.pendenciasPermissionsContainer.querySelectorAll('input:checked').forEach(cb => {
-        permissions[cb.dataset.key] = true;
-    });
-
+    elements.separacoesPermissionsContainer.querySelectorAll('input:checked').forEach(cb => { permissions[cb.dataset.key] = true; });
+    elements.sugestoesPermissionsContainer.querySelectorAll('input:checked').forEach(cb => { permissions[cb.dataset.key] = true; });
+    elements.conferenciasPermissionsContainer.querySelectorAll('input:checked').forEach(cb => { permissions[cb.dataset.key] = true; });
+    elements.pendenciasPermissionsContainer.querySelectorAll('input:checked').forEach(cb => { permissions[cb.dataset.key] = true; });
     const userData = {
         nome: document.getElementById('user-nome').value,
         email: document.getElementById('user-email').value,
@@ -228,16 +250,13 @@ async function handleFormSubmit(event) {
     if (mode === 'create') {
         userData.password = document.getElementById('user-password').value;
     }
-
     try {
         const endpoint = mode === 'create' ? '' : `/${uid}`;
         const method = mode === 'create' ? 'POST' : 'PUT';
-        // A CHAMADA EXTRA FOI REMOVIDA DAQUI. Agora só fazemos uma chamada.
         await apiCall(endpoint, method, userData);
-
         showToast(`Usuário ${mode === 'create' ? 'criado' : 'atualizado'} com sucesso!`, 'success');
         closeModal();
-        fetchAndRenderUsers(); // Recarrega a lista de usuários com os novos dados
+        fetchAndRenderUsers();
     } catch (error) {
         showToast(`Erro: ${error.message}`, 'error');
     } finally {
@@ -245,14 +264,11 @@ async function handleFormSubmit(event) {
     }
 }
 
-// ... (Restante do arquivo permanece o mesmo) ...
 function handleTableActions(event) {
     const target = event.target;
     const userRow = target.closest('tr');
     if (!userRow) return;
-
     const user = JSON.parse(userRow.dataset.user);
-
     if (target.classList.contains('btn-edit')) {
         openModal('edit', user);
     } else if (target.classList.contains('btn-set-pass')) {
@@ -271,21 +287,15 @@ function handleTableActions(event) {
 function handleSort(event) {
     const target = event.target;
     if (!target.classList.contains('sortable')) return;
-
     const sortKey = target.dataset.sort;
-
     if (currentSort.key === sortKey) {
         currentSort.order = currentSort.order === 'asc' ? 'desc' : 'asc';
     } else {
         currentSort.key = sortKey;
         currentSort.order = 'asc';
     }
-
-    document.querySelectorAll('.admin-table th.sortable').forEach(th => {
-        th.classList.remove('asc', 'desc');
-    });
+    document.querySelectorAll('.admin-table th.sortable').forEach(th => { th.classList.remove('asc', 'desc'); });
     target.classList.add(currentSort.order);
-
     renderTable();
 }
 
@@ -296,7 +306,6 @@ async function handleSetPasswordSubmit(event) {
     const newPassword = document.getElementById('new-password').value;
     const confirmPassword = document.getElementById('confirm-password').value;
     const saveButton = document.getElementById('btn-save-set-password');
-
     if (newPassword !== confirmPassword) {
         showToast('As senhas não coincidem.', 'error');
         return;
@@ -305,7 +314,6 @@ async function handleSetPasswordSubmit(event) {
         showToast('A senha deve ter no mínimo 6 caracteres.', 'error');
         return;
     }
-
     toggleButtonLoading(saveButton, true, 'Salvando...');
     try {
         await apiCall(`/${uid}/set-password`, 'POST', { password: newPassword });
@@ -317,7 +325,6 @@ async function handleSetPasswordSubmit(event) {
         toggleButtonLoading(saveButton, false, 'Salvar Nova Senha');
     }
 }
-
 
 export function initAdminSistemaPage() {
     elements = {
@@ -335,26 +342,31 @@ export function initAdminSistemaPage() {
         separacoesPermissionsContainer: document.getElementById('separacoes-permissions-container'),
         sugestoesPermissionsContainer: document.getElementById('sugestoes-permissions-container'),
         conferenciasPermissionsContainer: document.getElementById('conferencias-permissions-container'),
-        // ADIÇÃO: Obtém a referência do novo container
         pendenciasPermissionsContainer: document.getElementById('pendencias-permissions-container'),
         filtroInput: document.getElementById('filtro-tabela-usuarios')
     };
+
+    const listaSelect = document.getElementById('lista-selecionada');
+    const btnSalvarLista = document.getElementById('btn-salvar-lista');
+    if (listaSelect && btnSalvarLista) {
+        carregarListasDropdown();
+        listaSelect.addEventListener('change', (e) => {
+            if (e.target.value) {
+                carregarItensDaLista(e.target.value);
+            }
+        });
+        btnSalvarLista.addEventListener('click', salvarListaAtual);
+    }
+
     if (!elements.tableBody) return;
 
     const setPasswordForm = document.getElementById('form-set-password');
-    const btnCancelSetPassword = document.getElementById('btn-cancel-set-password');
-    if (setPasswordForm && btnCancelSetPassword) {
+    if (setPasswordForm) {
         setPasswordForm.addEventListener('submit', handleSetPasswordSubmit);
-        btnCancelSetPassword.addEventListener('click', () => {
-            document.getElementById('set-password-modal-overlay').style.display = 'none';
-        });
     }
-
     elements.btnCreate.addEventListener('click', () => openModal('create'));
-    elements.btnCancel.addEventListener('click', closeModal);
     elements.tableBody.addEventListener('click', handleTableActions);
     elements.form.addEventListener('submit', handleFormSubmit);
-
     document.querySelector('.admin-table thead').addEventListener('click', handleSort);
     elements.filtroInput.addEventListener('input', () => {
         clearTimeout(debounceTimer);
@@ -362,6 +374,5 @@ export function initAdminSistemaPage() {
             renderTable();
         }, 300);
     });
-
     fetchAndRenderUsers();
 }

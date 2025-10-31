@@ -1,10 +1,10 @@
 # quadro_app/blueprints/sugestoes.py
 from flask import Blueprint, request, jsonify
 from datetime import datetime
-from sqlalchemy import or_ # Adicione a importação de 'or_'
-from quadro_app import db, tz_cuiaba
-from quadro_app.models import Sugestao, Usuario # Importe o modelo Usuario
-from quadro_app.utils import criar_notificacao # Importe a função de notificação
+from sqlalchemy import or_ 
+from ..extensions import db, tz_cuiaba
+from quadro_app.models import Sugestao, Usuario, ItemExcluido
+from quadro_app.utils import criar_notificacao, registrar_log # Importe a função de notificação
 
 sugestoes_bp = Blueprint('sugestoes', __name__, url_prefix='/api/sugestoes') 
 
@@ -119,7 +119,22 @@ def atender_itens_sugestao(sugestao_id):
 
 @sugestoes_bp.route('/<int:sugestao_id>', methods=['DELETE'])
 def deletar_sugestao(sugestao_id):
+    editor_nome = request.json.get('editor_nome', 'Sistema') # Pega o nome do editor (se enviado)
     sugestao = Sugestao.query.get_or_404(sugestao_id)
+
+    # --- LÓGICA DE SOFT DELETE ---
+    item_excluido = ItemExcluido(
+        tipo_item='Sugestao',
+        item_id_original=str(sugestao.id),
+        dados_item=serialize_sugestao(sugestao),
+        excluido_por=editor_nome,
+        data_exclusao=datetime.now(tz_cuiaba).isoformat()
+    )
+    db.session.add(item_excluido)
+    # --- FIM ---
+
+    registrar_log(sugestao_id, editor_nome, 'EXCLUSAO', detalhes={'info': 'Sugestão movida para a lixeira.'}, log_type='sugestoes')
+
     db.session.delete(sugestao)
     db.session.commit()
     return jsonify({'status': 'success'})

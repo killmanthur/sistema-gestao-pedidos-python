@@ -78,6 +78,8 @@
                         <ul class="dropdown-menu">
                             <li class="nav-item" data-page="admin_sistema"><a
                                     href="{{ url_for('main_views.gerenciar_sistema_page') }}">Gerenciar Sistema</a></li>
+                            <!-- NOVO LINK PARA A LIXEIRA -->
+                            <li class="nav-item" data-page="lixeira"><a href="{{ url_for('main_views.lixeira_page') }}">Lixeira</a></li>
                         </ul>
                     </li>
 
@@ -176,8 +178,13 @@
                             id="edit-nome-cliente" required></div>
                     <div class="form-group"><label for="edit-vendedor-nome">Vendedor</label><select id="edit-vendedor-nome"
                             required data-placeholder="Selecione um Vendedor"></select></div>
-                    <div class="form-group"><label for="edit-separador-nome">Separador</label><select
-                            id="edit-separador-nome" required data-placeholder="Selecione um Separador"></select></div>
+                    <div class="form-group">
+                        <label for="edit-separador-container">Separador(es)</label>
+                        <div id="edit-separador-container" class="permissions-grid"
+                            style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); border: 1px solid var(--border-strong); padding: 0.75rem; border-radius: var(--border-radius);">
+                            <!-- Checkboxes serão inseridos aqui via JS -->
+                        </div>
+                    </div>
                     <div class="form-group"><label for="edit-conferente-nome">Conferente</label><select
                             id="edit-conferente-nome" data-placeholder="Selecione um Conferente"></select></div>
                 </div>

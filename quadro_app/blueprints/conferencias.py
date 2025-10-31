@@ -2,8 +2,8 @@
 from flask import Blueprint, request, jsonify
 from datetime import datetime
 from sqlalchemy import or_
-from quadro_app import db, tz_cuiaba
-from quadro_app.models import Conferencia
+from ..extensions import db, tz_cuiaba
+from quadro_app.models import Conferencia, ItemExcluido, Usuario
 from quadro_app.utils import registrar_log
 
 conferencias_bp = Blueprint('conferencias', __name__, url_prefix='/api/conferencias')
@@ -27,21 +27,31 @@ def reiniciar_conferencia(conferencia_id):
     dados = request.get_json()
     autor = dados.get('autor')
     motivo = dados.get('motivo')
+    
+    # --- INÍCIO DA PROTEÇÃO DA ROTA ---
+    # A requisição deve incluir o ID do usuário que está tentando a ação
+    user_id = dados.get('user_id') 
+    if not user_id:
+        return jsonify({'error': 'ID do usuário é obrigatório para esta ação.'}), 400
+
+    usuario = Usuario.query.get(user_id)
+    if not usuario:
+        return jsonify({'error': 'Usuário não encontrado.'}), 404
+        
+    # Verifica as permissões do usuário
+    user_permissions = usuario.permissions or {}
+    if not user_permissions.get('pode_reiniciar_conferencia_historico'):
+        return jsonify({'error': 'Você não tem permissão para reiniciar conferências.'}), 403
+    # --- FIM DA PROTEÇÃO DA ROTA ---
 
     if not autor or not motivo:
         return jsonify({'error': 'Autor e motivo são obrigatórios.'}), 400
 
     conferencia = Conferencia.query.get_or_404(conferencia_id)
-
-    # Reverte o status para 'Em Conferência'
     conferencia.status = 'Em Conferência'
-    
-    # Limpa a data de finalização e os flags de resolução
     conferencia.data_finalizacao = None
     conferencia.resolvido_gestor = False
     conferencia.resolvido_contabilidade = False
-
-    # Adiciona a justificativa ao log de observações
     obs_atuais = conferencia.observacoes or []
     nova_obs = {
         'texto': f"[REINICIADO] {motivo}",
@@ -50,15 +60,10 @@ def reiniciar_conferencia(conferencia_id):
     }
     obs_atuais.append(nova_obs)
     conferencia.observacoes = list(obs_atuais)
-
-    # Se não houver conferentes definidos (pode acontecer em notas de rua antigas), adiciona o autor
     if not conferencia.conferentes:
         conferencia.conferentes = [autor]
-
     db.session.commit()
-    
     registrar_log(conferencia_id, autor, 'CONFERENCIA_REINICIADA', detalhes={'info': motivo}, log_type='conferencias')
-    
     return jsonify({'status': 'success', 'message': 'Conferência reiniciada com sucesso.'})
 
 @conferencias_bp.route('/<int:conferencia_id>/finalizar-conferencia', methods=['PUT'])
@@ -219,32 +224,116 @@ def editar_conferencia(conferencia_id):
     dados = request.get_json()
     editor_nome = dados.pop('editor_nome', 'N/A')
     conferencia = Conferencia.query.get_or_404(conferencia_id)
+
+    # Captura o estado antigo dos campos que podem ser editados
+    estado_antigo = {
+        'Nº Nota Fiscal': conferencia.numero_nota_fiscal,
+        'Fornecedor': conferencia.nome_fornecedor,
+        'Transportadora': conferencia.nome_transportadora,
+        'Destino (Rua)': conferencia.vendedor_nome,
+        'Volumes': conferencia.qtd_volumes,
+        'Recebido por': conferencia.recebido_por
+    }
+
+    # Aplica as atualizações
     for key, value in dados.items():
         if hasattr(conferencia, key):
             setattr(conferencia, key, value)
+            
     db.session.commit()
-    registrar_log(conferencia_id, editor_nome, 'EDICAO_GERAL', log_type='conferencias')
+    
+    # Compara o estado antigo com o novo e monta o log
+    detalhes_log = {}
+    estado_novo = {
+        'Nº Nota Fiscal': conferencia.numero_nota_fiscal,
+        'Fornecedor': conferencia.nome_fornecedor,
+        'Transportadora': conferencia.nome_transportadora,
+        'Destino (Rua)': conferencia.vendedor_nome,
+        'Volumes': conferencia.qtd_volumes,
+        'Recebido por': conferencia.recebido_por
+    }
+
+    for key, valor_antigo in estado_antigo.items():
+        valor_novo = estado_novo.get(key)
+        if str(valor_antigo) != str(valor_novo):
+            detalhes_log[key] = {
+                'de': valor_antigo or 'N/A',
+                'para': valor_novo or 'N/A'
+            }
+            
+    if detalhes_log:
+        registrar_log(conferencia_id, editor_nome, 'EDICAO', detalhes=detalhes_log, log_type='conferencias')
+
     return jsonify({'status': 'success'})
 
 @conferencias_bp.route('/<int:conferencia_id>', methods=['DELETE'])
 def deletar_conferencia(conferencia_id):
     editor_nome = request.json.get('editor_nome', 'N/A')
     conferencia = Conferencia.query.get_or_404(conferencia_id)
+    
+    # Cria uma cópia para a lixeira ANTES de deletar
+    item_excluido = ItemExcluido(
+        tipo_item='Conferencia',
+        item_id_original=str(conferencia.id),
+        dados_item=serialize_conferencia(conferencia),
+        excluido_por=editor_nome,
+        data_exclusao=datetime.now(tz_cuiaba).isoformat()
+    )
+    db.session.add(item_excluido)
+    
+    # Registra o log da exclusão
+    log_info = f"NF {conferencia.numero_nota_fiscal} de '{conferencia.nome_fornecedor}' movida para a lixeira."
+    registrar_log(conferencia_id, editor_nome, 'EXCLUSAO', detalhes={'info': log_info}, log_type='conferencias')
+    
+    # Deleta o item original
     db.session.delete(conferencia)
     db.session.commit()
-    registrar_log(conferencia_id, editor_nome, 'EXCLUSAO', log_type='conferencias')
     return jsonify({'status': 'success'})
+# --- FIM DA MUDANÇA ---
 
 @conferencias_bp.route('/<int:conferencia_id>/iniciar', methods=['PUT'])
 def iniciar_conferencia(conferencia_id):
     dados = request.get_json()
     editor_nome = dados.get('editor_nome', 'N/A')
+    conferentes = dados.get('conferentes')
     conferencia = Conferencia.query.get_or_404(conferencia_id)
+    
     conferencia.status = 'Em Conferência'
     conferencia.data_inicio_conferencia = datetime.now(tz_cuiaba).isoformat()
-    conferencia.conferentes = dados.get('conferentes')
+    conferencia.conferentes = conferentes
     db.session.commit()
-    registrar_log(conferencia_id, editor_nome, 'INICIO_CONFERENCIA', detalhes={'conferentes': dados.get('conferentes')}, log_type='conferencias')
+    
+    # --- MUDANÇA 1: Formato do log de início ---
+    info_text = f"Iniciada com: {', '.join(conferentes) if conferentes else 'Nenhum conferente'}"
+    registrar_log(conferencia_id, editor_nome, 'INICIO_CONFERENCIA', detalhes={'info': info_text}, log_type='conferencias')
+    
+    return jsonify({'status': 'success'})
+
+@conferencias_bp.route('/<int:conferencia_id>/conferentes', methods=['PUT'])
+def atualizar_conferentes(conferencia_id):
+    """Atualiza a lista de conferentes de uma conferência em andamento."""
+    dados = request.get_json()
+    novos_conferentes = dados.get('conferentes')
+    editor_nome = dados.get('editor_nome', 'N/A')
+
+    if not isinstance(novos_conferentes, list):
+        return jsonify({'error': 'A lista de conferentes é inválida.'}), 400
+
+    conferencia = Conferencia.query.get_or_404(conferencia_id)
+    
+    conferentes_antigos = conferencia.conferentes[:] if conferencia.conferentes else []
+    conferencia.conferentes = novos_conferentes
+    db.session.commit()
+
+    # --- MUDANÇA 2: Estrutura do log de atualização ---
+    registrar_log(
+        conferencia_id, 
+        editor_nome, 
+        'CONFERENTES_ATUALIZADOS', 
+        detalhes={'conferentes': {'de': conferentes_antigos, 'para': novos_conferentes}}, 
+        log_type='conferencias'
+    )
+
     return jsonify({'status': 'success'})
 
 @conferencias_bp.route('/recebimento-rua', methods=['POST'])

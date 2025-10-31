@@ -4,16 +4,10 @@ import { showToast } from '../toasts.js';
 
 let formFiltros, spinner, tabelaSeparadoresBody, tabelaConferentesBody;
 
-/**
- * Renderiza os dados em uma tabela específica.
- * @param {HTMLTableSectionElement} tbodyElement - O elemento tbody da tabela.
- * @param {Array} data - Os dados a serem renderizados.
- * @param {Array<string>} columns - As chaves dos dados para cada coluna.
- */
 function renderTable(tbodyElement, data, columns) {
     tbodyElement.innerHTML = '';
     if (!data || data.length === 0) {
-        tbodyElement.innerHTML = `<tr><td colspan="${columns.length}">Nenhum dado encontrado.</td></tr>`;
+        tbodyElement.innerHTML = `<tr><td colspan="${columns.length}">Nenhum dado encontrado para o período.</td></tr>`;
         return;
     }
 
@@ -28,9 +22,6 @@ function renderTable(tbodyElement, data, columns) {
     });
 }
 
-/**
- * Busca os dados do dashboard na API com base nos filtros.
- */
 async function fetchAndRenderData() {
     spinner.style.display = 'block';
     tabelaSeparadoresBody.innerHTML = `<tr><td colspan="4">Carregando...</td></tr>`;
@@ -54,7 +45,6 @@ async function fetchAndRenderData() {
 
         const data = await response.json();
 
-        // MUDANÇA: Adicionado 'total_pecas' à lista de colunas
         renderTable(tabelaSeparadoresBody, data.separadores, ['nome', 'count', 'total_pecas', 'avg_time_str']);
         renderTable(tabelaConferentesBody, data.conferentes, ['nome', 'count', 'total_pecas', 'avg_time_str']);
 
@@ -68,9 +58,6 @@ async function fetchAndRenderData() {
     }
 }
 
-/**
- * Função principal que inicializa a página do Dashboard de Logística.
- */
 export function initDashboardLogisticaPage() {
     formFiltros = document.getElementById('form-filtros-logistica');
     spinner = document.getElementById('loading-spinner-dashboard');
@@ -90,6 +77,5 @@ export function initDashboardLogisticaPage() {
         fetchAndRenderData();
     });
 
-    // Carrega os dados iniciais ao entrar na página
     fetchAndRenderData();
 }

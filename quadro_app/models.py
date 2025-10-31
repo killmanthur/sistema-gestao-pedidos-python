@@ -1,8 +1,9 @@
+
 # quadro_app/models.py
-from . import db
 from datetime import datetime
 from sqlalchemy.ext.mutable import MutableList
 from sqlalchemy.types import JSON
+from .extensions import db
 
 # --- MODELOS PRINCIPAIS ---
 
@@ -36,11 +37,16 @@ class Sugestao(db.Model):
     quantidade = db.Column(db.Integer, nullable=True)
 
 class Separacao(db.Model):
-    # ... (sem alterações aqui)
     id = db.Column(db.Integer, primary_key=True)
     numero_movimentacao = db.Column(db.String(20), unique=True, nullable=False)
     nome_cliente = db.Column(db.String(200))
-    separador_nome = db.Column(db.String(100))
+
+    # --- INÍCIO DA ALTERAÇÃO ---
+    # O campo foi renomeado para o plural para indicar que é uma lista.
+    # O tipo foi alterado de String para JSON para armazenar a lista de nomes.
+    separadores_nomes = db.Column(MutableList.as_mutable(JSON))
+    # --- FIM DA ALTERAÇÃO ---
+    
     vendedor_nome = db.Column(db.String(100))
     status = db.Column(db.String(50), default='Em Separação')
     data_criacao = db.Column(db.String(100))
@@ -49,6 +55,7 @@ class Separacao(db.Model):
     conferente_nome = db.Column(db.String(100))
     observacoes = db.Column(MutableList.as_mutable(JSON))
     qtd_pecas = db.Column(db.Integer, default=0)
+
 
 class Conferencia(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -72,7 +79,7 @@ class Conferencia(db.Model):
     editor_nome = db.Column(db.String(100))
 
 # --- MODELOS DE SUPORTE ---
-# ... (Usuario, Log, Notificacao sem alterações)
+
 class Usuario(db.Model):
     id = db.Column(db.String(100), primary_key=True)
     email = db.Column(db.String(150), unique=True, nullable=False)
@@ -81,8 +88,22 @@ class Usuario(db.Model):
     accessible_pages = db.Column(MutableList.as_mutable(JSON))
     permissions = db.Column(db.JSON)
     password_hash = db.Column(db.String(256))
-    ativo_na_fila = db.Column(db.Boolean, default=False)
-    prioridade_fila = db.Column(db.Integer, default=0)
+
+class ListaDinamica(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    nome = db.Column(db.String(100), unique=True, nullable=False) # ex: 'vendedores', 'marcas'
+    itens = db.Column(MutableList.as_mutable(JSON), default=[]) # Lista de strings ['João', 'Maria']
+
+class ItemExcluido(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    tipo_item = db.Column(db.String(50), nullable=False) # 'Pedido', 'Sugestao', 'Separacao', 'Conferencia'
+    item_id_original = db.Column(db.String(100), nullable=False)
+    dados_item = db.Column(db.JSON, nullable=False) # Armazena um JSON do item original
+    excluido_por = db.Column(db.String(100))
+    data_exclusao = db.Column(db.String(100), nullable=False)
+    
+    # Índice para buscas mais rápidas
+    __table_args__ = (db.Index('idx_tipo_id_original', 'tipo_item', 'item_id_original'),)
 
 class Log(db.Model):
     id = db.Column(db.Integer, primary_key=True)

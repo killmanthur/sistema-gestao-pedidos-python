@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Lixeira{% endblock %}
+
+{% block content %}
+<section class="form-container" style="max-width: 1400px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h2>Lixeira de Itens Excluídos</h2>
+        <button id="btn-atualizar-lixeira" class="btn btn--secondary">Atualizar</button>
+    </div>
+    <p>Visualize todos os itens que foram excluídos. A partir daqui, você pode auditar os dados ou restaurá-los para
+        seus quadros originais.</p>
+
+    <div style="margin: 2rem 0;">
+        <input type="search" id="filtro-tabela-lixeira" placeholder="🔎 Buscar por tipo, ID, dados...">
+    </div>
+
+    <div id="loading-spinner-lixeira" class="spinner" style="display: block; margin: 2rem auto;"></div>
+
+    <table id="tabela-lixeira" class="admin-table" style="display: none; width: 100%; margin-top: 2rem;">
+        <thead>
+            <tr>
+                <th>Tipo</th>
+                <th>Descrição Principal</th>
+                <th>Excluído por</th>
+                <th>Data Exclusão</th>
+                <th style="width: 220px;">Ações</th>
+            </tr>
+        </thead>
+        <tbody id="tabela-lixeira-body"></tbody>
+    </table>
+</section>
+
+<!-- Modal de detalhes será reutilizado, o de base.html -->
+{% endblock %}

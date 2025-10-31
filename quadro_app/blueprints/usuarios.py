@@ -1,7 +1,7 @@
 # quadro_app/blueprints/usuarios.py
 from flask import Blueprint, request, jsonify
-from quadro_app import db
-from quadro_app.models import Usuario
+from ..extensions import db
+from quadro_app.models import Usuario, ListaDinamica 
 import uuid
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -100,42 +100,44 @@ def set_user_password(uid):
     return jsonify({"status": "success", "message": "Senha atualizada com sucesso."})
 
 
-# --- Rotas auxiliares para buscar nomes por role ---
+def _get_lista_dinamica_ou_fallback(nome_lista, role_fallback):
+    """
+    Tenta buscar da nova lista dinâmica. Se falhar (ex: banco ainda não migrado),
+    faz fallback para a busca antiga por role na tabela de usuários.
+    """
+    lista = ListaDinamica.query.filter_by(nome=nome_lista).first()
+    if lista:
+        return sorted(lista.itens)
+    
+    # Fallback (segurança)
+    users = Usuario.query.filter_by(role=role_fallback).all()
+    return sorted([u.nome for u in users if u.nome])
 
 @usuarios_bp.route('/comprador-nomes', methods=['GET'])
 def get_comprador_nomes():
-    users = Usuario.query.filter_by(role='Comprador').all()
-    return jsonify(sorted([u.nome for u in users if u.nome]))
+    return jsonify(_get_lista_dinamica_ou_fallback('compradores', 'Comprador'))
 
 @usuarios_bp.route('/vendedor-nomes', methods=['GET'])
 def get_vendedor_nomes():
-    users = Usuario.query.filter_by(role='Vendedor').all()
-    # --- MUDANÇA: REVERTIDA ---
-    # Agora esta rota retorna APENAS os vendedores, como deveria ser.
-    vendedores = [u.nome for u in users if u.nome]
-    return jsonify(sorted(vendedores))
+    return jsonify(_get_lista_dinamica_ou_fallback('vendedores', 'Vendedor'))
 
-# --- NOVA ROTA ---
 @usuarios_bp.route('/destinos-rua', methods=['GET'])
 def get_destinos_rua():
-    """Retorna a lista de vendedores mais a opção 'Estoque'."""
-    users = Usuario.query.filter_by(role='Vendedor').all()
-    destinos = [u.nome for u in users if u.nome]
-    destinos.append("Estoque") # Adiciona a opção estática "Estoque"
-    return jsonify(sorted(destinos))
-# --- FIM DA NOVA ROTA ---
+    vendedores = _get_lista_dinamica_ou_fallback('vendedores', 'Vendedor')
+    if "Estoque" not in vendedores:
+        vendedores.append("Estoque")
+    return jsonify(sorted(vendedores))
 
 @usuarios_bp.route('/separador-nomes', methods=['GET'])
 def get_separador_nomes():
-    users = Usuario.query.filter_by(role='Separador').all()
-    return jsonify(sorted([u.nome for u in users if u.nome and u.nome.lower() != 'separacao']))
+    return jsonify(_get_lista_dinamica_ou_fallback('separadores', 'Separador'))
 
 @usuarios_bp.route('/expedicao-nomes', methods=['GET'])
 def get_expedicao_nomes():
-    users = Usuario.query.filter_by(role='Expedição').all()
-    return jsonify(sorted([u.nome for u in users if u.nome and u.nome.lower() != 'expedicao']))
+    # Agora busca da lista específica de conferentes da expedição
+    return jsonify(_get_lista_dinamica_ou_fallback('conferentes_expedicao', 'Expedição'))
 
 @usuarios_bp.route('/estoquista-nomes', methods=['GET'])
 def get_estoquista_nomes():
-    users = Usuario.query.filter_by(role='Estoque').all()
-    return jsonify(sorted([u.nome for u in users if u.nome]))
+    # Agora busca da lista específica de conferentes do estoque
+     return jsonify(_get_lista_dinamica_ou_fallback('conferentes_estoque', 'Estoque'))

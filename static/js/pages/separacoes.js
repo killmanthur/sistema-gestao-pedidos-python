@@ -1,3 +1,4 @@
+
 // static/js/pages/separacoes.js
 import { AppState } from '../state.js';
 import { showToast } from '../toasts.js';
@@ -5,35 +6,26 @@ import { toggleButtonLoading, formatarData, showConfirmModal, openLogModal } fro
 
 let state = {};
 let debounceTimer;
-let pollingInterval = null; // Renomeado de autoRefreshInterval para clareza
+let pollingInterval = null;
 
-// --- INÍCIO DA NOVA LÓGICA DE SINCRONIZAÇÃO ---
 let estadoAnterior = {
     total_ativas: 0,
     ultimo_update: null,
 };
 
 async function verificarAtualizacoesSeparacoes() {
-    // Não verifica se o usuário está digitando no campo de busca
     if (document.activeElement === state.elementos.filtroInput && state.elementos.filtroInput.value !== '') {
         return;
     }
-
     try {
         const response = await fetch('/api/separacoes/status-ativas');
         if (!response.ok) return;
-
         const estadoAtual = await response.json();
-
         const mudouTotal = estadoAtual.total_ativas !== estadoAnterior.total_ativas;
         const mudouTimestamp = estadoAtual.ultimo_update !== estadoAnterior.ultimo_update;
-
         if (mudouTotal || mudouTimestamp) {
             console.log("Detectada mudança nas separações. Atualizando...");
             estadoAnterior = estadoAtual;
-
-            // Recarrega apenas a fila, os quadros ativos e o primeiro lote de finalizados.
-            // Isso é mais eficiente do que recarregar tudo sempre.
             await Promise.all([
                 fetchAndRenderFila(),
                 fetchActiveSeparacoes(),
@@ -43,12 +35,14 @@ async function verificarAtualizacoesSeparacoes() {
         console.error("Erro no polling de separações:", error);
     }
 }
-// --- FIM DA NOVA LÓGICA DE SINCRONIZAÇÃO ---
 
 function resetState() {
     state = {
         elementos: {},
         listasUsuarios: { expedicao: [], vendedores: [], separadores: [] },
+        // --- NOVO ESTADO PARA A FILA ---
+        filaAtiva: [], // Armazena os nomes dos separadores atualmente na fila
+        selecionadosNoForm: [],
         todasAsSeparacoesAtivas: [],
         dadosAtivos: { andamento: [], conferencia: [] },
         dadosFinalizados: [],
@@ -59,6 +53,46 @@ function resetState() {
     };
 }
 
+function openSelecionarSeparadorModal() {
+    const modal = state.elementos.selecionarSeparadorModal;
+    const container = modal.checkboxContainer;
+    modal.overlay.style.display = 'flex';
+    container.innerHTML = ''; // Limpa o conteúdo anterior
+
+    // --- INÍCIO DA CORREÇÃO ---
+    // Em vez de usar a lista mestre de todos os separadores,
+    // usamos a lista `filaAtiva` que é atualizada constantemente.
+    const separadoresDisponiveis = state.filaAtiva || [];
+    // --- FIM DA CORREÇÃO ---
+
+    if (separadoresDisponiveis.length === 0) {
+        container.innerHTML = '<p>Nenhum separador ativo na fila no momento.</p>';
+        return;
+    }
+
+    separadoresDisponiveis.forEach(nome => {
+        const isChecked = state.selecionadosNoForm.includes(nome);
+        const label = document.createElement('label');
+        label.innerHTML = `<input type="checkbox" value="${nome}" ${isChecked ? 'checked' : ''}> ${nome}`;
+        container.appendChild(label);
+    });
+}
+
+function confirmarSelecaoSeparadores() {
+    const modal = state.elementos.selecionarSeparadorModal;
+    const checkboxes = modal.checkboxContainer.querySelectorAll('input[type="checkbox"]:checked');
+    state.selecionadosNoForm = Array.from(checkboxes).map(cb => cb.value);
+    const displayElement = state.elementos.separadoresDisplay;
+    if (state.selecionadosNoForm.length > 0) {
+        displayElement.textContent = state.selecionadosNoForm.join(', ');
+        displayElement.style.color = 'var(--text-primary)';
+    } else {
+        displayElement.textContent = 'Nenhum selecionado';
+        displayElement.style.color = 'var(--text-secondary)';
+    }
+    modal.overlay.style.display = 'none';
+}
+
 export function openEditModal(separacao) {
     const modal = state.elementos.editModal;
     modal.form.dataset.id = separacao.id;
@@ -66,7 +100,20 @@ export function openEditModal(separacao) {
     modal.clienteInput.value = separacao.nome_cliente;
     modal.qtdPecasInput.value = separacao.qtd_pecas || '';
     populateSelect(modal.vendedorSelect, state.listasUsuarios.vendedores, separacao.vendedor_nome);
-    populateSelect(modal.separadorSelect, state.listasUsuarios.separadores, separacao.separador_nome);
+
+    // --- INÍCIO DA NOVA LÓGICA DE EDIÇÃO ---
+    const separadorContainer = document.getElementById('edit-separador-container');
+    separadorContainer.innerHTML = ''; // Limpa checkboxes antigos
+    const separadoresAtuais = separacao.separadores_nomes || [];
+
+    state.listasUsuarios.separadores.forEach(nome => {
+        const isChecked = separadoresAtuais.includes(nome);
+        const label = document.createElement('label');
+        label.innerHTML = `<input type="checkbox" value="${nome}" ${isChecked ? 'checked' : ''}> ${nome}`;
+        separadorContainer.appendChild(label);
+    });
+    // --- FIM DA NOVA LÓGICA DE EDIÇÃO ---
+
     const conferenteSelect = modal.conferenteSelect;
     populateSelect(conferenteSelect, state.listasUsuarios.expedicao, separacao.conferente_nome);
     conferenteSelect.insertAdjacentHTML('afterbegin', '<option value="">-- Remover Conferente --</option>');
@@ -77,16 +124,20 @@ export function openEditModal(separacao) {
 };
 
 async function fetchAndRenderFila() {
-    const listaFila = document.getElementById('fila-separadores-lista');
-    const separadorSelect = document.getElementById('separador-nome');
-    if (!listaFila || !separadorSelect) return;
+    const listaFilaElement = document.getElementById('fila-separadores-lista');
+    if (!listaFilaElement) return;
 
     try {
         const response = await fetch('/api/separacoes/fila-separadores');
         if (!response.ok) throw new Error('Falha ao buscar fila.');
         const filaVisivel = await response.json();
 
-        listaFila.innerHTML = '';
+        // --- INÍCIO DA ALTERAÇÃO ---
+        // Armazena a fila ativa no estado global para que outras funções possam usá-la.
+        state.filaAtiva = filaVisivel;
+        // --- FIM DA ALTERAÇÃO ---
+
+        listaFilaElement.innerHTML = '';
         if (filaVisivel.length > 0) {
             filaVisivel.forEach((nome, index) => {
                 const li = document.createElement('li');
@@ -94,21 +145,14 @@ async function fetchAndRenderFila() {
                 if (index === 0) {
                     li.classList.add('proximo-separador');
                 }
-                listaFila.appendChild(li);
+                listaFilaElement.appendChild(li);
             });
         } else {
-            listaFila.innerHTML = '<li>Nenhum separador ativo na fila.</li>';
+            listaFilaElement.innerHTML = '<li>Nenhum separador ativo na fila.</li>';
         }
-
-        if (filaVisivel.length > 0) {
-            populateSelect(separadorSelect, filaVisivel, filaVisivel[0]);
-        } else {
-            separadorSelect.innerHTML = '<option value="" disabled selected>Sem separadores ativos...</option>';
-        }
-
     } catch (error) {
-        listaFila.innerHTML = '<li>Erro ao carregar a fila.</li>';
-        separadorSelect.innerHTML = '<option value="" disabled selected>Erro...</option>';
+        listaFilaElement.innerHTML = '<li>Erro ao carregar a fila.</li>';
+        state.filaAtiva = []; // Limpa em caso de erro
         console.error(error);
     }
 }
@@ -116,31 +160,22 @@ async function fetchAndRenderFila() {
 async function openFilaModal() {
     const modal = state.elementos.gerenciarFilaModal;
     const container = modal.checkboxContainer;
-
     modal.overlay.style.display = 'flex';
     container.innerHTML = '<div class="spinner" style="margin: 1rem auto;"></div>';
-
     try {
         const response = await fetch('/api/separacoes/status-todos-separadores');
         if (!response.ok) throw new Error('Falha ao buscar a lista de separadores.');
-
         const separadores = await response.json();
         container.innerHTML = '';
-
         if (separadores.length === 0) {
             container.innerHTML = '<p>Nenhum usuário com a função "Separador" encontrado.</p>';
             return;
         }
-
         separadores.forEach(sep => {
             const label = document.createElement('label');
-            label.innerHTML = `
-                <input type="checkbox" value="${sep.nome}" ${sep.ativo ? 'checked' : ''}>
-                ${sep.nome}
-            `;
+            label.innerHTML = `<input type="checkbox" value="${sep.nome}" ${sep.ativo ? 'checked' : ''}> ${sep.nome}`;
             container.appendChild(label);
         });
-
     } catch (error) {
         showToast(error.message, 'error');
         container.innerHTML = `<p style="color: var(--clr-danger);">${error.message}</p>`;
@@ -152,26 +187,21 @@ async function handleSaveFila(event) {
     const modal = state.elementos.gerenciarFilaModal;
     const saveBtn = modal.saveButton;
     toggleButtonLoading(saveBtn, true, 'Salvando...');
-
     const checkboxes = modal.checkboxContainer.querySelectorAll('input[type="checkbox"]:checked');
     const nomesAtivos = Array.from(checkboxes).map(cb => cb.value);
-
     try {
         const response = await fetch('/api/separacoes/fila-separadores', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(nomesAtivos),
         });
-
         if (!response.ok) {
             const errorData = await response.json();
             throw new Error(errorData.error || 'Falha ao salvar a fila.');
         }
-
         showToast('Fila de separação atualizada com sucesso!', 'success');
         modal.overlay.style.display = 'none';
         await fetchAndRenderFila();
-
     } catch (error) {
         showToast(error.message, 'error');
     } finally {
@@ -183,7 +213,6 @@ function criarCardElement(separacao) {
     const card = document.createElement('div');
     card.className = 'card separacao-card';
     card.dataset.id = separacao.id;
-
     if (separacao.status === 'Finalizado') card.classList.add('card--status-done');
     else if (separacao.status === 'Em Conferência') card.classList.add('card--status-progress');
     else card.classList.add('card--status-awaiting');
@@ -191,15 +220,12 @@ function criarCardElement(separacao) {
     const perms = AppState.currentUser.permissions || {};
     const logBtn = `<button class="btn-icon" data-action="show-log" title="Ver Histórico"><img src="/static/history.svg" alt="Histórico"></button>`;
     const deleteBtn = perms.pode_deletar_separacao ? `<button class="btn btn--danger" data-action="delete" title="Excluir">Excluir</button>` : '';
-
     const hasObs = separacao.observacoes && Object.keys(separacao.observacoes).length > 0;
     const obsBtnClass = hasObs ? 'btn--edit' : 'btn--secondary';
     const obsBtn = perms.pode_gerenciar_observacao_separacao && separacao.status !== 'Finalizado'
         ? `<button class="btn ${obsBtnClass}" data-action="observation">Observação</button>`
         : '';
-
     const podeEditarFinalizada = perms.pode_editar_separacao_finalizada;
-
     let footerActions = [];
     if (separacao.status === 'Em Separação' && perms.pode_editar_separacao) {
         footerActions.push(`<button class="btn btn--edit" data-action="edit">Editar</button>`);
@@ -216,16 +242,10 @@ function criarCardElement(separacao) {
         let options = '<option value="" disabled selected>-- Enviar para Conferente --</option>';
         state.listasUsuarios.expedicao.forEach(nome => options += `<option value="${nome}">${nome}</option>`);
         const conferenteSelect = `<div class="comprador-select-wrapper"><select data-action="assign-conferente">${options}</select></div>`;
-        footerHTML = `<div class="card__footer">
-                        <div class="card__actions">${footerActions.join('')}</div>
-                        ${conferenteSelect}
-                      </div>`;
+        footerHTML = `<div class="card__footer"><div class="card__actions">${footerActions.join('')}</div>${conferenteSelect}</div>`;
     } else {
         const statusBadge = separacao.status === 'Finalizado' ? `<div class="finalizado-badge">Finalizado</div>` : '';
-        footerHTML = `<div class="card__footer">
-                        ${statusBadge}
-                        <div class="card__actions" ${statusBadge ? 'style="margin-top: 0.5rem;"' : ''}>${footerActions.join('')}</div>
-                      </div>`;
+        footerHTML = `<div class="card__footer">${statusBadge}<div class="card__actions" ${statusBadge ? 'style="margin-top: 0.5rem;"' : ''}>${footerActions.join('')}</div></div>`;
     }
 
     let observacoesHTML = '';
@@ -241,7 +261,10 @@ function criarCardElement(separacao) {
         });
         observacoesHTML += '</div>';
     }
-    card.innerHTML = `<div class="card__header"><h3>Mov. ${separacao.numero_movimentacao}</h3><div class="card__header-actions">${logBtn}${deleteBtn}</div></div><div class="card__body"><div class="card-info-grid"><p><strong>Cliente:</strong> ${separacao.nome_cliente}</p><p><strong>Vendedor:</strong> ${separacao.vendedor_nome}</p><p><strong>Separador:</strong> ${separacao.separador_nome || 'N/A'}</p><p><strong>Conferente:</strong> ${separacao.conferente_nome || 'N/A'}</p><p><strong>Peças:</strong> ${separacao.qtd_pecas || '0'}</p><p><strong>Criação:</strong> ${formatarData(separacao.data_criacao)}</p>${separacao.data_finalizacao ? `<p><strong>Finalização:</strong> ${formatarData(separacao.data_finalizacao)}</p>` : ''}</div>${observacoesHTML}</div>${footerHTML}`;
+
+    const separadoresDisplay = (separacao.separadores_nomes || []).join(', ') || 'N/A';
+
+    card.innerHTML = `<div class="card__header"><h3>Mov. ${separacao.numero_movimentacao}</h3><div class="card__header-actions">${logBtn}${deleteBtn}</div></div><div class="card__body"><div class="card-info-grid"><p><strong>Cliente:</strong> ${separacao.nome_cliente}</p><p><strong>Vendedor:</strong> ${separacao.vendedor_nome}</p><p><strong>Separador(es):</strong> ${separadoresDisplay}</p><p><strong>Conferente:</strong> ${separacao.conferente_nome || 'N/A'}</p><p><strong>Peças:</strong> ${separacao.qtd_pecas || '0'}</p><p><strong>Criação:</strong> ${formatarData(separacao.data_criacao)}</p>${separacao.data_finalizacao ? `<p><strong>Finalização:</strong> ${formatarData(separacao.data_finalizacao)}</p>` : ''}</div>${observacoesHTML}</div>${footerHTML}`;
 
     card.querySelector('[data-action="show-log"]')?.addEventListener('click', () => openLogModal(separacao.id, 'separacoes'));
     card.querySelector('[data-action="delete"]')?.addEventListener('click', () => handleDelete(separacao.id));
@@ -252,6 +275,7 @@ function criarCardElement(separacao) {
 
     return card;
 }
+
 function filtrarErenderizarColunasAtivas() {
     let separacoesAtivasFiltradas = state.todasAsSeparacoesAtivas;
     const termoBusca = state.elementos.filtroInput.value.toLowerCase().trim();
@@ -265,6 +289,7 @@ function filtrarErenderizarColunasAtivas() {
     state.dadosAtivos.conferencia = separacoesAtivasFiltradas.filter(s => s.status === 'Em Conferência').sort((a, b) => parseInt(b.numero_movimentacao, 10) - parseInt(a.numero_movimentacao, 10));
     renderizarColunasAtivas();
 }
+
 function renderizarColunasAtivas() {
     const { andamento, conferencia } = state.dadosAtivos;
     state.elementos.quadroAndamento.innerHTML = '';
@@ -274,6 +299,7 @@ function renderizarColunasAtivas() {
     if (conferencia.length === 0) state.elementos.quadroConferencia.innerHTML = `<p class="quadro-vazio-msg">Nenhuma separação nesta etapa.</p>`;
     else conferencia.forEach(item => state.elementos.quadroConferencia.appendChild(criarCardElement(item)));
 }
+
 function renderizarColunaFinalizados(novosItens, limpar = false) {
     if (limpar) state.elementos.quadroFinalizadas.innerHTML = '';
     if (novosItens.length > 0) novosItens.forEach(item => state.elementos.quadroFinalizadas.appendChild(criarCardElement(item)));
@@ -301,7 +327,6 @@ async function carregarFinalizados(recarregar = false) {
                 user_name: AppState.currentUser.nome
             })
         });
-
         const data = await response.json();
         if (!response.ok) throw new Error(data.error);
         renderizarColunaFinalizados(data.finalizadas, recarregar);
@@ -333,6 +358,7 @@ async function fetchInitialData() {
         showToast("Não foi possível carregar as listas de usuários.", "error");
     }
 }
+
 function populateSelect(selectElement, dataList, selectedValue) {
     if (!selectElement) return;
     const placeholder = selectElement.dataset.placeholder || "Selecione";
@@ -351,6 +377,7 @@ function populateSelect(selectElement, dataList, selectedValue) {
         selectElement.selectedIndex = 0;
     }
 }
+
 async function handleApiAction(form, url, method, body, successMessage, btnText) {
     const modal = form.closest('.modal-overlay');
     const btn = form.querySelector('button[type="submit"]');
@@ -364,12 +391,8 @@ async function handleApiAction(form, url, method, body, successMessage, btnText)
         if (!response.ok) throw new Error((await response.json()).error);
         showToast(successMessage, 'success');
         if (modal) modal.style.display = 'none';
-
-        // Força uma atualização imediata após a ação bem-sucedida
         await verificarAtualizacoesSeparacoes();
-        // Também atualiza a fila caso uma separação seja criada/editada
         await fetchAndRenderFila();
-
     } catch (error) {
         showToast(`Erro: ${error.message}`, 'error');
     } finally {
@@ -387,7 +410,7 @@ const handleDelete = (separacaoId) => {
             });
             if (!response.ok) throw new Error((await response.json()).error);
             showToast('Separação excluída!', 'success');
-            await verificarAtualizacoesSeparacoes(); // Força atualização
+            await verificarAtualizacoesSeparacoes();
         } catch (error) { showToast(`Erro: ${error.message}`, 'error'); }
     });
 };
@@ -402,12 +425,12 @@ const handleFinalize = (separacaoId) => {
             });
             if (!response.ok) throw new Error((await response.json()).error);
             showToast('Separação finalizada!', 'success');
-            // Recarrega os finalizados e força a atualização dos ativos
             await carregarFinalizados(true);
             await verificarAtualizacoesSeparacoes();
         } catch (error) { showToast(`Erro: ${error.message}`, 'error'); }
     });
 };
+
 const handleAssignConferente = (e, separacaoId) => {
     const conferenteNome = e.target.value;
     if (!conferenteNome) return;
@@ -420,19 +443,21 @@ const handleAssignConferente = (e, separacaoId) => {
             });
             if (!response.ok) throw new Error((await response.json()).error);
             showToast('Enviado para conferência!', 'success');
-            await verificarAtualizacoesSeparacoes(); // Força atualização
+            await verificarAtualizacoesSeparacoes();
         } catch (error) {
             showToast(`Erro: ${error.message}`, 'error');
             e.target.value = '';
         }
     });
 };
+
 function openObservacaoModal(separacao) {
     const modal = state.elementos.obsModal;
     modal.form.dataset.id = separacao.id;
     modal.textoInput.value = '';
     modal.overlay.style.display = 'flex';
 }
+
 async function handleFormSubmit(event) {
     event.preventDefault();
     const form = state.elementos.formSeparacao;
@@ -442,17 +467,25 @@ async function handleFormSubmit(event) {
         movInput.focus();
         return;
     }
+    if (state.selecionadosNoForm.length === 0) {
+        showToast('Selecione pelo menos um separador.', 'error');
+        openSelecionarSeparadorModal();
+        return;
+    }
     const dados = {
         numero_movimentacao: movInput.value,
         nome_cliente: document.getElementById('nome-cliente').value,
         vendedor_nome: document.getElementById('vendedor-nome').value,
-        separador_nome: document.getElementById('separador-nome').value,
+        separadores_nomes: state.selecionadosNoForm,
         qtd_pecas: document.getElementById('qtd-pecas').value,
         editor_nome: AppState.currentUser.nome
     };
     await handleApiAction(form, '/api/separacoes', 'POST', dados, 'Separação criada!', 'Criar');
     form.reset();
+    state.selecionadosNoForm = [];
+    confirmarSelecaoSeparadores();
 }
+
 async function handleEditFormSubmit(event) {
     event.preventDefault();
     const form = state.elementos.editModal.form;
@@ -462,21 +495,33 @@ async function handleEditFormSubmit(event) {
         movInput.focus();
         return;
     }
+
+    // --- INÍCIO DA NOVA LÓGICA DE COLETA DE DADOS ---
+    const separadorContainer = document.getElementById('edit-separador-container');
+    const separadoresSelecionados = Array.from(separadorContainer.querySelectorAll('input:checked')).map(cb => cb.value);
+
+    if (separadoresSelecionados.length === 0) {
+        showToast('Selecione pelo menos um separador para salvar.', 'error');
+        return;
+    }
+    // --- FIM DA NOVA LÓGICA DE COLETA DE DADOS ---
+
     const separacaoId = form.dataset.id;
     const dados = {
         numero_movimentacao: movInput.value,
         nome_cliente: document.getElementById('edit-nome-cliente').value,
         vendedor_nome: state.elementos.editModal.vendedorSelect.value,
-        separador_nome: state.elementos.editModal.separadorSelect.value,
+        separadores_nomes: separadoresSelecionados, // Envia a lista de nomes selecionados
         conferente_nome: state.elementos.editModal.conferenteSelect.value,
         qtd_pecas: document.getElementById('edit-qtd-pecas').value,
         editor_nome: AppState.currentUser.nome
     };
     await handleApiAction(form, `/api/separacoes/${separacaoId}`, 'PUT', dados, 'Separação salva!', 'Salvar Alterações');
     if (window.location.pathname.includes('/gerenciar-separacoes')) {
-        await carregarFinalizados(true); // Recarrega a tabela na página de gerenciamento
+        await carregarFinalizados(true);
     }
 }
+
 async function handleObsFormSubmit(event) {
     event.preventDefault();
     const form = state.elementos.obsModal.form;
@@ -493,12 +538,9 @@ async function fetchActiveSeparacoes() {
     try {
         const { role, nome } = AppState.currentUser;
         const response = await fetch(`/api/separacoes/ativas?user_role=${encodeURIComponent(role)}&user_name=${encodeURIComponent(nome)}`);
-
         if (!response.ok) throw new Error('Falha ao buscar separações ativas.');
-
         state.todasAsSeparacoesAtivas = await response.json();
         filtrarErenderizarColunasAtivas();
-
     } catch (error) {
         console.error("Erro ao buscar separações ativas:", error);
         showToast(error.message, 'error');
@@ -516,6 +558,12 @@ export async function initSeparacoesPage() {
         spinner: document.getElementById('loading-spinner'),
         btnCarregarMais: document.getElementById('btn-carregar-mais'),
         btnReload: document.getElementById('btn-reload-separacoes'),
+        selecionarSeparadorModal: {
+            overlay: document.getElementById('selecionar-separador-modal-overlay'),
+            checkboxContainer: document.getElementById('separadores-checkbox-container'),
+            btnConfirmar: document.getElementById('btn-confirmar-selecao-separadores'),
+        },
+        separadoresDisplay: document.getElementById('separadores-selecionados-display'),
         gerenciarFilaModal: {
             overlay: document.getElementById('gerenciar-fila-modal-overlay'),
             form: document.getElementById('form-gerenciar-fila'),
@@ -544,6 +592,14 @@ export async function initSeparacoesPage() {
             cancelButton: document.getElementById('btn-cancel-obs-separacao')
         }
     };
+
+    if (state.elementos.separadoresDisplay) {
+        state.elementos.separadoresDisplay.addEventListener('click', openSelecionarSeparadorModal);
+    }
+    if (state.elementos.selecionarSeparadorModal.btnConfirmar) {
+        state.elementos.selecionarSeparadorModal.btnConfirmar.addEventListener('click', confirmarSelecaoSeparadores);
+    }
+
     if (AppState.currentUser.permissions?.pode_criar_separacao) document.getElementById('form-container-separacao').style.display = 'block';
     const filaContainer = document.getElementById('container-fila-separadores');
     if (filaContainer) {
@@ -554,7 +610,6 @@ export async function initSeparacoesPage() {
     const userRole = AppState.currentUser.role;
     if (userRole === 'Admin' || userRole === 'Separador') state.elementos.gerenciarFilaModal.btnGerenciar.style.display = 'block';
     else state.elementos.gerenciarFilaModal.btnGerenciar.style.display = 'none';
-    if (AppState.currentUser.permissions?.pode_criar_separacao) document.getElementById('form-container-separacao').style.display = 'block';
     const filaModal = state.elementos.gerenciarFilaModal;
     if (filaModal.btnGerenciar) filaModal.btnGerenciar.addEventListener('click', openFilaModal);
     if (filaModal.form) filaModal.form.addEventListener('submit', handleSaveFila);
@@ -583,17 +638,13 @@ export async function initSeparacoesPage() {
         state.elementos.obsModal.cancelButton.addEventListener('click', () => { state.elementos.obsModal.overlay.style.display = 'none'; });
     }
 
-    // --- MUDANÇA: Lógica de inicialização e polling ---
     if (pollingInterval) clearInterval(pollingInterval);
-
     await fetchInitialData();
     await Promise.all([
         fetchAndRenderFila(),
         fetchActiveSeparacoes(),
         carregarFinalizados(true)
     ]);
-
-    // Inicia o polling após a carga inicial
-    verificarAtualizacoesSeparacoes(); // Popula o estado inicial
-    pollingInterval = setInterval(verificarAtualizacoesSeparacoes, 4000); // Verifica a cada 4 segundos
+    verificarAtualizacoesSeparacoes();
+    pollingInterval = setInterval(verificarAtualizacoesSeparacoes, 4000);
 }

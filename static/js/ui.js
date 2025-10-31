@@ -142,32 +142,67 @@ export function setupUI() {
 // --- Funções do Modal de Histórico/Log ---
 
 function formatarLogAcao(acao, detalhes) {
-    let acaoFormatada = `<span class="log-action">${acao.replace(/_/g, ' ')}</span>`;
+    let acaoFormatada = `<strong class="log-action">${acao.replace(/_/g, ' ')}</strong>`;
 
-    if (detalhes) {
-        if (detalhes.de && detalhes.para) {
-            acaoFormatada += `: <span class="log-detail">"${detalhes.de}"</span> → <span class="log-detail">"${detalhes.para}"</span>`;
-        } else if (detalhes.tipo) {
-            acaoFormatada += `: <span class="log-detail">${detalhes.tipo}</span>`;
-        } else if (detalhes.info) {
-            acaoFormatada += `: <span class="log-detail">${detalhes.info}</span>`;
-        } else if (detalhes.adicionado || detalhes.removido) {
-            let detailsHTML = '<ul>';
-            if (detalhes.adicionado) {
-                detalhes.adicionado.forEach(item => {
-                    detailsHTML += `<li><span style="color: var(--clr-success);">+ Adicionado:</span> ${item}</li>`;
-                });
-            }
-            if (detalhes.removido) {
-                detalhes.removido.forEach(item => {
-                    detailsHTML += `<li><span style="color: var(--clr-danger);">- Removido:</span> ${item}</li>`;
-                });
-            }
-            detailsHTML += '</ul>';
-            return acaoFormatada + detailsHTML;
+    if (!detalhes || Object.keys(detalhes).length === 0) {
+        return acaoFormatada;
+    }
+
+    let detalhesHtml = '<ul>';
+    let hasDetails = false;
+
+    // --- LÓGICA ATUALIZADA PARA MUDANÇAS DE CAMPO (DE/PARA) ---
+    for (const [key, value] of Object.entries(detalhes)) {
+        if (value && typeof value === 'object' && 'de' in value && 'para' in value) {
+            hasDetails = true;
+            const keyFormatted = key.replace(/_/g, ' ');
+
+            // Verifica se os valores são arrays e os formata.
+            // Se o array estiver vazio, mostra "Nenhum".
+            const de_val = Array.isArray(value.de)
+                ? (value.de.length > 0 ? value.de.join(', ') : 'Nenhum')
+                : (value.de || 'N/A');
+
+            const para_val = Array.isArray(value.para)
+                ? (value.para.length > 0 ? value.para.join(', ') : 'Nenhum')
+                : (value.para || 'N/A');
+
+            detalhesHtml += `<li><strong>${keyFormatted}:</strong> <span class="log-detail-change">"${de_val}"</span> → <span class="log-detail-change">"${para_val}"</span></li>`;
         }
     }
-    return acaoFormatada;
+
+    // O resto da lógica para itens, info, etc. continua igual
+    if (detalhes.adicionado) {
+        hasDetails = true;
+        detalhes.adicionado.forEach(item => {
+            detalhesHtml += `<li class="log-item-added">+ <strong>Adicionado:</strong> ${item}</li>`;
+        });
+    }
+    if (detalhes.removido) {
+        hasDetails = true;
+        detalhes.removido.forEach(item => {
+            detalhesHtml += `<li class="log-item-removed">- <strong>Removido:</strong> ${item}</li>`;
+        });
+    }
+    if (detalhes.modificado) {
+        hasDetails = true;
+        detalhes.modificado.forEach(item => {
+            detalhesHtml += `<li class="log-item-modified">~ <strong>Modificado:</strong> ${item}</li>`;
+        });
+    }
+
+    if (detalhes.info) {
+        hasDetails = true;
+        detalhesHtml += `<li><span class="log-detail-info">${detalhes.info}</span></li>`;
+    }
+    if (detalhes.tipo) {
+        hasDetails = true;
+        detalhesHtml += `<li><strong>Tipo:</strong> ${detalhes.tipo}</li>`;
+    }
+
+    detalhesHtml += '</ul>';
+
+    return hasDetails ? acaoFormatada + detalhesHtml : acaoFormatada;
 }
 
 export async function openLogModal(itemId, logType = 'pedidos') {
@@ -176,27 +211,39 @@ export async function openLogModal(itemId, logType = 'pedidos') {
 
     modalOverlay.style.display = 'flex';
     const logBody = document.getElementById('log-body');
-
-    // --- INÍCIO DA CORREÇÃO ---
-    // A lógica original dependia do Firebase. Vamos substituí-la por uma mensagem
-    // temporária enquanto a API de logs não é criada no backend.
-    logBody.innerHTML = `<p>A funcionalidade de histórico (log) está sendo migrada para o banco de dados local.</p>`;
-    showToast('A visualização de logs será implementada na versão com banco local.', 'info');
-    // --- FIM DA CORREÇÃO ---
-
-    /* CÓDIGO ANTIGO COMENTADO:
     const logTitle = document.getElementById('log-modal-title');
-    logBody.innerHTML = '<p>Carregando histórico...</p>';
+    logBody.innerHTML = '<div class="spinner" style="margin: 2rem auto;"></div>';
     logTitle.textContent = `Histórico (${logType.charAt(0).toUpperCase() + logType.slice(1)})`;
 
     try {
-        let logPath;
-        // ... (lógica antiga com db.ref(...)) ...
+        const response = await fetch(`/api/logs/${logType}/${itemId}`);
+        if (!response.ok) {
+            throw new Error('Falha ao buscar o histórico do item.');
+        }
+        const logs = await response.json();
+
+        if (logs.length === 0) {
+            logBody.innerHTML = '<p>Nenhuma atividade registrada para este item.</p>';
+            return;
+        }
+
+        logBody.innerHTML = logs.map(log => `
+            <div class="log-entry">
+                <div class="log-entry__meta">
+                    <span class="log-entry__author">${log.autor || 'Sistema'}</span>
+                    <span class="log-entry__timestamp">${formatarData(log.timestamp)}</span>
+                </div>
+                <div class="log-entry__action">
+                    ${formatarLogAcao(log.acao, log.detalhes)}
+                </div>
+            </div>
+        `).join('');
+
     } catch (error) {
         console.error('Erro ao buscar histórico:', error);
+        logBody.innerHTML = `<p style="color: var(--clr-danger);">Não foi possível carregar o histórico.</p>`;
         showToast('Não foi possível carregar o histórico.', 'error');
     }
-    */
 }
 
 export function setupLogModal() {
@@ -296,14 +343,21 @@ async function atualizarComprador(pedidoId, nomeComprador) {
 }
 
 async function excluirPedido(pedidoId) {
-    showConfirmModal('Excluir este pedido? A ação é irreversível.', async () => {
+    showConfirmModal('Mover este pedido para a lixeira? A ação pode ser revertida.', async () => {
         try {
-            const response = await fetch(`/api/pedidos/${pedidoId}`, { method: 'DELETE' });
+            const response = await fetch(`/api/pedidos/${pedidoId}`, {
+                method: 'DELETE',
+                // --- INÍCIO DA CORREÇÃO ---
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ editor_nome: AppState.currentUser.nome })
+                // --- FIM DA CORREÇÃO ---
+            });
+
             if (!response.ok) {
                 const errorData = await response.json();
-                showToast(`Não foi possível excluir: ${errorData.message}`, 'error');
+                showToast(`Não foi possível excluir: ${errorData.message || errorData.error}`, 'error');
             } else {
-                showToast('Pedido excluído com sucesso.', 'success');
+                showToast('Pedido movido para a lixeira.', 'success');
                 document.querySelector(`.pedido-card[data-id="${pedidoId}"]`)?.remove();
             }
         } catch (error) {
@@ -311,6 +365,7 @@ async function excluirPedido(pedidoId) {
         }
     });
 }
+
 
 // --- Função Principal de Criação de Card ---
 
