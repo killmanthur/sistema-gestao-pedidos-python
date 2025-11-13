@@ -18,7 +18,8 @@ PERMISSOES_CONFERENCIA_VALIDAS = ["pode_deletar_conferencia"]
 PERMISSOES_PENDENCIAS_VALIDAS = [
     "pode_editar_pendencia",
     "pode_resolver_pendencia_conferencia",
-    "pode_reiniciar_conferencia_historico"
+    "pode_reiniciar_conferencia_historico",
+    "pode_editar_pedido_a_caminho" # <-- NOVA PERMISSÃO AQUI
 ]
 # --- FIM DA ALTERAÇÃO ---
 

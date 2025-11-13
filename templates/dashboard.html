@@ -1,25 +1,76 @@
 {% extends "base.html" %}
 
-{% block title %}Quadro de Requisições{% endblock %}
+{% block title %}Dashboard de Compras{% endblock %}
 
 {% block content %}
-<section class="form-container" style="max-width: 800px; padding: 1.5rem; margin-bottom: 2rem;">
-    <input type="text" id="filtro-quadro-ativo" placeholder="🔎 Buscar por código, orçamento, vendedor, ...">
+<section class="form-container" style="max-width: 1200px;">
+    <h2>Filtros do Dashboard</h2>
+    <form id="form-filtros-dashboard">
+        <div class="layout-grid-3-cols" style="gap: 1rem;">
+            <div class="form-group">
+                <label for="filtro-data-inicio">De:</label>
+                <input type="date" id="filtro-data-inicio">
+            </div>
+            <div class="form-group">
+                <label for="filtro-data-fim">Até:</label>
+                <input type="date" id="filtro-data-fim">
+            </div>
+            <div class="form-group">
+                <label for="filtro-tipo-req">Tipo de Requisição</label>
+                <select id="filtro-tipo-req">
+                    <option value="">Todos os Tipos</option>
+                    <option value="Pedido Produto">Pedidos de Rua</option>
+                    <option value="Atualização Orçamento">Atualização de Orçamentos</option>
+                    <option value="Sugestao">Sugestões de Compra</option>
+                </select>
+            </div>
+        </div>
+        <div class="layout-grid-2-cols" style="gap: 1rem; margin-top: 1rem;">
+            <div class="form-group">
+                <label for="filtro-vendedor">Filtrar por Vendedor</label>
+                <input type="text" id="filtro-vendedor" placeholder="Nome do vendedor...">
+            </div>
+            <div class="form-group">
+                <label for="filtro-comprador">Filtrar por Comprador</label>
+                <input type="text" id="filtro-comprador" placeholder="Nome do comprador...">
+            </div>
+        </div>
+        <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+            <button type="submit" class="btn btn--primary" style="flex-grow: 1;">Aplicar Filtros</button>
+            <button type="button" id="btn-limpar-filtros" class="btn btn--secondary" style="flex-grow: 1;">Limpar
+                Filtros</button>
+        </div>
+    </form>
 </section>
 
-<!-- VOLTANDO PARA layout-grid-2-cols -->
-<section class="layout-grid-2-cols">
-    <div class="quadro-coluna">
-        <h2>Pedidos Rua</h2>
-        <div id="quadro-pedidos-rua" class="quadro-container">
-            <!-- Cards serão inseridos aqui -->
+<hr>
+
+<section id="dashboard-container">
+    <div id="loading-spinner-dashboard" class="spinner" style="display: none; margin: 3rem auto;"></div>
+
+    <!-- ****** INÍCIO DA CORREÇÃO ****** -->
+    <!-- Trocado para layout-grid-3-cols -->
+    <div class="layout-grid-3-cols" style="gap: 2rem;">
+        <div class="card">
+            <div class="card__body">
+                <h3 style="text-align: center; margin-bottom: 1.5rem;">Requisições por Mês</h3>
+                <canvas id="lineChart"></canvas>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card__body">
+                <h3 style="text-align: center; margin-bottom: 1.5rem;">Pedidos por Vendedor</h3>
+                <canvas id="pieChartVendedores"></canvas>
+            </div>
+        </div>
+        <!-- Removido o estilo grid-column: 1 / -1; -->
+        <div class="card">
+            <div class="card__body">
+                <h3 style="text-align: center; margin-bottom: 1.5rem;">Pedidos Atendidos por Comprador</h3>
+                <canvas id="pieChartCompradores"></canvas>
+            </div>
         </div>
     </div>
-    <div class="quadro-coluna">
-        <h2>Atualização de Orçamentos</h2>
-        <div id="quadro-orcamentos" class="quadro-container">
-            <!-- Cards serão inseridos aqui -->
-        </div>
-    </div>
+    <!-- ****** FIM DA CORREÇÃO ****** -->
 </section>
 {% endblock %}

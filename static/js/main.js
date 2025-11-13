@@ -17,6 +17,8 @@ import { initGerenciarSeparacoesPage } from './pages/gerenciar-separacoes.js';
 import { initDashboardLogisticaPage } from './pages/dashboard-logistica.js';
 import { initLixeiraPage } from './pages/lixeira.js';
 import { initHistoricoConferenciasPage } from './pages/historico-conferencias.js';
+// --- IMPORTAÇÃO DA NOVA PÁGINA ---
+import { initPedidosACaminhoPage } from './pages/pedidos_a_caminho.js';
 import { setupNotifications } from './notifications.js';
 
 async function fetchInitialData() {
@@ -46,12 +48,14 @@ export async function initializeAuthenticatedApp() {
 
     const path = window.location.pathname;
 
-    // --- CORREÇÃO AQUI ---
-    // Adiciona a verificação para a nova página de histórico
     if (path.includes('/historico-conferencias')) {
         initHistoricoConferenciasPage();
     }
-    // O resto das condições continua como estava
+    // --- LÓGICA DE INICIALIZAÇÃO DA NOVA PÁGINA ---
+    else if (path.includes('/pedidos-a-caminho')) {
+        initPedidosACaminhoPage();
+    }
+    // --- FIM DA LÓGICA ---
     else if (path.includes('/admin/sistema')) {
         initAdminSistemaPage();
     }

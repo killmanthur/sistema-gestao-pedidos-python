@@ -6,6 +6,7 @@ from ..extensions import db, tz_cuiaba
 from quadro_app.models import Conferencia, ItemExcluido, Usuario
 from quadro_app.utils import registrar_log
 
+# --- LINHA CORRIGIDA/ADICIONADA ---
 conferencias_bp = Blueprint('conferencias', __name__, url_prefix='/api/conferencias')
 
 def serialize_conferencia(c):
@@ -165,7 +166,6 @@ def get_conferencias_ativas():
     itens = Conferencia.query.filter(Conferencia.status.in_(status_relevantes)).order_by(Conferencia.data_recebimento.desc()).all()
     return jsonify([serialize_conferencia(c) for c in itens])
 
-# --- INÍCIO DA CORREÇÃO ---
 @conferencias_bp.route('/historico', methods=['POST'])
 def get_historico_conferencias():
     try:
@@ -197,8 +197,6 @@ def get_historico_conferencias():
     except Exception as e:
         print(f"ERRO AO BUSCAR HISTÓRICO DE CONFERÊNCIAS: {e}")
         return jsonify({"error": str(e)}), 500
-# --- FIM DA CORREÇÃO ---
-
 
 # --- ROTAS DE APOIO (CRUD) ---
 @conferencias_bp.route('/recebimento', methods=['POST'])
@@ -289,7 +287,6 @@ def deletar_conferencia(conferencia_id):
     db.session.delete(conferencia)
     db.session.commit()
     return jsonify({'status': 'success'})
-# --- FIM DA MUDANÇA ---
 
 @conferencias_bp.route('/<int:conferencia_id>/iniciar', methods=['PUT'])
 def iniciar_conferencia(conferencia_id):
@@ -303,7 +300,6 @@ def iniciar_conferencia(conferencia_id):
     conferencia.conferentes = conferentes
     db.session.commit()
     
-    # --- MUDANÇA 1: Formato do log de início ---
     info_text = f"Iniciada com: {', '.join(conferentes) if conferentes else 'Nenhum conferente'}"
     registrar_log(conferencia_id, editor_nome, 'INICIO_CONFERENCIA', detalhes={'info': info_text}, log_type='conferencias')
     
@@ -325,7 +321,6 @@ def atualizar_conferentes(conferencia_id):
     conferencia.conferentes = novos_conferentes
     db.session.commit()
 
-    # --- MUDANÇA 2: Estrutura do log de atualização ---
     registrar_log(
         conferencia_id, 
         editor_nome, 

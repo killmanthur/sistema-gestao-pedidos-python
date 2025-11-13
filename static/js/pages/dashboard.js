@@ -32,6 +32,10 @@ async function fetchAndRenderData() {
         dataFim: document.getElementById('filtro-data-fim').value,
         vendedor: document.getElementById('filtro-vendedor').value,
         comprador: document.getElementById('filtro-comprador').value,
+        // ****** INÍCIO DA CORREÇÃO ******
+        // Adiciona o tipo de requisição ao objeto de filtros
+        tipo_req: document.getElementById('filtro-tipo-req').value
+        // ****** FIM DA CORREÇÃO ******
     };
 
     try {

@@ -32,6 +32,18 @@ async function fetchAndRenderData() {
         dataFim: document.getElementById('filtro-data-fim').value,
     };
 
+    // --- INÍCIO DA ALTERAÇÃO ---
+    // Adiciona uma verificação para não buscar se os filtros estiverem vazios
+    if (!filtros.dataInicio && !filtros.dataFim) {
+        showToast("Por favor, selecione um período para a consulta.", "info");
+        spinner.style.display = 'none';
+        tabelaSeparadoresBody.innerHTML = `<tr><td colspan="4">Aplique um filtro para visualizar os dados.</td></tr>`;
+        tabelaConferentesBody.innerHTML = `<tr><td colspan="4">Aplique um filtro para visualizar os dados.</td></tr>`;
+        return;
+    }
+    // --- FIM DA ALTERAÇÃO ---
+
+
     try {
         const response = await fetch('/api/separacoes/dashboard-data', {
             method: 'POST',
@@ -74,8 +86,14 @@ export function initDashboardLogisticaPage() {
 
     btnLimpar.addEventListener('click', () => {
         formFiltros.reset();
-        fetchAndRenderData();
+        // --- ALTERAÇÃO AQUI ---
+        // Limpa as tabelas ao limpar os filtros
+        tabelaSeparadoresBody.innerHTML = `<tr><td colspan="4">Aplique um filtro para visualizar os dados.</td></tr>`;
+        tabelaConferentesBody.innerHTML = `<tr><td colspan="4">Aplique um filtro para visualizar os dados.</td></tr>`;
     });
 
-    fetchAndRenderData();
+    // --- ALTERAÇÃO AQUI ---
+    // A chamada inicial foi removida. O código abaixo define o estado inicial das tabelas.
+    tabelaSeparadoresBody.innerHTML = `<tr><td colspan="4">Aplique um filtro para visualizar os dados.</td></tr>`;
+    tabelaConferentesBody.innerHTML = `<tr><td colspan="4">Aplique um filtro para visualizar os dados.</td></tr>`;
 }

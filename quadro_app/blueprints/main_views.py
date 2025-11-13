@@ -19,6 +19,10 @@ def inicio():
 def quadro(): 
     return render_template('quadro.html')
 
+@main_views_bp.route('/pedidos-a-caminho')
+def pedidos_a_caminho_page(): 
+    return render_template('pedidos_a_caminho.html')
+
 @main_views_bp.route('/criar-pedido')
 def criar_pedido_form(): 
     return render_template('criar_pedido.html')

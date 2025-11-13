@@ -4,12 +4,6 @@ import { AppState } from './state.js';
 import { showToast } from './toasts.js';
 import { initQuadroPage } from './pages/quadro.js';
 
-/**
- * Alterna o estado de carregamento de um botão.
- * @param {HTMLButtonElement} button - O elemento do botão a ser modificado.
- * @param {boolean} isLoading - `true` para ativar o estado de carregamento, `false` para reverter.
- * @param {string} originalText - O texto original do botão.
- */
 export function toggleButtonLoading(button, isLoading, originalText = 'Salvar') {
     if (!button) return;
     if (isLoading) {
@@ -23,11 +17,6 @@ export function toggleButtonLoading(button, isLoading, originalText = 'Salvar') 
     }
 }
 
-/**
- * Formata uma string de data para o formato localizado (dd/mm/aaaa hh:mm).
- * @param {string} dataString - A string de data a ser formatada.
- * @returns {string} A string de data formatada ou 'N/A' / 'Data inválida'.
- */
 export function formatarData(dataString) {
     if (!dataString) return 'N/A';
     const cleanDateString = dataString.split('.')[0];
@@ -42,10 +31,6 @@ export function formatarData(dataString) {
     });
 }
 
-/**
- * Adiciona listeners de evento a todos os elementos que fecham modais.
- * Isso inclui botões 'X' e o clique no fundo escuro (overlay).
- */
 export function setupAllModalCloseHandlers() {
     document.querySelectorAll('.modal-overlay').forEach(overlay => {
         overlay.addEventListener('click', (e) => {
@@ -65,11 +50,6 @@ export function setupAllModalCloseHandlers() {
     });
 }
 
-// --- Funções Principais da Interface do Usuário (UI) ---
-
-/**
- * Inicializa a funcionalidade de alternância de tema com base nas preferências salvas.
- */
 export function initializeTheme() {
     const themeToggle = document.getElementById('theme-toggle');
     if (!themeToggle) return;
@@ -94,9 +74,6 @@ export function initializeTheme() {
     }
 }
 
-/**
- * Configura os elementos da UI com base no estado de login do usuário atual.
- */
 export function setupUI() {
     const mainNav = document.getElementById('main-nav');
     const navContainer = document.querySelector('.header__nav');
@@ -139,8 +116,6 @@ export function setupUI() {
     navContainer.style.display = 'block';
 }
 
-// --- Funções do Modal de Histórico/Log ---
-
 function formatarLogAcao(acao, detalhes) {
     let acaoFormatada = `<strong class="log-action">${acao.replace(/_/g, ' ')}</strong>`;
 
@@ -151,27 +126,16 @@ function formatarLogAcao(acao, detalhes) {
     let detalhesHtml = '<ul>';
     let hasDetails = false;
 
-    // --- LÓGICA ATUALIZADA PARA MUDANÇAS DE CAMPO (DE/PARA) ---
     for (const [key, value] of Object.entries(detalhes)) {
         if (value && typeof value === 'object' && 'de' in value && 'para' in value) {
             hasDetails = true;
             const keyFormatted = key.replace(/_/g, ' ');
-
-            // Verifica se os valores são arrays e os formata.
-            // Se o array estiver vazio, mostra "Nenhum".
-            const de_val = Array.isArray(value.de)
-                ? (value.de.length > 0 ? value.de.join(', ') : 'Nenhum')
-                : (value.de || 'N/A');
-
-            const para_val = Array.isArray(value.para)
-                ? (value.para.length > 0 ? value.para.join(', ') : 'Nenhum')
-                : (value.para || 'N/A');
-
+            const de_val = Array.isArray(value.de) ? (value.de.length > 0 ? value.de.join(', ') : 'Nenhum') : (value.de || 'N/A');
+            const para_val = Array.isArray(value.para) ? (value.para.length > 0 ? value.para.join(', ') : 'Nenhum') : (value.para || 'N/A');
             detalhesHtml += `<li><strong>${keyFormatted}:</strong> <span class="log-detail-change">"${de_val}"</span> → <span class="log-detail-change">"${para_val}"</span></li>`;
         }
     }
 
-    // O resto da lógica para itens, info, etc. continua igual
     if (detalhes.adicionado) {
         hasDetails = true;
         detalhes.adicionado.forEach(item => {
@@ -190,7 +154,6 @@ function formatarLogAcao(acao, detalhes) {
             detalhesHtml += `<li class="log-item-modified">~ <strong>Modificado:</strong> ${item}</li>`;
         });
     }
-
     if (detalhes.info) {
         hasDetails = true;
         detalhesHtml += `<li><span class="log-detail-info">${detalhes.info}</span></li>`;
@@ -246,11 +209,7 @@ export async function openLogModal(itemId, logType = 'pedidos') {
     }
 }
 
-export function setupLogModal() {
-    // A lógica de fechamento agora é gerenciada por setupAllModalCloseHandlers
-}
-
-// --- Função do Modal de Confirmação ---
+export function setupLogModal() { }
 
 export function showConfirmModal(message, onConfirm) {
     const modalOverlay = document.getElementById('confirm-modal-overlay');
@@ -276,27 +235,18 @@ export function showConfirmModal(message, onConfirm) {
     btnCancel.onclick = closeModal;
 }
 
-// --- Funções de Ação do Card de Pedidos ---
-
 async function atualizarStatus(pedidoId, novoStatus) {
     const dadosUpdate = {
         status: novoStatus,
         editor_nome: AppState.currentUser.nome,
     };
-
-    // --- INÍCIO DA CORREÇÃO ---
-    // Encontra o card específico pelo seu data-id
     const cardElement = document.querySelector(`.pedido-card[data-id="${pedidoId}"]`);
     if (cardElement) {
-        // Encontra o select de comprador dentro daquele card
         const compradorSelect = cardElement.querySelector('.comprador-select-wrapper select');
-        // Se o select existir, adiciona seu valor à requisição
         if (compradorSelect && compradorSelect.value) {
             dadosUpdate.comprador = compradorSelect.value;
         }
     }
-    // --- FIM DA CORREÇÃO ---
-
     try {
         const response = await fetch(`/api/pedidos/${pedidoId}/status`, {
             method: 'PUT',
@@ -305,10 +255,8 @@ async function atualizarStatus(pedidoId, novoStatus) {
         });
         if (response.ok) {
             showToast('Status atualizado com sucesso!', 'success');
-            // Recarrega os dados do quadro para refletir a mudança
-            if (window.initQuadroPage) { // Verifica se a função existe para evitar erros em outras páginas
-                window.initQuadroPage();
-            }
+            // Remove o card da tela atual, pois ele mudou de status/página
+            document.querySelector(`.pedido-card[data-id="${pedidoId}"]`)?.remove();
         } else {
             const errorData = await response.json();
             showToast(`Não foi possível atualizar: ${errorData.message}`, 'error');
@@ -320,13 +268,12 @@ async function atualizarStatus(pedidoId, novoStatus) {
 
 
 async function atualizarComprador(pedidoId, nomeComprador) {
-    if (!nomeComprador) return;
     const dadosUpdate = {
         comprador: nomeComprador,
         editor_nome: AppState.currentUser.nome,
     };
     try {
-        const response = await fetch(`/api/pedidos/${pedidoId}`, {
+        const response = await fetch(`/api/pedidos/${pedidoId}/comprador`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(dadosUpdate)
@@ -347,10 +294,8 @@ async function excluirPedido(pedidoId) {
         try {
             const response = await fetch(`/api/pedidos/${pedidoId}`, {
                 method: 'DELETE',
-                // --- INÍCIO DA CORREÇÃO ---
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ editor_nome: AppState.currentUser.nome })
-                // --- FIM DA CORREÇÃO ---
             });
 
             if (!response.ok) {
@@ -367,8 +312,7 @@ async function excluirPedido(pedidoId) {
 }
 
 
-// --- Função Principal de Criação de Card ---
-
+// --- FUNÇÃO DE CRIAR CARD MODIFICADA ---
 export function criarCardPedido(pedido) {
     const isAdmin = AppState.currentUser.role === 'Admin';
     const isComprador = AppState.currentUser.role === 'Comprador';
@@ -382,6 +326,7 @@ export function criarCardPedido(pedido) {
 
     if (pedido.status === 'Aguardando') card.classList.add('card--status-awaiting');
     else if (pedido.status === 'Em Cotação') card.classList.add('card--status-progress');
+    else if (pedido.status === 'A Caminho') card.classList.add('card--status-info');
     else if (pedido.status === 'OK') card.classList.add('card--status-done');
 
     let compradorOptions = '<option value="">- Atribuir -</option>';
@@ -393,10 +338,36 @@ export function criarCardPedido(pedido) {
     const deleteBtn = (isAdmin || isComprador) ? `<button class="btn btn--danger" title="Excluir Pedido">Excluir</button>` : '';
 
     let footerContent = '';
-    if (pedido.status !== 'OK') {
-        const editBtnHTML = canEdit ? `<button class="btn btn--edit">Editar</button>` : '';
-        const statusActionsHTML = canManage ? `<button class="btn btn--warning">Em Cotação</button><button class="btn btn--success">OK</button>` : '';
+
+    // --- INÍCIO DA LÓGICA DE BOTÃO DE EDIÇÃO COM PERMISSÃO ---
+    let editBtnHTML = '';
+    const canEditACaminho = AppState.currentUser.permissions?.pode_editar_pedido_a_caminho;
+
+    // Mostra o botão Editar no Quadro Ativo (se tiver permissão geral)
+    if (pedido.status !== 'A Caminho' && pedido.status !== 'OK' && canEdit) {
+        editBtnHTML = `<button class="btn btn--edit">Editar</button>`;
+    }
+    // Mostra o botão Editar na página A Caminho (se tiver permissão específica)
+    else if (pedido.status === 'A Caminho' && canEditACaminho) {
+        editBtnHTML = `<button class="btn btn--edit">Editar</button>`;
+    }
+    // --- FIM DA LÓGICA DE BOTÃO DE EDIÇÃO COM PERMISSÃO ---
+
+    if (pedido.status === 'A Caminho') {
+        footerContent = `
+            <p>Status: <span class="status-value">${pedido.status}</span></p>
+            <div class="card__actions">
+                ${editBtnHTML}
+                ${canManage ? '<button class="btn btn--success">Marcar Chegada</button>' : ''}
+            </div>
+        `;
+    } else if (pedido.status !== 'OK') {
+        const statusActionsHTML = canManage ? `
+            <button class="btn btn--warning">Em Cotação</button>
+            <button class="btn btn--primary">Pedido Efetuado</button> 
+        ` : '';
         const selectHTML = canManage ? `<div class="comprador-select-wrapper"><label>Comprador:</label><select>${compradorOptions}</select></div>` : '';
+
         footerContent = `
             <p>Status: <span class="status-value">${pedido.status}</span></p>
             <div class="card__actions">${editBtnHTML}${statusActionsHTML}</div>
@@ -440,13 +411,15 @@ export function criarCardPedido(pedido) {
         <div class="card__body">${cardBodyContent}</div>
         <div class="card__footer">${footerContent}</div>`;
 
-    if (pedido.status !== 'OK') {
-        if (canEdit) card.querySelector('.btn--edit')?.addEventListener('click', () => openEditModal(pedido));
-        if (canManage) {
-            card.querySelector('.btn--warning')?.addEventListener('click', () => atualizarStatus(pedido.id, 'Em Cotação'));
-            card.querySelector('.btn--success')?.addEventListener('click', () => atualizarStatus(pedido.id, 'OK'));
-            card.querySelector('.comprador-select-wrapper select')?.addEventListener('change', (e) => atualizarComprador(pedido.id, e.target.value));
-        }
+    // Adiciona listener para o botão de editar, não importa em qual contexto ele foi criado
+    card.querySelector('.btn--edit')?.addEventListener('click', () => openEditModal(pedido));
+
+    if (pedido.status === 'A Caminho' && canManage) {
+        card.querySelector('.btn--success')?.addEventListener('click', () => atualizarStatus(pedido.id, 'OK'));
+    } else if (pedido.status !== 'OK' && canManage) {
+        card.querySelector('.btn--warning')?.addEventListener('click', () => atualizarStatus(pedido.id, 'Em Cotação'));
+        card.querySelector('.btn--primary')?.addEventListener('click', () => atualizarStatus(pedido.id, 'A Caminho'));
+        card.querySelector('.comprador-select-wrapper select')?.addEventListener('change', (e) => atualizarComprador(pedido.id, e.target.value));
     }
 
     if (isAdmin || isComprador) {
@@ -457,8 +430,6 @@ export function criarCardPedido(pedido) {
     return card;
 }
 
-
-// --- Funções do Modal de Edição ---
 
 function openEditModal(pedido) {
     const modalOverlay = document.getElementById('edit-modal-overlay');
@@ -593,8 +564,11 @@ export function setupEditModal() {
             if (response.ok) {
                 closeModal();
                 showToast('Pedido salvo com sucesso!', 'success');
-                if (window.location.pathname.includes('/quadro')) {
-                    initQuadroPage();
+                // Recarrega os dados da página atual
+                if (window.location.pathname.includes('/quadro') && window.initQuadroPage) {
+                    window.initQuadroPage();
+                } else if (window.location.pathname.includes('/pedidos-a-caminho') && window.initPedidosACaminhoPage) {
+                    window.initPedidosACaminhoPage();
                 }
             } else {
                 const errorData = await response.json();

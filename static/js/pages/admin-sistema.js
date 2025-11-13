@@ -4,6 +4,7 @@ import { showConfirmModal, toggleButtonLoading } from '../ui.js';
 
 const ALL_PAGES = {
     quadro: "Quadro Ativo",
+    pedidos_a_caminho: "Pedidos a Caminho", // <-- Adicionado para completude
     historico: "Histórico de Pedidos",
     historico_conferencias: "Histórico de Conferências",
     criar_pedido: "Pedidos Rua (Criar)",
@@ -16,7 +17,7 @@ const ALL_PAGES = {
     separacoes: "Separações",
     gerenciar_separacoes: "Gerenciar Separações",
     admin_sistema: "Gerenciar Sistema",
-    lixeira: "Lixeira" // Adicionado para completude
+    lixeira: "Lixeira"
 };
 
 const SEPARACOES_PERMS = {
@@ -42,7 +43,8 @@ const CONFERENCIAS_PERMS = {
 const PENDENCIAS_PERMS = {
     pode_editar_pendencia: "Pode Editar Pendências",
     pode_resolver_pendencia_conferencia: "Pode Resolver Pendências (Conferência)",
-    pode_reiniciar_conferencia_historico: "Pode Reiniciar Conferência (Histórico)"
+    pode_reiniciar_conferencia_historico: "Pode Reiniciar Conferência (Histórico)",
+    pode_editar_pedido_a_caminho: "Pode Editar Pedido a Caminho" // <-- NOVA PERMISSÃO AQUI
 };
 // --- FIM DA ALTERAÇÃO ---
 

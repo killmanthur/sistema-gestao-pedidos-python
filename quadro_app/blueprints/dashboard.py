@@ -141,6 +141,114 @@ def get_dashboard_data():
 
     except Exception as e:
         print(f"ERRO ao gerar dados do dashboard: {e}")
+        return jsonify({'error': str(e)}), 500@dashboard_bp.route('/dashboard-data', methods=['POST'])
+def get_dashboard_data():
+    filtros = request.get_json() or {}
+    data_inicio = filtros.get('dataInicio')
+    data_fim = filtros.get('dataFim')
+    vendedor_filtro = filtros.get('vendedor', '').lower()
+    comprador_filtro = filtros.get('comprador', '').lower()
+    # ****** INÍCIO DA CORREÇÃO ******
+    tipo_req_filtro = filtros.get('tipo_req') # Pega o novo filtro
+    # ****** FIM DA CORREÇÃO ******
+
+    try:
+        # Busca inicial de dados
+        pedidos_query = Pedido.query
+        sugestoes_query = Sugestao.query
+
+        # Aplica filtros de data
+        if data_inicio:
+            pedidos_query = pedidos_query.filter(Pedido.data_criacao >= data_inicio)
+            sugestoes_query = sugestoes_query.filter(Sugestao.data_criacao >= data_inicio)
+        if data_fim:
+            pedidos_query = pedidos_query.filter(Pedido.data_criacao <= data_fim + 'T23:59:59')
+            sugestoes_query = sugestoes_query.filter(Sugestao.data_criacao <= data_fim + 'T23:59:59')
+        
+        # Aplica filtros de texto
+        if vendedor_filtro:
+            pedidos_query = pedidos_query.filter(Pedido.vendedor.ilike(f'%{vendedor_filtro}%'))
+            sugestoes_query = sugestoes_query.filter(Sugestao.vendedor.ilike(f'%{vendedor_filtro}%'))
+        if comprador_filtro:
+            pedidos_query = pedidos_query.filter(Pedido.comprador.ilike(f'%{comprador_filtro}%'))
+            sugestoes_query = sugestoes_query.filter(Sugestao.comprador.ilike(f'%{comprador_filtro}%'))
+
+        # ****** INÍCIO DA CORREÇÃO ******
+        # Inicializa as listas vazias
+        todos_pedidos = []
+        todas_sugestoes = []
+
+        # Condicional para carregar os dados com base no filtro de tipo
+        if not tipo_req_filtro: # Se o filtro estiver vazio, carrega tudo
+            todos_pedidos = pedidos_query.all()
+            todas_sugestoes = sugestoes_query.all()
+        elif tipo_req_filtro == 'Pedido Produto':
+            todos_pedidos = pedidos_query.filter_by(tipo_req='Pedido Produto').all()
+        elif tipo_req_filtro == 'Atualização Orçamento':
+            todos_pedidos = pedidos_query.filter_by(tipo_req='Atualização Orçamento').all()
+        elif tipo_req_filtro == 'Sugestao':
+            todas_sugestoes = sugestoes_query.all()
+        # ****** FIM DA CORREÇÃO ******
+
+        line_chart_data = {}
+        vendedor_counts = {}
+        comprador_counts = {}
+
+        # Processa Pedidos
+        for p in todos_pedidos:
+            vendedor = p.vendedor or ''
+            comprador = p.comprador or ''
+            
+            if vendedor:
+                vendedor_counts[vendedor] = vendedor_counts.get(vendedor, 0) + 1
+            if comprador:
+                comprador_counts[comprador] = comprador_counts.get(comprador, 0) + 1
+            
+            try:
+                mes_ano = datetime.fromisoformat(p.data_criacao).strftime('%Y-%m')
+                if mes_ano not in line_chart_data:
+                    line_chart_data[mes_ano] = {'pedidos_rua': 0, 'orcamentos': 0, 'sugestoes': 0}
+                
+                if p.tipo_req == 'Pedido Produto':
+                    line_chart_data[mes_ano]['pedidos_rua'] += 1
+                elif p.tipo_req == 'Atualização Orçamento':
+                    line_chart_data[mes_ano]['orcamentos'] += 1
+            except (ValueError, TypeError):
+                continue
+
+        # Processa Sugestões
+        for s in todas_sugestoes:
+            # Adiciona contagem para o gráfico de vendedores (se aplicável)
+            vendedor = s.vendedor or ''
+            if vendedor:
+                vendedor_counts[vendedor] = vendedor_counts.get(vendedor, 0) + 1
+
+            try:
+                mes_ano = datetime.fromisoformat(s.data_criacao).strftime('%Y-%m')
+                if mes_ano not in line_chart_data:
+                    line_chart_data[mes_ano] = {'pedidos_rua': 0, 'orcamentos': 0, 'sugestoes': 0}
+                line_chart_data[mes_ano]['sugestoes'] += 1
+            except (ValueError, TypeError):
+                continue
+
+        # Formata dados para Chart.js
+        sorted_months = sorted(line_chart_data.keys())
+        
+        return jsonify({
+            'lineChart': {
+                'labels': sorted_months,
+                'datasets': [
+                    {'label': 'Pedidos de Rua', 'data': [line_chart_data[m]['pedidos_rua'] for m in sorted_months], 'borderColor': '#3B71CA', 'fill': False, 'tension': 0.1},
+                    {'label': 'Orçamentos', 'data': [line_chart_data[m]['orcamentos'] for m in sorted_months], 'borderColor': '#5cb85c', 'fill': False, 'tension': 0.1},
+                    {'label': 'Sugestões', 'data': [line_chart_data[m]['sugestoes'] for m in sorted_months], 'borderColor': '#f0ad4e', 'fill': False, 'tension': 0.1}
+                ]
+            },
+            'pieChartVendedores': {'labels': list(vendedor_counts.keys()), 'data': list(vendedor_counts.values())},
+            'pieChartCompradores': {'labels': list(comprador_counts.keys()), 'data': list(comprador_counts.values())}
+        }), 200
+
+    except Exception as e:
+        print(f"ERRO ao gerar dados do dashboard: {e}")
         return jsonify({'error': str(e)}), 500
 
 @dashboard_bp.route('/relatorio', methods=['POST'])

@@ -43,3 +43,5 @@ set_admin_password.py
 
 #servidor nssm
 nssm-2.24/
+
+certs

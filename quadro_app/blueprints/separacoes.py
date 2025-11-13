@@ -246,13 +246,25 @@ def get_tabela_separacoes_paginada():
     pagination = query.order_by(Separacao.numero_movimentacao.desc()).paginate(page=page + 1, per_page=limit, error_out=False)
     return jsonify({'separacoes': [serialize_separacao(s) for s in pagination.items], 'temMais': pagination.has_next})
 
+
+# --- INÍCIO DA CORREÇÃO ---
 def format_seconds_to_hms(seconds):
-    """Formata segundos para uma string HH:MM."""
+    """Formata segundos para uma string HH:MM:SS."""
     if seconds is None or not isinstance(seconds, (int, float)) or seconds < 0:
         return "N/A"
-    hours, remainder = divmod(seconds, 3600)
-    minutes, _ = divmod(remainder, 60)
-    return f"{int(hours):02}:{int(minutes):02}"
+    
+    # Converte para inteiro para usar divmod
+    total_seconds = int(seconds)
+    
+    # Calcula horas e o resto
+    hours, remainder = divmod(total_seconds, 3600)
+    # Calcula minutos e segundos a partir do resto
+    minutes, sec = divmod(remainder, 60)
+    
+    # Retorna a string formatada com padding de zeros
+    return f"{hours:02}:{minutes:02}:{sec:02}"
+# --- FIM DA CORREÇÃO ---
+
 
 @separacoes_bp.route('/dashboard-data', methods=['POST'])
 def get_dashboard_logistica_data():
@@ -261,6 +273,9 @@ def get_dashboard_logistica_data():
     data_fim_str = filtros.get('dataFim')
 
     try:
+        if not data_inicio_str and not data_fim_str:
+             return jsonify({'separadores': [], 'conferentes': []})
+
         ids_excluidos_query = db.session.query(ItemExcluido.item_id_original).filter_by(tipo_item='Separacao')
         ids_excluidos = {str(item_id[0]) for item_id in ids_excluidos_query.all()}
         query = Separacao.query.filter_by(status='Finalizado')
@@ -281,30 +296,23 @@ def get_dashboard_logistica_data():
             num_separadores = len(lista_separadores)
 
             if num_separadores > 0:
-                # --- INÍCIO DA CORREÇÃO DA LÓGICA DE CÁLCULO ---
                 total_pecas_tarefa = sep.qtd_pecas or 0
-                
-                # Usa divisão de inteiros para obter a base
                 base_pecas = total_pecas_tarefa // num_separadores
-                # Usa o operador de módulo para obter o resto
                 resto_pecas = total_pecas_tarefa % num_separadores
-                
-                # Cria uma lista com a distribuição base para cada separador
                 distribuicao = [base_pecas] * num_separadores
                 
-                # Distribui o resto, 1 peça de cada vez, para os primeiros separadores da lista
                 for i in range(resto_pecas):
                     distribuicao[i] += 1
                 
-                # Itera sobre a lista de separadores e a lista de distribuição ao mesmo tempo
                 for i, nome_separador in enumerate(lista_separadores):
                     stats = separador_stats.setdefault(nome_separador, {'count': 0, 'total_seconds': 0, 'items_for_avg': 0, 'total_pecas': 0})
                     
                     stats['count'] += 1
-                    # Adiciona a quantidade de peças corretamente calculada para este separador
                     stats['total_pecas'] += distribuicao[i]
-                # --- FIM DA CORREÇÃO DA LÓGICA DE CÁLCULO ---
                     
+                    # --- INÍCIO DA LÓGICA DE TEMPO ---
+                    # O tempo total da tarefa é adicionado para CADA separador que participou.
+                    # Ele não é dividido.
                     try:
                         if sep.data_criacao and sep.data_inicio_conferencia:
                             data_criacao_obj = datetime.fromisoformat(sep.data_criacao)
@@ -317,6 +325,7 @@ def get_dashboard_logistica_data():
                                     stats['items_for_avg'] += 1
                     except (ValueError, TypeError):
                         continue
+                    # --- FIM DA LÓGICA DE TEMPO ---
 
             conferente_nome = sep.conferente_nome
             if conferente_nome:
@@ -336,8 +345,6 @@ def get_dashboard_logistica_data():
                 except (ValueError, TypeError):
                     continue
         
-        # O arredondamento agora não é mais estritamente necessário para as peças do separador,
-        # mas não causa mal, pois já estamos trabalhando com inteiros.
         for _, data in separador_stats.items():
             data['total_pecas'] = round(data['total_pecas'])
 
