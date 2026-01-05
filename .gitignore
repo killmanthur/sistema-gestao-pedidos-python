@@ -1,48 +1,61 @@
-# Arquivos de Chave de Serviço e Configurações Sensíveis
-serviceAccountKey.json
-*.env
+# === Python ===
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+develop-eggs/
+eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
 
-# Ambiente Virtual do Python
+# === Ambientes Virtuais ===
 venv/
 .venv/
 env/
+ENV/
 
-# Arquivos de cache e logs do Python
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
+# === Banco de Dados (Local) ===
+# Ignoramos o arquivo de dados, mas mantemos o schema.sql se existir
+quadro_local.db
+quadro_local.sqbpro
+*.sqlite
 
-# Pastas e arquivos gerados pelo PyInstaller
-build/
-dist/
-*.spec
-
-# Bancos de dados locais
-*.db
-*.sqlite3
-
-# Arquivos de configuração de IDEs e editores
-.vscode/
-.idea/
-
-# Logs e outros arquivos temporários
+# === Logs ===
+log.txt
 *.log
 
-#regras do Firebase
-firebase_rules.txt
+# === Configurações de IDE ===
+.vscode/
+.idea/
+*.swp
+*.swo
 
-# Logs de aplicação
-log.txt
+# === Arquivos de Build e Executáveis ===
+# Ignora as pastas geradas pelo PyInstaller ao criar o .exe
+build/
+dist/
+# Se você quiser manter o arquivo de configuração de build, 
+# remova a linha abaixo. Caso contrário, ignore os .spec
+# *.spec
 
-# Exportações e backups
-firebase_export.json
-
-# Atribuir senha de Admin
-set_admin_password.py
-
-#servidor nssm
+# === Ferramentas de Terceiros ===
+# Ignora o NSSM e executáveis de auxílio
+nssm.exe
 nssm-2.24/
 
-# Arquivos de migração do banco de dados
-migrations/
+# === Segredos e Exportações ===
+# Arquivos de exportação do Firebase podem conter dados sensíveis
+firebase_export.json
+.env
+
+# === Sistema Operacional ===
+.DS_Store
+Thumbs.db

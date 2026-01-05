@@ -54,7 +54,7 @@ pip install -r requirements.txt
 python run.py
 ```
 
-Acesse: **http://localhost:5000**
+Acesse: **http://localhost:52080**
 
 > O banco de dados é criado automaticamente no primeiro acesso.
 
