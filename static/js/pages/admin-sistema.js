@@ -4,17 +4,21 @@ import { showConfirmModal, toggleButtonLoading } from '../ui.js';
 
 const ALL_PAGES = {
     quadro: "Quadro Ativo",
-    pedidos_a_caminho: "Pedidos a Caminho", // <-- Adicionado para completude
+    pedidos_a_caminho: "Pedidos a Caminho",
     historico: "Histórico de Pedidos",
     historico_conferencias: "Histórico de Conferências",
     criar_pedido: "Pedidos Rua (Criar)",
     atualizacao_orcamento: "Atualizar Orçamento (Criar)",
+    registro_compras: "Registro de Compras",
     sugestoes: "Sugestão de Compras",
     dashboard: "Dashboard de Compras",
     dashboard_logistica: "Dashboard de Logística",
+    dashboard_conferencias: "Dashboard de Conferência",
     recebimento: "Recebimento",
     conferencias: "Quadro de Conferência",
+    pendencias_e_alteracoes: "Pendências e Alterações", // <-- ADICIONADO AQUI
     separacoes: "Separações",
+    tv_expedicao: "TV Expedição (Painel)",
     gerenciar_separacoes: "Gerenciar Separações",
     admin_sistema: "Gerenciar Sistema",
     lixeira: "Lixeira"
@@ -39,14 +43,12 @@ const CONFERENCIAS_PERMS = {
     pode_deletar_conferencia: "Pode Deletar Conferência"
 };
 
-// --- INÍCIO DA ALTERAÇÃO ---
 const PENDENCIAS_PERMS = {
     pode_editar_pendencia: "Pode Editar Pendências",
     pode_resolver_pendencia_conferencia: "Pode Resolver Pendências (Conferência)",
     pode_reiniciar_conferencia_historico: "Pode Reiniciar Conferência (Histórico)",
-    pode_editar_pedido_a_caminho: "Pode Editar Pedido a Caminho" // <-- NOVA PERMISSÃO AQUI
+    pode_editar_pedido_a_caminho: "Pode Editar Pedido a Caminho"
 };
-// --- FIM DA ALTERAÇÃO ---
 
 
 const LISTAS_DISPONIVEIS = {

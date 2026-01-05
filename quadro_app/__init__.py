@@ -54,6 +54,7 @@ def create_app():
     from .blueprints.logs import logs_bp
     from .blueprints.lixeira import lixeira_bp
     from .blueprints.listas_dinamicas import listas_bp, garantir_listas_padrao
+    from .blueprints.registro_compras import compras_registro_bp
 
     app.register_blueprint(main_views_bp)
     app.register_blueprint(pedidos_bp)
@@ -66,7 +67,8 @@ def create_app():
     app.register_blueprint(notificacoes_bp)
     app.register_blueprint(logs_bp)
     app.register_blueprint(lixeira_bp)
-    app.register_blueprint(listas_bp) 
+    app.register_blueprint(listas_bp)
+    app.register_blueprint(compras_registro_bp)
 
     # Cria as tabelas no banco de dados se não existirem
     with app.app_context():

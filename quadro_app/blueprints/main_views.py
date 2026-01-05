@@ -55,6 +55,10 @@ def separacoes_page():
 def conferencias_page():
     return render_template('conferencias.html')
 
+@main_views_bp.route('/dashboard-conferencias')
+def dashboard_conferencias_page():
+    return render_template('dashboard_conferencias.html')
+
 @main_views_bp.route('/historico-conferencias')
 def historico_conferencias_page():
     return render_template('historico_conferencias.html')
@@ -74,3 +78,16 @@ def gerenciar_sistema_page():
 @main_views_bp.route('/lixeira')
 def lixeira_page():
     return render_template('lixeira.html')
+
+@main_views_bp.route('/tv-expedicao')
+def tv_expedicao_page():
+    # Passamos tv_mode=True para ativar a classe CSS que esconde o header
+    return render_template('tv_expedicao.html', tv_mode=True)
+
+@main_views_bp.route('/registro-compras')
+def registro_compras_page():
+    return render_template('registro_compras.html')
+
+@main_views_bp.route('/pendencias-e-alteracoes')
+def pendencias_e_alteracoes_page():
+    return render_template('pendencias_e_alteracoes.html')

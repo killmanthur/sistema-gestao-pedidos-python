@@ -3,6 +3,7 @@
 {% block title %}Recebimento de Mercadorias{% endblock %}
 
 {% block content %}
+<!-- Seção Superior: Botões de Registro -->
 <section class="form-container" style="max-width: 800px; text-align: center;">
     <h2>Registrar Recebimento de Nota</h2>
     <p>Selecione o tipo de nota que está sendo recebida.</p>
@@ -16,41 +17,67 @@
 
 <hr>
 
-<section class="form-container" style="max-width: 1400px;">
-    <h2>Recebimentos Recentes</h2>
+<!-- Seção Principal: Filtros e Tabela -->
+<section class="form-container" style="max-width: 1600px;">
+    <h2>Recebimentos</h2>
 
-    <div style="margin: 2rem 0;">
-        <input type="search" id="filtro-geral-recebimentos" placeholder="🔎 Buscar em todos os campos...">
+    <!-- ÁREA DE FILTROS -->
+    <div class="layout-grid-4-cols" style="gap: 1rem; margin: 2rem 0; align-items: end;">
+        <div class="form-group" style="margin-bottom: 0;">
+            <label for="filtro-data-inicio">De:</label>
+            <input type="date" id="filtro-data-inicio">
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+            <label for="filtro-data-fim">Até:</label>
+            <input type="date" id="filtro-data-fim">
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+            <label for="filtro-status">Status:</label>
+            <select id="filtro-status">
+                <option value="">Todos</option>
+                <option value="Aguardando Conferência">Aguardando Conferência</option>
+                <option value="Em Conferência">Em Conferência</option>
+                <option value="Pendente">Com Pendências (Todas)</option>
+                <option value="Finalizado">Finalizado</option>
+            </select>
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+            <label for="filtro-geral-recebimentos">Busca Geral:</label>
+            <input type="search" id="filtro-geral-recebimentos" placeholder="🔎 NF, Fornecedor, Vendedor...">
+        </div>
+    </div>
+
+    <!-- Botão para limpar filtros -->
+    <div style="text-align: right; margin-bottom: 1.5rem;">
+        <button id="btn-limpar-filtros-recebimento" class="btn btn--secondary btn--sm">Limpar Filtros</button>
     </div>
 
     <div id="loading-spinner-tabela" class="spinner" style="display: block; margin: 2rem auto;"></div>
+
     <table id="tabela-recebimentos" class="admin-table" style="display: none; width: 100%;">
         <thead>
             <tr>
-                <th><input type="text" class="filtro-coluna" data-col="data_recebimento" placeholder="Data/Hora"></th>
-                <th><input type="text" class="filtro-coluna" data-col="numero_nota_fiscal" placeholder="Nº NF"></th>
-                <th><input type="text" class="filtro-coluna" data-col="nome_fornecedor" placeholder="Fornecedor"></th>
-                <th><input type="text" class="filtro-coluna" data-col="transportadora_ou_vendedor"
-                        placeholder="Transportadora / Vendedor"></th>
-                <th><input type="text" class="filtro-coluna" data-col="qtd_volumes" placeholder="Volumes"></th>
-                <th><input type="text" class="filtro-coluna" data-col="recebido_por" placeholder="Recebido por"></th>
-                <th>
-                    <select class="filtro-coluna" data-col="status">
-                        <option value="">Status (Todos)</option>
-                        <option value="Aguardando Conferência">Aguardando Conferência</option>
-                        <option value="Em Conferência">Em Conferência</option>
-                        <option value="Pendente de Resolução">Pendente de Resolução</option>
-                        <option value="Finalizado">Finalizado</option>
-                    </select>
-                </th>
+                <th>Data/Hora</th>
+                <th>Nº NF</th>
+                <th>Fornecedor</th>
+                <th>Transportadora / Vendedor</th>
+                <th>Volumes</th>
+                <th>Recebido por</th>
+                <th>Status</th>
                 <th>Ações</th>
             </tr>
         </thead>
         <tbody id="tabela-recebimentos-body"></tbody>
     </table>
+
+    <div id="pagination-container" class="pagination-container" style="margin-top: 1rem;">
+        <button id="btn-carregar-mais" class="btn btn--secondary" style="display: none;">Carregar mais antigos</button>
+    </div>
 </section>
 
-<!-- MODAL DE EDIÇÃO ATUALIZADO -->
+<!-- --- MODAIS --- -->
+
+<!-- MODAL DE EDIÇÃO -->
 <div id="edit-recebimento-modal-overlay" class="modal-overlay" style="display:none;">
     <div class="modal-content">
         <div class="modal-header">
@@ -67,29 +94,27 @@
                     <label for="edit-nome-fornecedor">Nome do Fornecedor</label>
                     <input type="text" id="edit-nome-fornecedor" required>
                 </div>
-                <!-- MUDANÇA: O grupo da transportadora agora tem um ID para ser manipulado -->
                 <div class="form-group" id="edit-transportadora-group">
                     <label for="edit-nome-transportadora">Transportadora</label>
                     <input type="text" id="edit-nome-transportadora" required>
                 </div>
-                <!-- NOVO: Grupo do Vendedor para Notas da Rua (inicialmente oculto) -->
+                <!-- Grupo de Vendedor para Edição -->
                 <div class="form-group" id="edit-vendedor-group" style="display: none;">
-                    <label for="edit-nome-vendedor">Vendedor</label>
-                    <select id="edit-nome-vendedor" required>
-                        <option value="" disabled selected>Carregando...</option>
-                    </select>
+                    <label for="edit-nome-vendedor">Vendedor(es)</label>
+                    <div id="edit-vendedores-container" class="vendedores-grid">
+                        <div class="spinner"></div>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label for="edit-qtd-volumes">Qtd. Volumes</label>
                     <input type="number" id="edit-qtd-volumes" required min="1">
-                    </div>
-                    <!-- ****** NOVO CAMPO ADICIONADO AQUI ****** -->
-                    <div class="form-group">
-                        <label for="edit-recebido-por">Recebido por</label>
-                        <input type="text" id="edit-recebido-por" required>
-                    </div>
-                    </div>
-                    <div class="modal-footer">
+                </div>
+                <div class="form-group">
+                    <label for="edit-recebido-por">Recebido por</label>
+                    <input type="text" id="edit-recebido-por" required>
+                </div>
+            </div>
+            <div class="modal-footer">
                 <button type="button" id="btn-excluir-recebimento" class="btn btn--danger"
                     style="margin-right: auto;">Excluir</button>
                 <button type="button" id="btn-cancel-edit-recebimento"
@@ -100,7 +125,7 @@
     </div>
 </div>
 
-<!-- NOVO MODAL: Registrar Nota de Fornecedor -->
+<!-- MODAL: Registrar Nota de Fornecedor -->
 <div id="modal-fornecedor-overlay" class="modal-overlay" style="display:none;">
     <div class="modal-content" style="max-width: 600px;">
         <div class="modal-header">
@@ -125,10 +150,15 @@
                     <label for="fornecedor-qtd-volumes">Qtd. Volumes</label>
                     <input type="number" id="fornecedor-qtd-volumes" required min="1">
                 </div>
-            <div class="form-group">
-                <label for="fornecedor-recebido-por">Recebido por</label>
-                <input type="text" id="fornecedor-recebido-por" required>
-            </div>
+                <div class="form-group">
+                    <label for="fornecedor-recebido-por">Recebido por</label>
+                    <input type="text" id="fornecedor-recebido-por" required>
+                </div>
+                <div class="form-group">
+                    <label for="fornecedor-observacao">Observação Inicial (Opcional)</label>
+                    <textarea id="fornecedor-observacao" rows="2"
+                        placeholder="Ex: Caixa amassada, volume aberto..."></textarea>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn--secondary close-modal">Cancelar</button>
@@ -138,7 +168,7 @@
     </div>
 </div>
 
-<!-- NOVO MODAL: Registrar Nota da Rua -->
+<!-- MODAL: Registrar Nota da Rua -->
 <div id="modal-rua-overlay" class="modal-overlay" style="display:none;">
     <div class="modal-content" style="max-width: 600px;">
         <div class="modal-header">
@@ -156,10 +186,10 @@
                     <input type="text" id="rua-nome-fornecedor" required>
                 </div>
                 <div class="form-group">
-                    <label for="rua-nome-vendedor">Vendedor</label>
-                    <select id="rua-nome-vendedor" required>
-                        <option value="" disabled selected>Carregando...</option>
-                    </select>
+                    <label>Selecione os Responsáveis (Vendedores/Motoristas)</label>
+                    <div id="rua-vendedores-container" class="vendedores-grid">
+                        <div class="spinner"></div>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label for="rua-qtd-volumes">Qtd. Volumes</label>

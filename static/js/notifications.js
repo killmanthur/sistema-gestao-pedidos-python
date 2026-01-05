@@ -55,21 +55,26 @@ async function fetchNotifications() {
         if (!response.ok) return;
 
         const notifications = await response.json();
+
+        // Filtra apenas as não lidas para a badge
         const unreadCount = notifications.filter(n => !n.lida).length;
 
+        // Atualiza a Badge
         if (unreadCount > 0) {
-            elements.count.textContent = unreadCount;
-            elements.count.style.display = 'block';
+            elements.count.textContent = unreadCount > 99 ? '99+' : unreadCount;
+            elements.count.style.display = 'flex'; // 'flex' para centralizar texto, definido no CSS
+
+            // Tocar som se houver NOVAS notificações (mais do que antes)
+            if (unreadCount > lastNotificationCount && audioUnlocked) {
+                notificationSound.play().catch(e => console.warn("Som bloqueado:", e));
+            }
         } else {
             elements.count.style.display = 'none';
         }
 
-        if (unreadCount > lastNotificationCount && audioUnlocked) {
-            notificationSound.play().catch(e => console.warn("Não foi possível tocar o som:", e));
-        }
         lastNotificationCount = unreadCount;
+        renderNotifications(notifications); // Renderiza a lista no painel
 
-        renderNotifications(notifications);
     } catch (error) {
         console.error("Erro ao buscar notificações:", error);
     }

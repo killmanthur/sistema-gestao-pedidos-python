@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block title %}Registro de Compras{% endblock %}
+
+{% block content %}
+<div style="max-width: 1400px; margin: 0 auto; padding: 1.5rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <h1>Registro de Compras</h1>
+        <div style="display: flex; gap: 1rem;">
+            <button id="btn-gerar-relatorio" class="btn btn--secondary"> 📄 Gerar Relatório </button>
+            <!-- Botão de Filtro -->
+            <button id="btn-abrir-modal-busca" class="btn btn--secondary"> 🔎 Filtrar </button>
+            <!-- Botão de Criação -->
+            <button id="btn-abrir-modal-criacao" class="btn btn--primary"> + Novo Registro </button>
+        </div>
+    </div>
+
+    <section id="relatorio-container" style="display: none; max-width: 1200px; margin: 2rem auto;">
+        <div class="modal-content" style="box-shadow: var(--shadow-lg); border: 1px solid var(--border-main);">
+            <div class="modal-header">
+                <h2>Relatório de Registros</h2>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button id="btn-salvar-relatorio" class="btn btn--primary">Salvar .txt</button>
+                    <button id="btn-fechar-relatorio" class="close-modal close-modal-icon">×</button>
+                </div>
+            </div>
+            <pre id="relatorio-output"
+                style="padding: 1.5rem; background: var(--bg-main); max-height: 60vh; overflow-y: auto; font-family: monospace;"></pre>
+        </div>
+    </section>
+
+    <!-- Tabela de Histórico (Agora com mais espaço) -->
+    <section class="form-container" style="max-width: 100%; margin: 0; padding: 0;">
+        <div id="loading-spinner-registros" class="spinner" style="display: none; margin: 2rem auto;"></div>
+        <table id="tabela-registros-compras" class="admin-table">
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Fornecedor</th>
+                    <th>Comprador</th>
+                    <th style="width: 180px;">Status</th>
+                    <th>Observação</th>
+                    <th style="width: 120px;">Ações</th>
+                </tr>
+            </thead>
+            <tbody id="tabela-registros-body"></tbody>
+        </table>
+    </section>
+</div>
+
+<!-- MODAL DE BUSCA/FILTRO -->
+<div id="search-registro-modal-overlay" class="modal-overlay" style="display:none;">
+    <div class="modal-content" style="max-width: 450px;">
+        <div class="modal-header">
+            <h2>🔎 Filtrar Registros</h2>
+            <button class="close-modal close-modal-icon">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>Fornecedor</label>
+                <input type="text" id="filtro-fornecedor" placeholder="Nome do fornecedor...">
+            </div>
+            <div class="form-group">
+                <label>Comprador</label>
+                <select id="filtro-comprador">
+                    <option value="">Todos os Compradores</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Status</label>
+                <select id="filtro-status">
+                    <option value="">Todos os Status</option>
+                    <option value="Aguardando">Aguardando</option>
+                    <option value="Em Cotação">Em Cotação</option>
+                    <option value="Pedido Efetuado">Pedido Efetuado</option>
+                </select>
+            </div>
+            <!-- NOVOS CAMPOS DE DATA -->
+            <div class="layout-grid-2-cols" style="gap: 1rem;">
+                <div class="form-group">
+                    <label>De:</label>
+                    <input type="date" id="filtro-data-inicio">
+                </div>
+                <div class="form-group">
+                    <label>Até:</label>
+                    <input type="date" id="filtro-data-fim">
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button id="btn-limpar-filtros" class="btn btn--secondary" style="margin-right: auto;">Limpar Tudo</button>
+            <button id="btn-aplicar-filtro" class="btn btn--primary">Aplicar Filtro</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL DE CRIAÇÃO (Permanece igual ao anterior) -->
+<div id="create-registro-modal-overlay" class="modal-overlay" style="display:none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Novo Registro de Compra</h2>
+            <button class="close-modal close-modal-icon">×</button>
+        </div>
+        <form id="form-registro-compra">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Fornecedor</label>
+                    <input type="text" id="reg-fornecedor" required>
+                </div>
+                <div class="form-group">
+                    <label>Comprador Responsável</label>
+                    <select id="reg-comprador"></select>
+                </div>
+                <div class="form-group">
+                    <label>Status Inicial</label>
+                    <select id="reg-status">
+                        <option value="Aguardando">Aguardando</option>
+                        <option value="Em Cotação">Em Cotação</option>
+                        <option value="Pedido Efetuado">Pedido Efetuado</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Observação</label>
+                    <textarea id="reg-observacao" rows="3"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="submit" class="btn btn--primary">Salvar Registro</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL DE EDIÇÃO (Permanece igual ao anterior) -->
+<div id="edit-registro-modal-overlay" class="modal-overlay" style="display:none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Editar Registro</h2>
+            <button class="close-modal close-modal-icon">×</button>
+        </div>
+        <form id="form-edit-registro">
+            <div class="modal-body">
+                <div class="form-group"><label>Fornecedor</label><input type="text" id="edit-reg-fornecedor" required>
+                </div>
+                <div class="form-group"><label>Comprador</label><select id="edit-reg-comprador"></select></div>
+                <div class="form-group"><label>Status</label>
+                    <select id="edit-reg-status">
+                        <option value="Aguardando">Aguardando</option>
+                        <option value="Em Cotação">Em Cotação</option>
+                        <option value="Pedido Efetuado">Pedido Efetuado</option>
+                    </select>
+                </div>
+                <div class="form-group"><label>Observação</label><textarea id="edit-reg-observacao" rows="3"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="submit" class="btn btn--primary">Salvar Alterações</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

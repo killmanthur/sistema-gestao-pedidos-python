@@ -176,20 +176,25 @@ def atualizar_status(pedido_id):
     
     # Lógica de notificação para o vendedor
     try:
+        # Busca o objeto usuário do vendedor
         vendedor = Usuario.query.filter_by(nome=pedido.vendedor).first()
+        
         if vendedor:
             tipo_texto = "Seu pedido de rua" if pedido.tipo_req == 'Pedido Produto' else "Sua atualização de orçamento"
+            # Pega o código ou o primeiro item para identificar
             codigo_texto = pedido.codigo or (pedido.itens[0]['codigo'] if pedido.itens and pedido.itens[0] else 'N/A')
             
-            # Notificação para "Pedido Efetuado"
+            # --- CENÁRIO 1: Pedido foi feito (Status vira 'A Caminho') ---
             if novo_status == 'A Caminho':
-                mensagem = f"{tipo_texto} '{codigo_texto}' foi efetuado por {editor_nome}."
+                mensagem = f"COMPRADO: {tipo_texto} '{codigo_texto}' já foi pedido!"
+                # Link leva para a página de pedidos a caminho
                 criar_notificacao(user_id=vendedor.id, mensagem=mensagem, link='/pedidos-a-caminho')
             
-            # Notificação para "Mercadoria Chegou"
+            # --- CENÁRIO 2: Mercadoria chegou (Status vira 'OK') ---
             elif novo_status == 'OK':
                 pedido.data_finalizacao = datetime.now(tz_cuiaba).isoformat()
-                mensagem = f"{tipo_texto} '{codigo_texto}' foi finalizado e a mercadoria recebida."
+                mensagem = f"CHEGOU: {tipo_texto} '{codigo_texto}' está disponível para retirada."
+                # Link leva para o histórico ou onde ele possa ver o finalizado
                 criar_notificacao(user_id=vendedor.id, mensagem=mensagem, link='/historico')
 
     except Exception as e:
@@ -199,19 +204,74 @@ def atualizar_status(pedido_id):
     registrar_log(pedido_id, editor_nome, 'STATUS_ALTERADO', detalhes={'de': status_antigo, 'para': novo_status})
     return jsonify({'status': 'success'})
 
+@pedidos_bp.route('/<int:pedido_id>/comprador', methods=['PUT'])
+def atualizar_comprador_pedido(pedido_id):
+    dados = request.get_json()
+    novo_comprador = dados.get('comprador')
+    editor_nome = dados.get('editor_nome', 'Sistema')
+    
+    pedido = Pedido.query.get_or_404(pedido_id)
+    
+    comprador_antigo = pedido.comprador
+    pedido.comprador = novo_comprador
+    
+    db.session.commit()
+    
+    # Registra no Log
+    registrar_log(
+        pedido_id, 
+        editor_nome, 
+        'COMPRADOR_ALTERADO', 
+        detalhes={'de': comprador_antigo or 'N/A', 'para': novo_comprador or 'N/A'}
+    )
+    
+    # Envia Notificação para o Comprador atribuído
+    try:
+        if novo_comprador and novo_comprador != comprador_antigo:
+            # Busca o usuário pelo nome para pegar o ID
+            usuario_comprador = Usuario.query.filter_by(nome=novo_comprador).first()
+            if usuario_comprador:
+                codigo_texto = pedido.codigo or (pedido.itens[0]['codigo'] if pedido.itens else 'N/A')
+                mensagem = f"{editor_nome} atribuiu o pedido '{codigo_texto}' a você."
+                criar_notificacao(user_id=usuario_comprador.id, mensagem=mensagem, link='/quadro')
+    except Exception as e:
+        print(f"ERRO ao criar notificação de atribuição de comprador: {e}")
+
+    return jsonify({'status': 'success'})
 
 @pedidos_bp.route('/ativos', methods=['GET'])
 def get_pedidos_ativos():
-    # Agora não mostra mais os pedidos "A Caminho" nesta rota
-    pedidos = Pedido.query.filter(Pedido.status.in_(['Aguardando', 'Em Cotação']))\
-                         .order_by(Pedido.data_criacao.desc()).all()
+    # --- INÍCIO DA ALTERAÇÃO ---
+    user_role = request.args.get('user_role')
+    user_name = request.args.get('user_name')
+
+    query = Pedido.query.filter(Pedido.status.in_(['Aguardando', 'Em Cotação']))
+    
+    # Se for Vendedor, filtra pelo nome dele
+    if user_role == 'Vendedor' and user_name:
+        query = query.filter(Pedido.vendedor == user_name)
+
+    pedidos = query.order_by(Pedido.data_criacao.desc()).all()
+    # --- FIM DA ALTERAÇÃO ---
+    
     return jsonify([serialize_pedido(p) for p in pedidos])
 
 # --- NOVA ROTA PARA A PÁGINA "PEDIDOS A CAMINHO" ---
 @pedidos_bp.route('/a-caminho', methods=['GET'])
 def get_pedidos_a_caminho():
-    pedidos = Pedido.query.filter(Pedido.status == 'A Caminho')\
-                         .order_by(Pedido.data_criacao.desc()).all()
+    # --- INÍCIO DA ALTERAÇÃO ---
+    user_role = request.args.get('user_role')
+    user_name = request.args.get('user_name')
+
+    query = Pedido.query.filter(Pedido.status == 'A Caminho')
+
+    # Se for Vendedor, filtra pelo nome dele
+    if user_role == 'Vendedor' and user_name:
+        query = query.filter(Pedido.vendedor == user_name)
+
+    pedidos = query.order_by(Pedido.data_criacao.desc()).all()
+    # --- FIM DA ALTERAÇÃO ---
+
     return jsonify([serialize_pedido(p) for p in pedidos])
 
 

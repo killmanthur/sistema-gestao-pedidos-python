@@ -135,23 +135,40 @@ function renderTableRows(separacoes) {
         const tr = document.createElement('tr');
         tr.dataset.separacao = JSON.stringify(sep);
 
-        // Transforma a lista de nomes em uma string separada por vírgula.
-        // Se a lista não existir ou estiver vazia, usa 'N/A'.
-        const separadoresDisplay = (sep.separadores_nomes && sep.separadores_nomes.length > 0)
-            ? sep.separadores_nomes.join(', ')
-            : 'N/A';
+        // --- INÍCIO DA ALTERAÇÃO (Badges Coloridas) ---
+        let separadoresDisplay = '<span style="color: var(--text-muted);">N/A</span>';
+
+        if (sep.separadores_nomes && sep.separadores_nomes.length > 0) {
+            separadoresDisplay = sep.separadores_nomes.map(nome => {
+                const color = getSeparatorColor(nome) || '#6c757d'; // Pega cor ou usa cinza padrão
+                // Retorna um HTML com estilo inline para a cor de fundo (Badge)
+                return `<span style="
+                background-color: ${color}; 
+                color: white; 
+                padding: 3px 8px; 
+                border-radius: 12px; 
+                font-size: 0.85rem; 
+                font-weight: 500;
+                display: inline-block; 
+                margin: 1px;
+                white-space: nowrap;
+                text-shadow: 0 1px 1px rgba(0,0,0,0.2);
+            ">${nome}</span>`;
+            }).join(' ');
+        }
+        // --- FIM DA ALTERAÇÃO ---
 
         tr.innerHTML = `
-            <td>${sep.numero_movimentacao}</td>
-            <td>${sep.nome_cliente}</td>
-            <td>${sep.vendedor_nome}</td>
-            <td>${separadoresDisplay}</td>
-            <td>${sep.conferente_nome || 'N/A'}</td>
-            <td>${formatarData(sep.data_criacao)}</td>
-            <td>${formatarData(sep.data_finalizacao)}</td>
-            <td class="actions-cell">
-               <button class="btn-action btn-edit">Editar</button>
-            </td>`;
+        <td>${sep.numero_movimentacao}</td>
+        <td>${sep.nome_cliente}</td>
+        <td>${sep.vendedor_nome}</td>
+        <td>${separadoresDisplay}</td>
+        <td>${sep.conferente_nome || 'N/A'}</td>
+        <td>${formatarData(sep.data_criacao)}</td>
+        <td>${formatarData(sep.data_finalizacao)}</td>
+        <td class="actions-cell">
+           <button class="btn-action btn-edit">Editar</button>
+        </td>`;
         fragment.appendChild(tr);
     });
     elementos.tableBody.appendChild(fragment);

@@ -1,10 +1,11 @@
+
 /**
  * @file sugestoes.js
  * @description Gerencia a lógica da página de sugestões com carregamento paginado para alta performance.
  */
 
 // --- Importações de Módulos ---
-import { AppState } from '../state.js';
+import { AppState } from '../state.js'; // <--- ADICIONADO: Importação necessária para os filtros
 import { formatarData, toggleButtonLoading, showConfirmModal } from '../ui.js';
 import { renderNewItemRow } from '../forms.js';
 import { showToast } from '../toasts.js';
@@ -57,15 +58,26 @@ async function carregarSugestoesPorStatus(status) {
 
     try {
         const page = estado.itens.length / TAMANHO_PAGINA;
-        let url = `/api/sugestoes-paginadas?status=${status}&limit=${TAMANHO_PAGINA}&page=${page}`;
+
+        // --- INÍCIO DA CORREÇÃO: Filtros de Usuário ---
+        const { role, nome } = AppState.currentUser;
+
+        let url = `/api/sugestoes/sugestoes-paginadas?status=${status}&limit=${TAMANHO_PAGINA}&page=${page}`;
+
+        // Adiciona user_role e user_name na URL
+        url += `&user_role=${encodeURIComponent(role || '')}&user_name=${encodeURIComponent(nome || '')}`;
+
         if (termoBuscaAtual) {
             url += `&search=${encodeURIComponent(termoBuscaAtual)}`;
         }
+        // --- FIM DA CORREÇÃO ---
 
         const response = await fetch(url);
         if (!response.ok) throw new Error('Falha na resposta da API.');
 
-        const data = await response.json();
+        // --- CORREÇÃO DO ERRO "data is not defined" ---
+        const data = await response.json(); // Esta linha é crucial
+        // ----------------------------------------------
 
         if (data.sugestoes && data.sugestoes.length > 0) {
             estado.itens.push(...data.sugestoes);
@@ -154,7 +166,7 @@ function criarItemSugestao(sugestao) {
         if (sugestao.status === 'parcialmente_atendido') {
             actionsHTML += `<button class="btn btn--success btn-finalizar-parcial">Finalizar Pedido</button>`;
         }
-        // MUDANÇA: O botão excluir agora aparece em cards finalizados se o usuário tiver permissão
+
         if (!isFinalizado || (isFinalizado && podeEditarFinalizada)) {
             actionsHTML += `<button class="btn btn--danger btn-excluir">Excluir</button>`;
         }
@@ -162,7 +174,6 @@ function criarItemSugestao(sugestao) {
 
     let itensHTML = '<ul class="item-list-selectable">';
     (sugestao.itens || []).forEach(item => {
-        // MUDANÇA: Força o status 'atendido' para todos os itens se a sugestão principal for 'atendido'
         const isAttended = sugestao.status === 'atendido' || item.status === 'atendido';
 
         const checkboxOrBullet = !isAttended && canManage
@@ -280,15 +291,9 @@ function handleAtenderParcial(event, sugestaoId) {
     handleApiAction(promise, 'Itens atendidos com sucesso!');
 }
 
-/**
- * --- INÍCIO DA CORREÇÃO ---
- * Função para copiar o conteúdo da sugestão para a área de transferência.
- * Inclui um fallback para ambientes não seguros (HTTP).
- */
 function handleCopySugestao(sugestao) {
     const textoParaCopiar = sugestao.itens.map(item => `${item.quantidade || 1}x ${item.codigo}`).join('\n');
 
-    // Tenta usar a API moderna (só funciona em HTTPS/localhost)
     if (navigator.clipboard && window.isSecureContext) {
         navigator.clipboard.writeText(textoParaCopiar)
             .then(() => {
@@ -299,10 +304,8 @@ function handleCopySugestao(sugestao) {
                 showToast('Não foi possível copiar os itens.', 'error');
             });
     } else {
-        // Fallback para HTTP ou navegadores mais antigos
         const textArea = document.createElement("textarea");
         textArea.value = textoParaCopiar;
-        // Evita que o textarea pisque na tela
         textArea.style.position = "fixed";
         textArea.style.top = "-9999px";
         textArea.style.left = "-9999px";
@@ -320,14 +323,12 @@ function handleCopySugestao(sugestao) {
             }
         } catch (err) {
             console.error('Falha ao copiar (fallback):', err);
-            showToast('Não foi possível copiar. Esta função pode requerer uma conexão segura (HTTPS).', 'error');
+            showToast('Não foi possível copiar.', 'error');
         }
 
         document.body.removeChild(textArea);
     }
 }
-// --- FIM DA CORREÇÃO ---
-
 
 function changeSugestaoStatus(sugestaoId, action) {
     showConfirmModal(`Mover esta sugestão para "${action.toUpperCase()}"?`, () => {

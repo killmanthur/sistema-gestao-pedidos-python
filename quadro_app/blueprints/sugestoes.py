@@ -160,7 +160,16 @@ def get_sugestoes_paginadas():
     page = int(request.args.get('page', 0))
     search_term = request.args.get('search', '').lower().strip()
     
+    # --- INÍCIO DA ALTERAÇÃO ---
+    user_role = request.args.get('user_role')
+    user_name = request.args.get('user_name')
+    
     query = Sugestao.query.filter_by(status=status)
+
+    # Lógica de restrição para Vendedores
+    if user_role == 'Vendedor' and user_name:
+        query = query.filter(Sugestao.vendedor == user_name)
+    # --- FIM DA ALTERAÇÃO ---
 
     if search_term:
         search_filter = or_(

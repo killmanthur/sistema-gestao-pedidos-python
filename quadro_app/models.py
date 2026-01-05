@@ -66,17 +66,17 @@ class Conferencia(db.Model):
     qtd_volumes = db.Column(db.Integer)
     vendedor_nome = db.Column(db.String(100))
     recebido_por = db.Column(db.String(100))
-    # MUDANÇA: Status mais detalhados
     status = db.Column(db.String(50)) # 'Aguardando...', 'Em Conferência', 'Pendente (Fornecedor)', 'Pendente (Alteração)', 'Pendente (Ambos)', 'Finalizado'
     data_inicio_conferencia = db.Column(db.String(100))
+    data_conferencia_finalizada = db.Column(db.String(100))
     data_finalizacao = db.Column(db.String(100))
     conferentes = db.Column(MutableList.as_mutable(JSON))
     observacoes = db.Column(MutableList.as_mutable(JSON))
-    # MUDANÇA: Campos de controle de resolução reintroduzidos
     resolvido_gestor = db.Column(db.Boolean, default=False)
     resolvido_contabilidade = db.Column(db.Boolean, default=False)
     conferente_nome = db.Column(db.String(100))
     editor_nome = db.Column(db.String(100))
+    total_itens = db.Column(db.Integer, default=0)
 
 # --- MODELOS DE SUPORTE ---
 
@@ -123,3 +123,12 @@ class Notificacao(db.Model):
     timestamp = db.Column(db.String(100), nullable=False)
 
     usuario = db.relationship('Usuario', backref=db.backref('notificacoes', lazy=True))
+
+class RegistroCompra(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    fornecedor = db.Column(db.String(200), nullable=False)
+    comprador_nome = db.Column(db.String(100), nullable=True)
+    observacao = db.Column(db.Text)
+    status = db.Column(db.String(50), default='Aguardando') # Pedido, Em Cotação, Aguardando
+    data_criacao = db.Column(db.String(100), nullable=False)
+    editor_nome = db.Column(db.String(100))

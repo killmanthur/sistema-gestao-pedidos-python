@@ -1,4 +1,5 @@
 // static/js/pages/pedidos_a_caminho.js
+import { AppState } from '../state.js';
 import { showToast } from '../toasts.js';
 import { criarCardPedido, setupLogModal } from '../ui.js';
 
@@ -26,7 +27,16 @@ function renderizarPedidos() {
 
 async function fetchACaminhoPedidos() {
     try {
-        const response = await fetch('/api/pedidos/a-caminho');
+        // --- INÍCIO DA ALTERAÇÃO ---
+        const { role, nome } = AppState.currentUser;
+        const params = new URLSearchParams({
+            user_role: role || '',
+            user_name: nome || ''
+        });
+
+        const response = await fetch(`/api/pedidos/a-caminho?${params.toString()}`);
+        // --- FIM DA ALTERAÇÃO ---
+
         if (!response.ok) throw new Error('Falha ao buscar pedidos a caminho.');
         aCaminhoPedidos = await response.json();
         renderizarPedidos();

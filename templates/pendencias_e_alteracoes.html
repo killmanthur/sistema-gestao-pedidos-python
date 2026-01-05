@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Pendências e Alterações{% endblock %}
+
+{% block content %}
+<section class="filtro-container-actions" style="margin: 0 auto 1.5rem; max-width: 1000px;">
+    <input type="text" id="filtro-pendencias" placeholder="🔎 Buscar por Nº NF, Fornecedor...">
+</section>
+
+<!-- Alterado para 2 colunas apenas -->
+<section class="layout-grid-2-cols">
+    <div class="quadro-coluna">
+        <h2>Pendências (Fornecedor)</h2>
+        <div id="quadro-pendencia-fornecedor" class="quadro-container"></div>
+    </div>
+    <div class="quadro-coluna">
+        <h2>Solicitações (Contabilidade)</h2>
+        <div id="quadro-solicitacao-alteracao" class="quadro-container"></div>
+    </div>
+</section>
+
+<!-- Modal para Resolver Item -->
+<div id="resolver-modal-overlay" class="modal-overlay" style="display:none;">
+    <div class="modal-content" style="max-width: 600px;">
+        <div class="modal-header">
+            <h2 id="resolver-modal-title">Gerenciar Pendência</h2>
+            <button class="close-modal close-modal-icon">×</button>
+        </div>
+        <form id="form-resolver">
+            <div class="modal-body">
+                <div class="obs-log-container" id="historico-observacoes"
+                    style="margin-bottom: 1rem; max-height: 200px;"></div>
+                <div class="form-group">
+                    <label for="resolver-observacao">Adicionar Nova Observação ou Resolução</label>
+                    <textarea id="resolver-observacao" rows="3" required></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn--secondary close-modal">Cancelar</button>
+                <button type="button" id="btn-add-update" class="btn btn--secondary">Apenas Adicionar
+                    Observação</button>
+                <button type="submit" class="btn btn--primary">Marcar como Resolvido</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

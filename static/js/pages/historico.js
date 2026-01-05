@@ -1,114 +1,143 @@
 // static/js/pages/historico.js
-// Responsabilidade: Lógica da página de Histórico com carregamento e filtragem no servidor.
-
-import { criarCardPedido, setupLogModal } from '../ui.js'; 
+import { criarCardPedido, setupLogModal } from '../ui.js';
 import { showToast } from '../toasts.js';
 
-// --- Variáveis de Estado ---
+// --- Variáveis de Estado Independentes para cada coluna ---
 const TAMANHO_PAGINA = 20;
-let paginaAtual = 0;
-let carregandoMais = false;
-let naoHaMaisPedidos = false;
-let filtrosAtuais = {};
+
+// Estado para a coluna Pedidos Rua
+const estadoRua = {
+    pagina: 0,
+    temMais: true,
+    carregando: false
+};
+
+// Estado para a coluna Orçamentos
+const estadoOrc = {
+    pagina: 0,
+    temMais: true,
+    carregando: false
+};
 
 // --- Elementos do DOM ---
 let quadroRua, quadroOrcamentos, formFiltros, btnLimpar, btnGerarRelatorio;
 let relatorioContainer, relatorioOutput, btnFecharRelatorio, btnSalvarRelatorio;
-let btnCarregarMais, loadingSpinner, paginationContainer;
+let btnCarregarMais, loadingSpinner;
 
 /**
- * Renderiza os cards de pedidos recebidos da API nas colunas corretas.
- * @param {Array} pedidos - Uma lista de objetos de pedido.
- * @param {boolean} limpar - Se true, limpa as colunas antes de adicionar novos cards.
+ * Função genérica para carregar dados de uma coluna específica.
+ * @param {string} tipoReq - 'Pedido Produto' ou 'Atualização Orçamento'
+ * @param {object} estado - Objeto de estado (estadoRua ou estadoOrc)
+ * @param {HTMLElement} container - Elemento DOM onde os cards serão inseridos
+ * @param {boolean} recarregar - Se deve limpar e recomeçar
  */
-function renderizarPedidos(pedidos, limpar = false) {
-    if (limpar) {
-        quadroRua.innerHTML = '';
-        quadroOrcamentos.innerHTML = '';
-    }
+async function carregarColuna(tipoReq, estado, container, recarregar = false) {
+    // Se já está carregando ou não tem mais dados (e não é um reload forçado), sai.
+    if (estado.carregando || (!recarregar && !estado.temMais)) return;
 
-    if (pedidos.length === 0 && paginaAtual === 0) {
-        quadroRua.innerHTML = `<p class="quadro-vazio-msg">Nenhum pedido de rua finalizado com estes filtros.</p>`;
-        quadroOrcamentos.innerHTML = `<p class="quadro-vazio-msg">Nenhuma atualização de orçamento finalizada com estes filtros.</p>`;
-    }
-
-    pedidos.forEach(pedido => {
-        const card = criarCardPedido(pedido);
-        if (pedido.tipo_req === 'Pedido Produto') {
-            quadroRua.appendChild(card);
-        } else {
-            quadroOrcamentos.appendChild(card);
-        }
-    });
-}
-
-/**
- * Busca a próxima página de pedidos do backend.
- * @param {boolean} recarregar - Se true, inicia a busca da primeira página.
- */
-async function carregarHistorico(recarregar = false) {
-    if (carregandoMais) return;
-    if (!recarregar && naoHaMaisPedidos) {
-        showToast('Não há mais pedidos antigos para carregar.', 'info');
-        return;
-    }
-
-    carregandoMais = true;
-    loadingSpinner.style.display = 'block';
-    btnCarregarMais.style.display = 'none';
+    estado.carregando = true;
 
     if (recarregar) {
-        paginaAtual = 0;
-        naoHaMaisPedidos = false;
-        filtrosAtuais = {
-            vendedor: document.getElementById('filtro-vendedor').value,
-            comprador: document.getElementById('filtro-comprador').value,
-            codigo: document.getElementById('filtro-codigo').value,
-            dataInicio: document.getElementById('filtro-data-inicio').value,
-            dataFim: document.getElementById('filtro-data-fim').value
-        };
+        estado.pagina = 0;
+        estado.temMais = true;
+        container.innerHTML = ''; // Limpa a coluna visualmente
     }
 
-    const body = {
-        ...filtrosAtuais,
-        page: paginaAtual,
-        limit: TAMANHO_PAGINA
+    // Coleta os filtros
+    const filtros = {
+        vendedor: document.getElementById('filtro-vendedor') ? document.getElementById('filtro-vendedor').value : '',
+        comprador: document.getElementById('filtro-comprador') ? document.getElementById('filtro-comprador').value : '',
+        codigo: document.getElementById('filtro-codigo') ? document.getElementById('filtro-codigo').value : '',
+        dataInicio: document.getElementById('filtro-data-inicio') ? document.getElementById('filtro-data-inicio').value : '',
+        dataFim: document.getElementById('filtro-data-fim') ? document.getElementById('filtro-data-fim').value : '',
+
+        // Parâmetros de paginação e tipo
+        page: estado.pagina,
+        limit: TAMANHO_PAGINA,
+        tipo_req: tipoReq
     };
 
     try {
         const response = await fetch('/api/historico-paginado', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
+            body: JSON.stringify(filtros)
         });
 
         const data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'Falha ao buscar histórico.');
+        if (!response.ok) throw new Error(data.error || `Erro ao buscar ${tipoReq}`);
 
-        renderizarPedidos(data.pedidos, recarregar);
-        
-        naoHaMaisPedidos = !data.temMais;
-        if (!naoHaMaisPedidos) {
-            paginaAtual++;
+        if (data.pedidos.length === 0 && estado.pagina === 0) {
+            container.innerHTML = `<p class="quadro-vazio-msg">Nenhum registro encontrado.</p>`;
+        } else {
+            // Remove a mensagem de vazio se existir e for adicionar itens
+            const emptyMsg = container.querySelector('.quadro-vazio-msg');
+            if (emptyMsg) emptyMsg.remove();
+
+            data.pedidos.forEach(pedido => {
+                container.appendChild(criarCardPedido(pedido));
+            });
+        }
+
+        estado.temMais = data.temMais;
+        if (estado.temMais) {
+            estado.pagina++;
         }
 
     } catch (error) {
-        console.error("Erro ao carregar histórico:", error);
-        showToast(error.message, "error");
+        console.error(`Erro ao carregar ${tipoReq}:`, error);
+        showToast(`Erro ao carregar coluna ${tipoReq}`, "error");
+        if (estado.pagina === 0) {
+            container.innerHTML = `<p class="quadro-vazio-msg" style="color:var(--clr-danger)">Erro de conexão.</p>`;
+        }
     } finally {
-        carregandoMais = false;
-        loadingSpinner.style.display = 'none';
-        btnCarregarMais.style.display = naoHaMaisPedidos ? 'none' : 'block';
+        estado.carregando = false;
+        atualizarEstadoBotao();
     }
 }
 
 /**
- * Pede ao backend para gerar um relatório com os filtros atuais.
+ * Controla a visibilidade do botão "Carregar Mais" e do Spinner.
+ * O botão só deve sumir se AMBAS as colunas não tiverem mais dados.
  */
+function atualizarEstadoBotao() {
+    const algumCarregando = estadoRua.carregando || estadoOrc.carregando;
+    const algumTemMais = estadoRua.temMais || estadoOrc.temMais;
+
+    if (loadingSpinner) loadingSpinner.style.display = algumCarregando ? 'block' : 'none';
+
+    if (btnCarregarMais) {
+        // Mostra o botão se não estiver carregando E se pelo menos uma coluna tiver mais dados
+        if (!algumCarregando && algumTemMais) {
+            btnCarregarMais.style.display = 'block';
+        } else {
+            btnCarregarMais.style.display = 'none';
+        }
+    }
+}
+
+/**
+ * Função principal chamada para iniciar ou continuar o carregamento.
+ */
+function carregarTudo(recarregar = false) {
+    if (loadingSpinner) loadingSpinner.style.display = 'block';
+    if (btnCarregarMais) btnCarregarMais.style.display = 'none';
+
+    // Dispara as duas requisições em paralelo
+    Promise.all([
+        carregarColuna('Pedido Produto', estadoRua, quadroRua, recarregar),
+        carregarColuna('Atualização Orçamento', estadoOrc, quadroOrcamentos, recarregar)
+    ]).then(() => {
+        // Ambas terminaram (com sucesso ou erro)
+        atualizarEstadoBotao();
+    });
+}
+
+// ... (Funções de Relatório permanecem iguais) ...
 async function gerarRelatorio() {
     showToast("Gerando relatório no servidor. Aguarde...", 'info');
-    btnGerarRelatorio.disabled = true;
-    loadingSpinner.style.display = 'block';
+    if (btnGerarRelatorio) btnGerarRelatorio.disabled = true;
+    if (loadingSpinner) loadingSpinner.style.display = 'block';
 
     const filtros = {
         vendedor: document.getElementById('filtro-vendedor').value,
@@ -128,21 +157,18 @@ async function gerarRelatorio() {
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || 'Erro desconhecido no servidor.');
 
-        relatorioOutput.textContent = result.relatorio;
-        relatorioContainer.style.display = 'block';
+        if (relatorioOutput) relatorioOutput.textContent = result.relatorio;
+        if (relatorioContainer) relatorioContainer.style.display = 'block';
 
     } catch (error) {
         console.error("Erro ao gerar relatório:", error);
         showToast(`Falha ao gerar relatório: ${error.message}`, "error");
     } finally {
-        btnGerarRelatorio.disabled = false;
-        loadingSpinner.style.display = 'none';
+        if (btnGerarRelatorio) btnGerarRelatorio.disabled = false;
+        if (loadingSpinner) loadingSpinner.style.display = 'none';
     }
 }
 
-/**
- * Salva o relatório gerado em um arquivo de texto.
- */
 async function salvarRelatorio() {
     const texto = relatorioOutput.textContent;
     if (!texto) {
@@ -151,7 +177,6 @@ async function salvarRelatorio() {
     }
 
     try {
-        // Usa fetch para enviar o texto para o nosso novo endpoint
         const response = await fetch('/api/download-relatorio', {
             method: 'POST',
             headers: {
@@ -160,36 +185,26 @@ async function salvarRelatorio() {
             body: texto
         });
 
-        if (!response.ok) {
-            throw new Error('Falha ao gerar o arquivo no servidor.');
-        }
+        if (!response.ok) throw new Error('Falha ao gerar o arquivo no servidor.');
 
-        // Pega o arquivo retornado pelo servidor
         const blob = await response.blob();
-
-        // Cria um link temporário na memória para o arquivo
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.style.display = 'none';
         a.href = url;
 
-        // Pega o nome do arquivo do header da resposta
+        let filename = `relatorio-${new Date().toISOString().split('T')[0]}.txt`;
         const contentDisposition = response.headers.get('content-disposition');
-        let filename = `relatorio-${new Date().toISOString()}.txt`;
         if (contentDisposition && contentDisposition.indexOf('attachment') !== -1) {
-            const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
-            const matches = filenameRegex.exec(contentDisposition);
+            const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(contentDisposition);
             if (matches != null && matches[1]) {
                 filename = matches[1].replace(/['"]/g, '');
             }
         }
         a.download = filename;
 
-        // Adiciona o link ao corpo do documento e o clica programaticamente
         document.body.appendChild(a);
         a.click();
-
-        // Limpa o link da memória
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
 
@@ -201,44 +216,53 @@ async function salvarRelatorio() {
     }
 }
 
-/**
- * Função principal que inicializa a página de Histórico.
- */
 export function initHistoricoPage() {
     setupLogModal();
+
     quadroRua = document.getElementById('quadro-historico-rua');
     quadroOrcamentos = document.getElementById('quadro-historico-orcamentos');
+
     formFiltros = document.getElementById('form-filtros');
     btnLimpar = document.getElementById('btn-limpar-filtros');
     btnGerarRelatorio = document.getElementById('btn-gerar-relatorio');
+
     relatorioContainer = document.getElementById('relatorio-container');
     relatorioOutput = document.getElementById('relatorio-output');
     btnFecharRelatorio = document.getElementById('btn-fechar-relatorio');
     btnSalvarRelatorio = document.getElementById('btn-salvar-relatorio');
+
     btnCarregarMais = document.getElementById('btn-carregar-mais');
     loadingSpinner = document.getElementById('loading-spinner');
-    paginationContainer = document.getElementById('pagination-container');
 
-    if (!formFiltros || !btnCarregarMais) return;
+    if (!quadroRua || !quadroOrcamentos) {
+        console.error("Elementos do quadro histórico não encontrados.");
+        return;
+    }
 
-    formFiltros.addEventListener('submit', (e) => { 
-        e.preventDefault();
-        relatorioContainer.style.display = 'none';
-        carregarHistorico(true);
-    });
+    if (formFiltros) {
+        formFiltros.addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (relatorioContainer) relatorioContainer.style.display = 'none';
+            carregarTudo(true); // true = recarregar (limpar e buscar pág 0)
+        });
+    }
 
-    btnLimpar.addEventListener('click', () => { 
-        formFiltros.reset();
-        relatorioContainer.style.display = 'none';
-        carregarHistorico(true);
-    });
-    
-    btnCarregarMais.addEventListener('click', () => carregarHistorico(false));
+    if (btnLimpar) {
+        btnLimpar.addEventListener('click', () => {
+            formFiltros.reset();
+            if (relatorioContainer) relatorioContainer.style.display = 'none';
+            carregarTudo(true);
+        });
+    }
 
-    btnGerarRelatorio.addEventListener('click', gerarRelatorio);
-    btnFecharRelatorio.addEventListener('click', () => relatorioContainer.style.display = 'none');
-    btnSalvarRelatorio.addEventListener('click', salvarRelatorio);
+    if (btnCarregarMais) {
+        btnCarregarMais.addEventListener('click', () => carregarTudo(false)); // false = carregar próxima página
+    }
+
+    if (btnGerarRelatorio) btnGerarRelatorio.addEventListener('click', gerarRelatorio);
+    if (btnFecharRelatorio) btnFecharRelatorio.addEventListener('click', () => relatorioContainer.style.display = 'none');
+    if (btnSalvarRelatorio) btnSalvarRelatorio.addEventListener('click', salvarRelatorio);
 
     // Carrega a primeira página de dados ao entrar
-    carregarHistorico(true);
+    carregarTudo(true);
 }

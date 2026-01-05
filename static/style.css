@@ -227,6 +227,24 @@ main {
     border-color: var(--clr-danger);
 }
 
+.btn-finalize {
+    background-color: var(--clr-success);
+    color: var(--text-on-primary) !important;
+    border-color: var(--clr-success);
+    padding: 5.5px 12px;
+}
+
+.btn-finalize:hover:not(:disabled) {
+    border-color: #1b582c;
+    background-color: #1b582c !important;
+}
+
+.btn--confirmar {
+    background-color: var(--clr-primary-);
+    color: var(--text-on-primary);
+    border-color: var(--clr-primary-main);
+}
+
 .btn--danger:hover:not(:disabled) {
     background-color: #b22222;
     border-color: #b22222;
@@ -357,41 +375,91 @@ header {
 .dropdown-menu {
     display: none;
     position: absolute;
-    top: 90%;
+    top: 100%;
+    /* Garante que comece logo abaixo do item pai */
     left: 0;
     z-index: 1001;
     background-color: var(--bg-surface);
     border: 1px solid var(--border-main);
-    border-radius: var(--border-radius);
-    box-shadow: var(--shadow-lg);
+    border-radius: 12px;
+    /* Bordas mais arredondadas no container */
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    /* Sombra mais suave e profunda */
     list-style: none;
-    padding: 0.5rem 0;
-    margin-top: 0;
-    min-width: 240px;
+    padding: 0.75rem;
+    /* Espaço interno geral para afastar itens da borda */
+    margin-top: 0.5rem;
+    /* Espaço entre o menu e o header */
+    min-width: 260px;
+    /* Um pouco mais largo para caber textos maiores */
     opacity: 0;
     visibility: hidden;
     transform: translateY(-10px);
     transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
+
+    /* Flex para organizar melhor se necessário */
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    /* Espaço físico entre cada item da lista (funciona se display for flex/grid, mas vamos forçar no item abaixo também) */
 }
 
+/* O comportamento de hover para mostrar o menu continua o mesmo */
 .nav-item--dropdown:hover>.dropdown-menu {
-    display: block;
+    display: flex;
+    /* Mudado de block para flex para usar o gap */
     opacity: 1;
     visibility: visible;
     transform: translateY(0);
 }
 
-.dropdown-menu .nav-item a {
-    padding: 0.6rem 1.25rem;
-    white-space: nowrap;
-    color: var(--text-primary);
-    font-size: 0.9rem;
-    transition: var(--transition-main);
+/* Estilo de cada item individual */
+.dropdown-menu .nav-item {
+    width: 100%;
 }
 
+/* Estilo do Link dentro do Dropdown */
+.dropdown-menu .nav-item a {
+    display: block;
+    /* Ocupa a largura total */
+    padding: 0.75rem 1rem;
+    /* Mais altura (0.75rem) para facilitar o clique */
+    white-space: nowrap;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    /* Fonte levemente maior */
+    font-weight: 500;
+    transition: all 0.2s ease;
+    border-radius: 8px;
+    /* Arredonda os itens individuais */
+    text-decoration: none;
+    border-left: 3px solid transparent;
+    /* Prepara uma borda lateral para o hover */
+}
+
+/* Efeito Hover Moderno */
 .dropdown-menu .nav-item a:hover {
     background-color: var(--bg-muted);
+    /* Cor de fundo suave ao passar o mouse */
     color: var(--clr-primary-main);
+    /* Cor do texto muda para a primária */
+    padding-left: 1.5rem;
+    /* O texto "anda" um pouco para a direita */
+    border-left-color: var(--clr-primary-main);
+    /* Aparece uma barrinha colorida na esquerda */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    /* Sutil destaque */
+}
+
+/* Ajuste específico para o Modo Escuro ficar bonito */
+body.dark-mode .dropdown-menu {
+    border: 1px solid var(--border-strong);
+    background-color: var(--bg-surface);
+}
+
+body.dark-mode .dropdown-menu .nav-item a:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    /* Hover mais sutil no escuro */
 }
 
 /* --- 6. Forms --- */
@@ -432,6 +500,21 @@ textarea {
     background-color: var(--bg-surface);
     color: var(--text-primary);
     transition: var(--transition-main);
+    resize: vertical;
+}
+
+textarea {
+    min-height: 100px;
+}
+
+/* Seleciona as setas internas do Chrome/Edge/Safari/Opera */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+
+    filter: opacity(0.3);
+    height: 20px;
+    opacity: 1;
+    cursor: pointer;
 }
 
 input[type="checkbox"] {
@@ -594,20 +677,117 @@ body.dark-mode .card__header-actions .btn-icon img {
     flex-wrap: wrap;
 }
 
+/* Estilo base para botões dentro dos cards */
 .card__actions .btn {
     flex-grow: 1;
     padding: 0.4rem 0.5rem;
     font-size: 0.8rem;
-    font-weight: 500;
-    border: 1px solid;
+    font-weight: 600;
+    /* Um pouco mais de peso na fonte */
+    border: 1px solid transparent;
+    /* Borda transparente por padrão para botões sólidos */
     border-radius: 6px;
     transition: var(--transition-main);
     text-transform: uppercase;
-    background-color: transparent;
+    /* Removemos background-color: transparent global para permitir botões sólidos */
 }
 
-body.dark-mode .card__actions .btn {
-    background-color: var(--bg-surface);
+/* Botão Editar (Outline/Borda) */
+.card__actions .btn--edit {
+    background-color: transparent;
+    color: var(--text-secondary);
+    border-color: var(--border-strong);
+}
+
+.card__actions .btn--edit:hover:not([disabled]) {
+    background-color: var(--text-secondary);
+    color: white;
+    border-color: var(--text-secondary);
+}
+
+/* Botão Aviso/Em Cotação (Outline Amarelo) */
+.card__actions .btn--warning {
+    background-color: transparent;
+    color: #d9a406;
+    /* Um amarelo mais escuro para legibilidade no branco */
+    border-color: #d9a406;
+}
+
+.card__actions .btn--warning:hover:not([disabled]) {
+    background-color: #ffc107;
+    color: #212529;
+    /* Texto escuro no hover amarelo */
+    border-color: #ffc107;
+}
+
+/* Botão Primário/Pedido Efetuado (SÓLIDO AZUL) - Correção Principal */
+.card__actions .btn--primary {
+    background-color: transparent;
+    /* Azul sólido */
+    color: var(--clr-primary-light);
+    /* Texto branco forçado */
+    border-color: var(--clr-primary-main);
+}
+
+.card__actions .btn--primary:hover:not([disabled]) {
+    color: #0a0b0c;
+}
+
+.card__actions .btn--primary:hover:not([disabled]) {
+    background-color: var(--clr-primary-dark);
+    border-color: var(--clr-primary-dark);
+    opacity: 0.95;
+}
+
+/* Botão Sucesso/Chegada (SÓLIDO VERDE) */
+.card__actions .btn--success {
+    background-color: transparent;
+    /* Verde sólido */
+    color: var(--clr-success);
+    border-color: var(--clr-success);
+}
+
+.card__actions .btn--success:hover:not([disabled]) {
+    color: rgb(0, 0, 0) !important;
+}
+
+.card__actions .btn--success:hover:not([disabled]) {
+    filter: brightness(0.9);
+    /* Leve escurecimento no hover */
+}
+
+/* Botão Perigo/Excluir (SÓLIDO VERMELHO) */
+.card__actions .btn--danger {
+    background-color: var(--clr-danger);
+    color: white !important;
+    border-color: var(--clr-danger);
+}
+
+.card__actions .btn--danger:hover:not([disabled]) {
+    background-color: #b22222;
+    /* Vermelho mais escuro */
+}
+
+/* --- Ajustes Específicos para o MODO ESCURO --- */
+body.dark-mode .card__actions .btn--edit {
+    color: var(--text-secondary);
+    border-color: var(--border-strong);
+}
+
+body.dark-mode .card__actions .btn--edit:hover:not([disabled]) {
+    background-color: var(--text-secondary);
+    color: white;
+}
+
+body.dark-mode .card__actions .btn--warning {
+    color: var(--clr-warning);
+    /* Amarelo original funciona bem no escuro */
+    border-color: var(--clr-warning);
+}
+
+body.dark-mode .card__actions .btn--warning:hover:not([disabled]) {
+    background-color: var(--clr-warning);
+    color: #121826;
 }
 
 .btn--edit {
@@ -1231,4 +1411,406 @@ body.tv-mode main {
 
 .log-item-modified {
     color: var(--clr-warning);
+}
+
+/* --- Estilos da Badge de Notificação --- */
+
+/* O botão do sino precisa ser relativo para a badge se posicionar nele */
+#notification-bell {
+    position: relative;
+    overflow: visible;
+    /* Garante que a badge não seja cortada */
+}
+
+/* O contador (a bolinha vermelha) */
+#notification-count {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background-color: var(--clr-danger);
+    /* Vermelho */
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 700;
+    min-width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    /* Flex para centralizar o número */
+    align-items: center;
+    justify-content: center;
+    padding: 2px;
+    border: 2px solid var(--bg-surface);
+    /* Borda branca para separar do ícone */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    z-index: 10;
+
+    /* Animação suave quando aparece */
+    animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* Animação de entrada */
+@keyframes popIn {
+    from {
+        transform: scale(0);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Ajuste para quando o número for maior que 9 (vira um oval) */
+#notification-count:not(:empty) {
+    padding: 0 4px;
+    border-radius: 10px;
+}
+
+/* --- Estilização Global de Inputs de Data --- */
+
+input[type="date"] {
+    /* Herda o estilo base dos inputs, mas reforçamos algumas propriedades */
+    appearance: none;
+    -webkit-appearance: none;
+    display: inline-block;
+    position: relative;
+    padding: 0.7rem 0.9rem;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--border-radius);
+    background-color: var(--bg-surface);
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 0.9rem;
+    line-height: normal;
+    cursor: pointer;
+    min-width: 150px;
+    /* Garante que não fique muito estreito */
+}
+
+/* Foco: Borda azul igual aos outros inputs */
+input[type="date"]:focus {
+    outline: none;
+    border-color: var(--clr-primary-main);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--clr-primary-light) 25%, transparent);
+}
+
+/* --- Estilização do Ícone do Calendário (Webkit/Chrome/Edge) --- */
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+    background-color: transparent;
+    padding: 5px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.2s ease, filter 0.2s ease;
+
+    /* Ajusta a cor do ícone padrão (geralmente preto) */
+    /* Opacidade reduzida para ficar cinza suave */
+    opacity: 0.6;
+}
+
+/* Hover no ícone: Fica mais nítido e ganha fundo suave */
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+    background-color: var(--bg-muted);
+    opacity: 1;
+}
+
+/* --- Ajustes para o Modo Escuro --- */
+
+/* 
+   IMPORTANTE: Isso informa ao navegador para renderizar 
+   o popup do calendário (os dias) com tema escuro nativo 
+*/
+body.dark-mode input[type="date"] {
+    color-scheme: dark;
+}
+
+/* No modo escuro, precisamos inverter a cor do ícone padrão (que é preto) para ficar branco */
+body.dark-mode input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+}
+
+/* No modo claro, garantimos que o popup seja claro */
+body:not(.dark-mode) input[type="date"] {
+    color-scheme: light;
+}
+
+/* --- Cores das Linhas da Tabela de Recebimento --- */
+
+/* Status: Aguardando Conferência (Padrão ou levemente cinza) */
+tr.status-aguardando {
+    background-color: transparent;
+}
+
+/* Status: Em Conferência (Azul suave) */
+tr.status-em-conferencia {
+    background-color: var(--bg-info-soft);
+}
+
+tr.status-em-conferencia:hover {
+    background-color: #c2e0f5;
+    /* Um pouco mais escuro no hover */
+}
+
+/* Status: Pendências (Vermelho suave) */
+tr.status-pendente {
+    background-color: var(--bg-danger-soft);
+}
+
+tr.status-pendente:hover {
+    background-color: #f1c1c5;
+}
+
+/* Status: Finalizado (Verde suave) */
+tr.status-finalizado {
+    background-color: var(--bg-success-soft);
+}
+
+tr.status-finalizado:hover {
+    background-color: #c3e6cb;
+}
+
+/* Checkbox grid para Seleção Múltipla (Reutilizando estilo de Separações) */
+.vendedores-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 0.5rem;
+    max-height: 150px;
+    overflow-y: auto;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--border-radius);
+    padding: 0.5rem;
+    background-color: var(--bg-surface);
+}
+
+.vendedores-grid label {
+    font-size: 0.85rem;
+    margin: 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.badge-status {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    color: #fff;
+}
+
+.bg-status-awaiting {
+    background-color: #3498db;
+}
+
+/* Azul */
+.bg-status-progress {
+    background-color: #f1c40f;
+    color: #000;
+}
+
+/* Amarelo */
+.bg-status-success {
+    background-color: #2ecc71;
+}
+
+/* Verde */
+
+/* Cores para as linhas da tabela de Registro de Compras */
+
+/* Status: Aguardando (Padrão ou leve azul) */
+tr.status-aguardando {
+    background-color: transparent;
+}
+
+/* Status: Em Cotação (Amarelo suave) */
+tr.status-em-cotacao {
+    background-color: var(--bg-warning-soft);
+}
+
+tr.status-em-cotacao:hover {
+    background-color: #fff3cd;
+    /* Um pouco mais forte no hover */
+}
+
+/* Status: Pedido Efetuado (Verde suave) */
+tr.status-pedido-efetuado {
+    background-color: var(--bg-success-soft);
+}
+
+tr.status-pedido-efetuado:hover {
+    background-color: #d4edda;
+}
+
+/* --- Estilos para TV Expedição (KDS Compacto) --- */
+
+.tv-dashboard {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    /* MUDADO PARA 3 COLUNAS */
+    gap: 0.8rem;
+    height: 100vh;
+    padding: 0.5rem;
+    background-color: #121212;
+    overflow: hidden;
+}
+
+/* Nova cor para o cabeçalho de finalizados */
+.tv-header--finalizado {
+    background-color: #0d2137;
+    color: #3498db;
+    border-bottom-color: #3498db;
+}
+
+/* Garante que o card de finalizado também tenha a borda azul */
+.tv-column:last-child .tv-card {
+    border-left-color: #3498db;
+}
+
+.tv-header {
+    padding: 0.8rem 1rem;
+    /* Cabeçalho mais fino */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 3px solid;
+    flex-shrink: 0;
+    /* Garante que o header não encolha */
+}
+
+.tv-header h2 {
+    margin: 0;
+    font-size: 1.6rem;
+    /* Fonte do título menor */
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.tv-count {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 0.1rem 0.8rem;
+    border-radius: 6px;
+    font-size: 1.6rem;
+    font-weight: bold;
+}
+
+/* Cores específicas */
+.tv-header--separacao {
+    background-color: #2c2508;
+    color: #f1c40f;
+    border-bottom-color: #f1c40f;
+}
+
+.tv-header--conferencia {
+    background-color: #0d2713;
+    color: #2ecc71;
+    border-bottom-color: #2ecc71;
+}
+
+/* --- MUDANÇA PRINCIPAL: GRID NA LISTA --- */
+.tv-list {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 0.8rem;
+    /* Transforma a lista em uma grade */
+    display: grid;
+    /* Tenta colocar 2 cards por linha se couber (minimo 220px cada) */
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    grid-auto-rows: min-content;
+    /* Altura baseada no conteúdo */
+    gap: 0.8rem;
+    /* Espaço entre os cards */
+    align-content: start;
+    /* Cola os itens no topo */
+}
+
+/* O Card do Pedido (Compacto) */
+.tv-card {
+    background-color: #2d2d2d;
+    border-radius: 6px;
+    padding: 0.6rem;
+    /* Padding reduzido */
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    border-left: 5px solid #555;
+    /* Borda lateral mais fina */
+    transition: transform 0.2s;
+}
+
+.tv-column:first-child .tv-card {
+    border-left-color: #f1c40f;
+}
+
+.tv-column:last-child .tv-card {
+    border-left-color: #2ecc71;
+}
+
+.tv-card__mov {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: #383838;
+    padding: 0.4rem 0.6rem;
+    border-radius: 4px;
+    min-width: 70px;
+    /* Largura fixa menor */
+}
+
+.tv-card__mov .label {
+    font-size: 0.65rem;
+    color: #aaa;
+    text-transform: uppercase;
+    font-weight: bold;
+    margin-bottom: -2px;
+}
+
+.tv-card__mov .number {
+    font-size: 1.8rem;
+    /* Número menor, mas ainda legível */
+    font-weight: 800;
+    color: #fff;
+    line-height: 1;
+}
+
+.tv-card__client {
+    font-size: 1.3rem;
+    /* Nome do cliente menor */
+    font-weight: 600;
+    color: #e0e0e0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    /* Corta nomes muito longos com ... */
+    line-height: 1.2;
+}
+
+.tv-empty-state {
+    grid-column: 1 / -1;
+    /* Ocupa toda a largura do grid */
+    text-align: center;
+    font-size: 1.2rem;
+    color: #555;
+    margin-top: 2rem;
+    font-style: italic;
+}
+
+/* Scrollbar fina para não ocupar espaço */
+.tv-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.tv-list::-webkit-scrollbar-track {
+    background: #1e1e1e;
+}
+
+.tv-list::-webkit-scrollbar-thumb {
+    background: #444;
+    border-radius: 3px;
 }

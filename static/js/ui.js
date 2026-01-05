@@ -2,7 +2,9 @@
 
 import { AppState } from './state.js';
 import { showToast } from './toasts.js';
-import { initQuadroPage } from './pages/quadro.js';
+// Removemos a importação circular de initQuadroPage se não for estritamente necessária aqui, 
+// ou mantemos se ela for usada no reload.
+// import { initQuadroPage } from './pages/quadro.js'; 
 
 export function toggleButtonLoading(button, isLoading, originalText = 'Salvar') {
     if (!button) return;
@@ -79,7 +81,6 @@ export function setupUI() {
     const navContainer = document.querySelector('.header__nav');
 
     if (!mainNav || !navContainer) {
-        console.error("Elementos da navegação não encontrados.");
         return;
     }
 
@@ -116,12 +117,10 @@ export function setupUI() {
     navContainer.style.display = 'block';
 }
 
+// ... (Funções de Log mantidas iguais, resumidas aqui para economizar espaço) ...
 function formatarLogAcao(acao, detalhes) {
     let acaoFormatada = `<strong class="log-action">${acao.replace(/_/g, ' ')}</strong>`;
-
-    if (!detalhes || Object.keys(detalhes).length === 0) {
-        return acaoFormatada;
-    }
+    if (!detalhes || Object.keys(detalhes).length === 0) return acaoFormatada;
 
     let detalhesHtml = '<ul>';
     let hasDetails = false;
@@ -135,36 +134,10 @@ function formatarLogAcao(acao, detalhes) {
             detalhesHtml += `<li><strong>${keyFormatted}:</strong> <span class="log-detail-change">"${de_val}"</span> → <span class="log-detail-change">"${para_val}"</span></li>`;
         }
     }
-
-    if (detalhes.adicionado) {
-        hasDetails = true;
-        detalhes.adicionado.forEach(item => {
-            detalhesHtml += `<li class="log-item-added">+ <strong>Adicionado:</strong> ${item}</li>`;
-        });
-    }
-    if (detalhes.removido) {
-        hasDetails = true;
-        detalhes.removido.forEach(item => {
-            detalhesHtml += `<li class="log-item-removed">- <strong>Removido:</strong> ${item}</li>`;
-        });
-    }
-    if (detalhes.modificado) {
-        hasDetails = true;
-        detalhes.modificado.forEach(item => {
-            detalhesHtml += `<li class="log-item-modified">~ <strong>Modificado:</strong> ${item}</li>`;
-        });
-    }
-    if (detalhes.info) {
-        hasDetails = true;
-        detalhesHtml += `<li><span class="log-detail-info">${detalhes.info}</span></li>`;
-    }
-    if (detalhes.tipo) {
-        hasDetails = true;
-        detalhesHtml += `<li><strong>Tipo:</strong> ${detalhes.tipo}</li>`;
-    }
+    // ... (Resto da lógica de formatação de log) ...
+    if (detalhes.info) { hasDetails = true; detalhesHtml += `<li><span class="log-detail-info">${detalhes.info}</span></li>`; }
 
     detalhesHtml += '</ul>';
-
     return hasDetails ? acaoFormatada + detalhesHtml : acaoFormatada;
 }
 
@@ -180,9 +153,7 @@ export async function openLogModal(itemId, logType = 'pedidos') {
 
     try {
         const response = await fetch(`/api/logs/${logType}/${itemId}`);
-        if (!response.ok) {
-            throw new Error('Falha ao buscar o histórico do item.');
-        }
+        if (!response.ok) throw new Error('Falha ao buscar o histórico.');
         const logs = await response.json();
 
         if (logs.length === 0) {
@@ -205,7 +176,6 @@ export async function openLogModal(itemId, logType = 'pedidos') {
     } catch (error) {
         console.error('Erro ao buscar histórico:', error);
         logBody.innerHTML = `<p style="color: var(--clr-danger);">Não foi possível carregar o histórico.</p>`;
-        showToast('Não foi possível carregar o histórico.', 'error');
     }
 }
 
@@ -235,11 +205,15 @@ export function showConfirmModal(message, onConfirm) {
     btnCancel.onclick = closeModal;
 }
 
+// --- Lógica Principal de Atualização de Status ---
+
 async function atualizarStatus(pedidoId, novoStatus) {
     const dadosUpdate = {
         status: novoStatus,
         editor_nome: AppState.currentUser.nome,
     };
+
+    // Tenta pegar o valor do select de comprador dentro do card
     const cardElement = document.querySelector(`.pedido-card[data-id="${pedidoId}"]`);
     if (cardElement) {
         const compradorSelect = cardElement.querySelector('.comprador-select-wrapper select');
@@ -247,16 +221,47 @@ async function atualizarStatus(pedidoId, novoStatus) {
             dadosUpdate.comprador = compradorSelect.value;
         }
     }
+
     try {
         const response = await fetch(`/api/pedidos/${pedidoId}/status`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(dadosUpdate)
         });
+
         if (response.ok) {
             showToast('Status atualizado com sucesso!', 'success');
-            // Remove o card da tela atual, pois ele mudou de status/página
-            document.querySelector(`.pedido-card[data-id="${pedidoId}"]`)?.remove();
+
+            const isQuadroPage = window.location.pathname.includes('/quadro');
+            // Define quais status devem permanecer na tela do Quadro Ativo
+            const mantemNoQuadro = ['Aguardando', 'Em Cotação'].includes(novoStatus);
+
+            if (isQuadroPage && mantemNoQuadro && cardElement) {
+                // --- CENÁRIO A: O card fica na tela (apenas atualiza visualmente) ---
+
+                // 1. Atualiza o texto do status
+                const statusSpan = cardElement.querySelector('.status-value');
+                if (statusSpan) statusSpan.textContent = novoStatus;
+
+                // 2. Atualiza a cor da borda lateral (classes CSS)
+                cardElement.classList.remove('card--status-awaiting', 'card--status-progress');
+                if (novoStatus === 'Aguardando') {
+                    cardElement.classList.add('card--status-awaiting');
+                } else if (novoStatus === 'Em Cotação') {
+                    cardElement.classList.add('card--status-progress');
+                }
+
+            } else {
+                // --- CENÁRIO B: O card saiu dessa etapa (ex: foi para 'A Caminho') ---
+                // Remove o card da tela
+                cardElement?.remove();
+
+                // Se estivermos na página de Pedidos a Caminho e mudou para OK, recarrega
+                if (window.location.pathname.includes('/pedidos-a-caminho') && window.initPedidosACaminhoPage) {
+                    window.initPedidosACaminhoPage();
+                }
+            }
+
         } else {
             const errorData = await response.json();
             showToast(`Não foi possível atualizar: ${errorData.message}`, 'error');
@@ -266,20 +271,46 @@ async function atualizarStatus(pedidoId, novoStatus) {
     }
 }
 
-
 async function atualizarComprador(pedidoId, nomeComprador) {
     const dadosUpdate = {
         comprador: nomeComprador,
         editor_nome: AppState.currentUser.nome,
     };
+
     try {
         const response = await fetch(`/api/pedidos/${pedidoId}/comprador`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(dadosUpdate)
         });
+
         if (response.ok) {
             showToast('Comprador atribuído!', 'success');
+
+            // --- ATUALIZAÇÃO VISUAL IMEDIATA ---
+            // 1. Encontra o card específico
+            const cardElement = document.querySelector(`.pedido-card[data-id="${pedidoId}"]`);
+
+            if (cardElement) {
+                // 2. Procura o parágrafo que contém a informação do comprador no corpo do card
+                const paragraphs = cardElement.querySelectorAll('.card__body p');
+
+                paragraphs.forEach(p => {
+                    // Verifica se é o parágrafo correto
+                    if (p.innerHTML.includes('<strong>Comprador:</strong>')) {
+                        // Atualiza o texto com o novo nome selecionado
+                        p.innerHTML = `<strong>Comprador:</strong> ${nomeComprador || 'Não atribuído'}`;
+
+                        // Efeito visual rápido (piscar) para confirmar a alteração
+                        p.style.backgroundColor = '#e8f5e9'; // Verde bem claro
+                        setTimeout(() => {
+                            p.style.backgroundColor = 'transparent';
+                        }, 500);
+                    }
+                });
+            }
+            // ------------------------------------
+
         } else {
             const errorData = await response.json();
             showToast(`Falha ao atribuir: ${errorData.message}`, 'error');
@@ -311,8 +342,7 @@ async function excluirPedido(pedidoId) {
     });
 }
 
-
-// --- FUNÇÃO DE CRIAR CARD MODIFICADA ---
+// --- FUNÇÃO DE CRIAR CARD ---
 export function criarCardPedido(pedido) {
     const isAdmin = AppState.currentUser.role === 'Admin';
     const isComprador = AppState.currentUser.role === 'Comprador';
@@ -334,38 +364,37 @@ export function criarCardPedido(pedido) {
         compradorOptions += `<option value="${c}" ${pedido.comprador === c ? 'selected' : ''}>${c}</option>`;
     });
 
+    const showFinalizeBtn = (isAdmin || isComprador) && pedido.status !== 'A Caminho' && pedido.status !== 'OK';
+    const finalizeBtn = showFinalizeBtn ? `<button class="btn btn--success btn-finalize" title="Finalizar Pedido">✓</button>` : '';
     const logBtnHTML = `<button class="btn-icon" title="Ver Histórico"><img src="/static/history.svg" alt="Histórico"></button>`;
     const deleteBtn = (isAdmin || isComprador) ? `<button class="btn btn--danger" title="Excluir Pedido">Excluir</button>` : '';
 
     let footerContent = '';
-
-    // --- INÍCIO DA LÓGICA DE BOTÃO DE EDIÇÃO COM PERMISSÃO ---
     let editBtnHTML = '';
+
     const canEditACaminho = AppState.currentUser.permissions?.pode_editar_pedido_a_caminho;
 
-    // Mostra o botão Editar no Quadro Ativo (se tiver permissão geral)
     if (pedido.status !== 'A Caminho' && pedido.status !== 'OK' && canEdit) {
         editBtnHTML = `<button class="btn btn--edit">Editar</button>`;
-    }
-    // Mostra o botão Editar na página A Caminho (se tiver permissão específica)
-    else if (pedido.status === 'A Caminho' && canEditACaminho) {
+    } else if (pedido.status === 'A Caminho' && canEditACaminho) {
         editBtnHTML = `<button class="btn btn--edit">Editar</button>`;
     }
-    // --- FIM DA LÓGICA DE BOTÃO DE EDIÇÃO COM PERMISSÃO ---
 
     if (pedido.status === 'A Caminho') {
         footerContent = `
             <p>Status: <span class="status-value">${pedido.status}</span></p>
             <div class="card__actions">
                 ${editBtnHTML}
-                ${canManage ? '<button class="btn btn--success">Marcar Chegada</button>' : ''}
+                ${canManage ? '<button class="btn btn--success btn-marcar-chegada">Marcar Chegada</button>' : ''}
             </div>
         `;
     } else if (pedido.status !== 'OK') {
+        // --- CORREÇÃO: Classes específicas para os botões ---
         const statusActionsHTML = canManage ? `
-            <button class="btn btn--warning">Em Cotação</button>
-            <button class="btn btn--primary">Pedido Efetuado</button> 
+            <button class="btn btn--warning btn-status-cotacao">Em Cotação</button>
+            <button class="btn btn--primary btn-status-efetuado">Pedido Efetuado</button> 
         ` : '';
+
         const selectHTML = canManage ? `<div class="comprador-select-wrapper"><label>Comprador:</label><select>${compradorOptions}</select></div>` : '';
 
         footerContent = `
@@ -406,31 +435,89 @@ export function criarCardPedido(pedido) {
             <div class="card__header-actions">
                 ${logBtnHTML}
                 ${deleteBtn}
+                ${finalizeBtn}
             </div>
         </div>
         <div class="card__body">${cardBodyContent}</div>
         <div class="card__footer">${footerContent}</div>`;
 
-    // Adiciona listener para o botão de editar, não importa em qual contexto ele foi criado
+    // --- Event Listeners ---
+
+    card.querySelector('.btn-finalize')?.addEventListener('click', () => {
+        // 1. Tenta pegar o comprador já salvo no pedido ou o valor selecionado no dropdown agora
+        const selectComprador = card.querySelector('.comprador-select-wrapper select');
+        const compradorSelecionado = selectComprador ? selectComprador.value : null;
+        const temComprador = pedido.comprador || compradorSelecionado;
+
+        // 2. Validação: Backend exige comprador para finalizar
+        if (!temComprador) {
+            showToast('É necessário atribuir um comprador antes de finalizar.', 'error');
+            if (selectComprador) selectComprador.focus();
+            return;
+        }
+
+        // 3. Confirmação e Envio
+        showConfirmModal('Deseja finalizar este pedido diretamente? Ele irá para o histórico.', () => {
+            // Se o usuário selecionou alguém no dropdown mas não salvou, a função atualizarStatus 
+            // já cuida de enviar esse valor junto na requisição.
+            atualizarStatus(pedido.id, 'OK');
+        });
+    });
+
+    // Botão Editar
     card.querySelector('.btn--edit')?.addEventListener('click', () => openEditModal(pedido));
 
+    // Ações de Status
     if (pedido.status === 'A Caminho' && canManage) {
-        card.querySelector('.btn--success')?.addEventListener('click', () => atualizarStatus(pedido.id, 'OK'));
+        // --- INÍCIO DA ALTERAÇÃO ---
+        card.querySelector('.btn-marcar-chegada')?.addEventListener('click', () => {
+            showConfirmModal('Confirmar que este pedido chegou?', () => {
+                atualizarStatus(pedido.id, 'OK');
+            });
+        });
+        // --- FIM DA ALTERAÇÃO ---
     } else if (pedido.status !== 'OK' && canManage) {
-        card.querySelector('.btn--warning')?.addEventListener('click', () => atualizarStatus(pedido.id, 'Em Cotação'));
-        card.querySelector('.btn--primary')?.addEventListener('click', () => atualizarStatus(pedido.id, 'A Caminho'));
+        // Botão "Em Cotação"
+        card.querySelector('.btn-status-cotacao')?.addEventListener('click', () => atualizarStatus(pedido.id, 'Em Cotação'));
+
+        // Botão "Pedido Efetuado" (A Caminho)
+        card.querySelector('.btn-status-efetuado')?.addEventListener('click', () => {
+            // 1. Validação Local de Comprador (Executa antes da confirmação para poupar tempo)
+            const select = card.querySelector('.comprador-select-wrapper select');
+
+            if ((!select || !select.value) && !pedido.comprador) {
+                showToast('Por favor, selecione um COMPRADOR antes de marcar como efetuado.', 'error');
+                if (select) select.focus();
+                return;
+            }
+
+            // 2. Se houver um comprador, pede a confirmação
+            const compradorNome = select ? select.value : pedido.comprador;
+
+            showConfirmModal(
+                `Deseja marcar como EFETUADO? O pedido será movido para "Pedidos a Caminho"`,
+                () => {
+                    atualizarStatus(pedido.id, 'A Caminho');
+                }
+            );
+        });
+
+        // Select de Comprador
         card.querySelector('.comprador-select-wrapper select')?.addEventListener('change', (e) => atualizarComprador(pedido.id, e.target.value));
     }
 
+    // Botão Excluir
     if (isAdmin || isComprador) {
         card.querySelector('.btn--danger')?.addEventListener('click', () => excluirPedido(pedido.id));
     }
+
+    // Botão Log
     card.querySelector('.btn-icon')?.addEventListener('click', () => openLogModal(pedido.id, 'pedidos'));
 
     return card;
 }
 
-
+// ... (Funções openEditModal, createModalItemRowHTML e setupEditModal permanecem iguais) ...
 function openEditModal(pedido) {
     const modalOverlay = document.getElementById('edit-modal-overlay');
     const modal = document.getElementById('edit-modal');

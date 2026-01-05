@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Painel Expedição{% endblock %}
+
+{% block content %}
+<div class="tv-dashboard">
+    <!-- Coluna 1: Em Separação -->
+    <div class="tv-column">
+        <div class="tv-header tv-header--separacao">
+            <h2>EM SEPARAÇÃO</h2>
+            <span id="count-separacao" class="tv-count">0</span>
+        </div>
+        <div id="list-separacao" class="tv-list"></div>
+    </div>
+
+    <!-- Coluna 2: Em Conferência -->
+    <div class="tv-column">
+        <div class="tv-header tv-header--conferencia">
+            <h2>EM CONFERÊNCIA</h2>
+            <span id="count-conferencia" class="tv-count">0</span>
+        </div>
+        <div id="list-conferencia" class="tv-list"></div>
+    </div>
+
+    <!-- NOVA Coluna 3: Finalizadas -->
+    <div class="tv-column">
+        <div class="tv-header tv-header--finalizado">
+            <h2>CONCLUÍDAS (Últimas 10)</h2>
+            <span id="count-finalizado" class="tv-count">0</span>
+        </div>
+        <div id="list-finalizado" class="tv-list"></div>
+    </div>
+</div>
+{% endblock %}

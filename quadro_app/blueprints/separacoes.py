@@ -115,22 +115,32 @@ def editar_separacao(separacao_id):
     dados = request.get_json()
     separacao = Separacao.query.get_or_404(separacao_id)
     editor_nome = dados.pop('editor_nome', 'Sistema')
-    estado_antigo = {field: getattr(separacao, field) for field in serialize_separacao(separacao).keys()}
+    
+    # --- VERIFICAÇÃO DE DUPLICIDADE NO NÚMERO ---
+    novo_num = dados.get('numero_movimentacao')
+    if novo_num:
+        novo_num_str = str(novo_num)
+        # Busca se existe outra separação (ID diferente) com este mesmo número
+        existente = Separacao.query.filter(
+            Separacao.numero_movimentacao == novo_num_str, 
+            Separacao.id != separacao_id
+        ).first()
+        
+        if existente:
+            return jsonify({
+                'error': f'Erro: O número de movimentação {novo_num_str} já está sendo usado na separação do cliente "{existente.nome_cliente}".'
+            }), 409
+
+    # Atualiza os campos
     for key, value in dados.items():
-        if hasattr(separacao, key):
-            setattr(separacao, key, value)
-    if dados.get('conferente_nome') and estado_antigo['status'] == 'Em Separação':
+        if hasattr(separacao, key): setattr(separacao, key, value)
+    
+    if dados.get('conferente_nome') and separacao.status == 'Em Separação':
         separacao.status = 'Em Conferência'
         separacao.data_inicio_conferencia = datetime.now(tz_cuiaba).isoformat()
+        
     db.session.commit()
-    detalhes_log = {}
-    for key, old_value in estado_antigo.items():
-        new_value = getattr(separacao, key)
-        if key in ['id', 'observacoes', 'data_criacao', 'data_inicio_conferencia', 'data_finalizacao']: continue
-        if str(old_value) != str(new_value):
-            detalhes_log[key] = {'de': old_value or 'N/A', 'para': new_value or 'N/A'}
-    if detalhes_log:
-        registrar_log(separacao_id, editor_nome, 'EDICAO', detalhes=detalhes_log, log_type='separacoes')
+    registrar_log(separacao_id, editor_nome, 'EDICAO', log_type='separacoes')
     return jsonify({'status': 'success'})
 
 @separacoes_bp.route('/<int:separacao_id>', methods=['DELETE'])
@@ -191,6 +201,14 @@ def get_separacoes_ativas():
         query = query.filter_by(vendedor_nome=user_name)
     ativas = query.order_by(Separacao.data_criacao.desc()).all()
     return jsonify([serialize_separacao(s) for s in ativas])
+
+@separacoes_bp.route('/recentes-finalizadas', methods=['GET'])
+def get_recentes_finalizadas():
+    # Busca as 10 últimas finalizadas ordenadas pela data de finalização
+    recentes = Separacao.query.filter_by(status='Finalizado')\
+        .order_by(Separacao.data_finalizacao.desc())\
+        .limit(10).all()
+    return jsonify([serialize_separacao(s) for s in recentes])
 
 @separacoes_bp.route('/status-ativas', methods=['GET'])
 def get_status_separacoes_ativas():

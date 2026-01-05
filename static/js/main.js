@@ -17,9 +17,12 @@ import { initGerenciarSeparacoesPage } from './pages/gerenciar-separacoes.js';
 import { initDashboardLogisticaPage } from './pages/dashboard-logistica.js';
 import { initLixeiraPage } from './pages/lixeira.js';
 import { initHistoricoConferenciasPage } from './pages/historico-conferencias.js';
-// --- IMPORTAÇÃO DA NOVA PÁGINA ---
+import { initDashboardConferenciasPage } from './pages/dashboard-conferencias.js';
 import { initPedidosACaminhoPage } from './pages/pedidos_a_caminho.js';
 import { setupNotifications } from './notifications.js';
+import { initTvExpedicaoPage } from './pages/tv_expedicao.js';
+import { initRegistroComprasPage } from './pages/registro_compras.js';
+import { initPendenciasEAlteracoesPage } from './pages/pendencias_e_alteracoes.js';
 
 async function fetchInitialData() {
     try {
@@ -51,6 +54,9 @@ export async function initializeAuthenticatedApp() {
     if (path.includes('/historico-conferencias')) {
         initHistoricoConferenciasPage();
     }
+    else if (path.includes('/tv-expedicao')) {
+        initTvExpedicaoPage();
+    }
     // --- LÓGICA DE INICIALIZAÇÃO DA NOVA PÁGINA ---
     else if (path.includes('/pedidos-a-caminho')) {
         initPedidosACaminhoPage();
@@ -74,11 +80,17 @@ export async function initializeAuthenticatedApp() {
     else if (path.includes('/criar-pedido')) {
         initCriarPedidoPage();
     }
+    else if (path.includes('/pendencias-e-alteracoes')) {
+        initPendenciasEAlteracoesPage();
+    }
     else if (path.includes('/atualizacao-orcamento')) {
         initAtualizacaoOrcamentoPage();
     }
     else if (path.includes('/dashboard-logistica')) {
         initDashboardLogisticaPage();
+    }
+    else if (path.includes('/dashboard-conferencias')) {
+        initDashboardConferenciasPage();
     }
     else if (path.includes('/dashboard')) {
         initDashboardPage();
@@ -97,6 +109,9 @@ export async function initializeAuthenticatedApp() {
     }
     else if (path.includes('/lixeira')) {
         initLixeiraPage();
+    }
+    else if (path.includes('/registro-compras')) {
+        initRegistroComprasPage();
     }
 }
 

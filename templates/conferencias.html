@@ -7,7 +7,7 @@
     <input type="text" id="filtro-conferencias" placeholder="🔎 Buscar por Nº NF, Fornecedor...">
 </section>
 
-<section class="layout-grid-4-cols">
+<section class="layout-grid-2-cols">
     <div class="quadro-coluna">
         <h2>Aguardando Conferência</h2>
         <div id="quadro-aguardando" class="quadro-container"></div>
@@ -16,17 +16,9 @@
         <h2>Em Conferência</h2>
         <div id="quadro-em-conferencia" class="quadro-container"></div>
     </div>
-    <div class="quadro-coluna">
-        <h2>Pendências (Fornecedor)</h2>
-        <div id="quadro-pendencia-fornecedor" class="quadro-container"></div>
-    </div>
-    <div class="quadro-coluna">
-        <h2>Pendências (Contabilidade)</h2>
-        <div id="quadro-pendencia-contabilidade" class="quadro-container"></div>
-    </div>
 </section>
 
-<!-- MODAIS -->
+<!-- MODAIS OPERACIONAIS -->
 
 <!-- Modal para Iniciar Conferência -->
 <div id="add-conferente-modal-overlay" class="modal-overlay" style="display:none;">
@@ -37,7 +29,12 @@
         </div>
         <form id="form-add-conferente">
             <div class="modal-body">
-                <p>Selecione um ou mais conferentes.</p>
+                <div class="form-group">
+                    <label for="conf-total-itens">Quantidade Total de Itens da NF</label>
+                    <input type="number" id="conf-total-itens" required min="1" placeholder="Ex: 1000">
+                </div>
+                <hr>
+                <p>Selecione os conferentes:</p>
                 <div id="conferentes-checkbox-container" class="permissions-grid" style="grid-template-columns: 1fr;">
                 </div>
             </div>
@@ -49,7 +46,7 @@
     </div>
 </div>
 
-<!-- Modal para Finalizar Conferência -->
+<!-- Modal para Finalizar Conferência (Aqui define se vai para Pendência) -->
 <div id="finalize-modal-overlay" class="modal-overlay" style="display:none;">
     <div class="modal-content" style="max-width: 500px;">
         <div class="modal-header">
@@ -58,16 +55,16 @@
         </div>
         <form id="form-finalize-conferencia">
             <div class="modal-body">
-                <p>Se houver qualquer divergência, marque a opção correspondente e descreva o problema.</p>
+                <p>Se houver qualquer divergência, marque a opção correspondente:</p>
                 <hr style="margin: 1rem 0;">
                 <div class="form-group" style="display: flex; flex-direction: column; gap: 0.75rem;">
-                    <label style="display: flex; align-items: center; gap: 0.75rem; margin: 0;">
+                    <label style="display: flex; align-items: center; gap: 0.75rem;">
                         <input type="checkbox" id="checkbox-pendencia-fornecedor">
-                        Há pendências com o Fornecedor? (Ex: item faltante, avariado)
+                        Há pendências com o Fornecedor? (Falta/Avaria)
                     </label>
-                    <label style="display: flex; align-items: center; gap: 0.75rem; margin: 0;">
+                    <label style="display: flex; align-items: center; gap: 0.75rem;">
                         <input type="checkbox" id="checkbox-solicitar-alteracao">
-                        Há erro de lançamento? (Ex: código/quantidade errada no sistema)
+                        Há erro de lançamento no sistema?
                     </label>
                 </div>
                 <div class="form-group" style="margin-top: 1.5rem;">
@@ -78,31 +75,6 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn--secondary close-modal">Cancelar</button>
                 <button type="submit" class="btn btn--primary">Confirmar Finalização</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<!-- Modal para Resolver Pendência -->
-<div id="resolver-modal-overlay" class="modal-overlay" style="display:none;">
-    <div class="modal-content" style="max-width: 600px;">
-        <div class="modal-header">
-            <h2 id="resolver-modal-title">Resolver Item</h2>
-            <button class="close-modal close-modal-icon">×</button>
-        </div>
-        <form id="form-resolver">
-            <div class="modal-body">
-                <div class="obs-log-container" id="historico-observacoes"
-                    style="margin-bottom: 1rem; max-height: 200px;"></div>
-                <div class="form-group">
-                    <label for="resolver-observacao">Adicionar Observação de Resolução</label>
-                    <textarea id="resolver-observacao" rows="3" required></textarea>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn--secondary close-modal">Cancelar</button>
-                <button type="button" id="btn-add-update" class="btn btn--info">Adicionar Atualização</button>
-                <button type="submit" class="btn btn--primary">Marcar como Resolvido</button>
             </div>
         </form>
     </div>

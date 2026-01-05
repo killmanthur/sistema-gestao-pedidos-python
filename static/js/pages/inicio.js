@@ -8,7 +8,7 @@ const PAGE_MAP = {
     criar_pedido: { name: "Criar Pedido de Rua", url: "/criar-pedido" },
     atualizacao_orcamento: { name: "Atualizar Orçamento", url: "/atualizacao-orcamento" },
     sugestoes: { name: "Sugestão de Compras", url: "/sugestoes" },
-    // --- ALTERAÇÃO AQUI ---
+    tv_expedicao: { name: "TV Expedição", url: "/tv-expedicao" }, // Adiciona a nova página
     pendencias_e_alteracoes: { name: "Pendências e Alterações", url: "/pendencias-e-alteracoes" }, // Adiciona a nova página
     dashboard: { name: "Dashboard", url: "/dashboard" },
     admin_sistema: { name: "Gerenciar Sistema", url: "/admin/sistema" } // Corrigido para o nome correto da página
@@ -16,9 +16,6 @@ const PAGE_MAP = {
 
 export function initInicioPage() {
     const welcomeMessage = document.getElementById('welcome-message');
-    // ATENÇÃO: O container de links rápidos não existia no seu HTML original,
-    // adicione-o em `inicio.html` se quiser usar esta funcionalidade.
-    // Exemplo: <div id="quick-links-container" class="quick-links"></div>
     const quickLinksContainer = document.getElementById('quick-links-container');
     const noAccessMessage = document.getElementById('no-access-message');
 
