@@ -3,6 +3,7 @@ from flask import Blueprint, request, jsonify
 from datetime import datetime
 from ..extensions import db, tz_cuiaba
 from ..models import RegistroCompra
+from quadro_app import socketio  # <-- ADICIONADO
 
 compras_registro_bp = Blueprint('compras_registro', __name__, url_prefix='/api/registro-compras')
 
@@ -33,6 +34,7 @@ def criar_registro():
         )
         db.session.add(novo)
         db.session.commit()
+        socketio.emit('registro_compras_atualizado')
         return jsonify({'status': 'success', 'id': novo.id}), 201
     except Exception as e:
         db.session.rollback()
@@ -62,6 +64,7 @@ def editar_registro(reg_id):
         reg.comprador_nome = comprador_novo
         reg.observacao = dados.get('observacao', reg.observacao)
         db.session.commit()
+        socketio.emit('registro_compras_atualizado')
         return jsonify({'status': 'success'})
     except Exception as e:
         db.session.rollback()
@@ -73,6 +76,7 @@ def excluir_registro(reg_id):
         reg = RegistroCompra.query.get_or_404(reg_id)
         db.session.delete(reg)
         db.session.commit()
+        socketio.emit('registro_compras_atualizado')
         return jsonify({'status': 'success'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500

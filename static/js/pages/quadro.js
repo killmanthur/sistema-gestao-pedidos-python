@@ -5,7 +5,7 @@ import { criarCardPedido, setupLogModal } from '../ui.js';
 
 let quadroPedidosRua, quadroOrcamentos, filtroInput;
 let activePedidos = [];
-let pollingInterval = null;
+// --- REMOVIDO: let pollingInterval = null; ---
 
 /**
  * Filtra os pedidos carregados localmente e renderiza nas colunas corretas
@@ -15,18 +15,12 @@ function renderizarColunasComFiltro() {
 
     const termoBusca = filtroInput.value.toLowerCase().trim();
 
-    // Função de filtragem
     const filtrar = (pedidos) => {
         if (!termoBusca) return pedidos;
         return pedidos.filter(p => {
             const textoCard = [
-                p.vendedor,
-                p.comprador,
-                p.tipo_req,
-                p.codigo,
-                p.código,
-                p.observacao_geral,
-                p.descricao,
+                p.vendedor, p.comprador, p.tipo_req, p.codigo, p.código,
+                p.observacao_geral, p.descricao,
                 ...(p.itens || []).map(i => i.codigo)
             ].join(' ').toLowerCase();
             return textoCard.includes(termoBusca);
@@ -60,18 +54,11 @@ function renderizarColuna(container, pedidos, mensagemVazio) {
 async function fetchActivePedidos() {
     try {
         const { role, nome } = AppState.currentUser;
-        const params = new URLSearchParams({
-            user_role: role || '',
-            user_name: nome || ''
-        });
-
+        const params = new URLSearchParams({ user_role: role || '', user_name: nome || '' });
         const response = await fetch(`/api/pedidos/ativos?${params.toString()}`);
-
         if (!response.ok) throw new Error('Falha ao buscar dados do quadro.');
-
         activePedidos = await response.json();
         renderizarColunasComFiltro();
-
     } catch (error) {
         console.error("Erro ao buscar pedidos ativos:", error);
         showToast(error.message, "error");
@@ -82,41 +69,35 @@ async function fetchActivePedidos() {
  * Inicialização principal da página de Quadro Ativo
  */
 export function initQuadroPage() {
-    // Inicializa o modal de logs (histórico)
     setupLogModal();
-
-    // Mapeia elementos do DOM
     quadroPedidosRua = document.getElementById('quadro-pedidos-rua');
     quadroOrcamentos = document.getElementById('quadro-orcamentos');
     filtroInput = document.getElementById('filtro-quadro-ativo');
 
     if (!quadroPedidosRua || !quadroOrcamentos || !filtroInput) return;
 
-    // --- LOGICA DE ATUALIZAÇÃO AUTOMÁTICA (POLLING) ---
-    if (pollingInterval) clearInterval(pollingInterval);
+    // --- INÍCIO DA MUDANÇA: DE POLLING PARA WEBSOCKETS ---
+    // Removemos o setInterval completamente.
+    // Agora, nós "ouvimos" o evento 'quadro_atualizado' que o servidor envia.
+    if (AppState.socket) {
+        AppState.socket.off('quadro_atualizado');
 
-    pollingInterval = setInterval(() => {
-        // Verifica se algum modal de edição ou log está aberto
-        const modalEditAberto = document.getElementById('edit-modal-overlay')?.style.display === 'flex';
-        const modalLogAberto = document.getElementById('log-modal-overlay')?.style.display === 'flex';
+        AppState.socket.on('quadro_atualizado', (data) => {
+            console.log('Sincronizando Quadro Ativo:', data.message);
 
-        // Só atualiza se o usuário não estiver interagindo com um pedido
-        if (!modalEditAberto && !modalLogAberto) {
-            console.log("Sincronizando Quadro Ativo...");
-            fetchActivePedidos();
-        }
-    }, 5000); // 20 segundos
+            // Só atualiza se não houver um modal de edição aberto (para não perder o que o user está digitando)
+            const modalEditAberto = document.getElementById('edit-modal-overlay')?.style.display === 'flex';
+            if (!modalEditAberto) {
+                fetchActivePedidos();
+            }
+        });
+    }
 
-    // --- LISTENERS ---
     filtroInput.addEventListener('input', renderizarColunasComFiltro);
 
-    // --- CARREGAMENTO INICIAL ---
     quadroPedidosRua.innerHTML = `<div class="spinner" style="margin: 2rem auto;"></div>`;
     quadroOrcamentos.innerHTML = `<div class="spinner" style="margin: 2rem auto;"></div>`;
 
     fetchActivePedidos();
-
-    // Exporta para o objeto window para que o salvamento no modal de edição
-    // (que está no ui.js) consiga disparar o refresh desta página.
     window.initQuadroPage = fetchActivePedidos;
 }

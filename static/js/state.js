@@ -2,13 +2,13 @@
 export const AppState = {
     currentUser: {
         isLoggedIn: false,
-        data: null, 
+        data: null,
         role: null,
         nome: null,
         acessible_pages: [],
-        compradorNomes: []
     },
-    // MUDANÇA: Adicionado estado para a lista de compradores
+    compradorNomes: [], // Mantido para compatibilidade
     currentChatListener: null,
-    isAppInitialized: false, // <-- ADICIONE ESTA LINHA
+    isAppInitialized: false,
+    socket: null, // <-- ADICIONADO
 };

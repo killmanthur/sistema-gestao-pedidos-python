@@ -2,9 +2,7 @@
 
 import { AppState } from './state.js';
 import { showToast } from './toasts.js';
-// Removemos a importação circular de initQuadroPage se não for estritamente necessária aqui, 
-// ou mantemos se ela for usada no reload.
-// import { initQuadroPage } from './pages/quadro.js'; 
+import { pedidosAPI } from './apiClient.js';
 
 export function toggleButtonLoading(button, isLoading, originalText = 'Salvar') {
     if (!button) return;
@@ -56,24 +54,21 @@ export function initializeTheme() {
     const themeToggle = document.getElementById('theme-toggle');
     if (!themeToggle) return;
 
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    if (savedTheme === 'dark') {
-        document.body.classList.add('dark-mode');
-    }
+    // A classe dark-mode já foi aplicada pelo script no head
+    const isDark = document.documentElement.classList.contains('dark-mode');
+    if (isDark) document.body.classList.add('dark-mode'); // Sincroniza body se necessário
 
-    document.getElementById('theme-icon-sun').style.display = (savedTheme === 'dark') ? 'none' : 'block';
-    document.getElementById('theme-icon-moon').style.display = (savedTheme === 'dark') ? 'block' : 'none';
+    document.getElementById('theme-icon-sun').style.display = isDark ? 'none' : 'block';
+    document.getElementById('theme-icon-moon').style.display = isDark ? 'block' : 'none';
 
-    if (!themeToggle.hasAttribute('data-listener-attached')) {
-        themeToggle.addEventListener('click', () => {
-            const isDarkMode = document.body.classList.toggle('dark-mode');
-            const theme = isDarkMode ? 'dark' : 'light';
-            localStorage.setItem('theme', theme);
-            document.getElementById('theme-icon-sun').style.display = isDarkMode ? 'none' : 'block';
-            document.getElementById('theme-icon-moon').style.display = isDarkMode ? 'block' : 'none';
-        });
-        themeToggle.setAttribute('data-listener-attached', 'true');
-    }
+    themeToggle.onclick = () => {
+        const isDarkMode = document.documentElement.classList.toggle('dark-mode');
+        document.body.classList.toggle('dark-mode', isDarkMode);
+        const theme = isDarkMode ? 'dark' : 'light';
+        localStorage.setItem('theme', theme);
+        document.getElementById('theme-icon-sun').style.display = isDarkMode ? 'none' : 'block';
+        document.getElementById('theme-icon-moon').style.display = isDarkMode ? 'block' : 'none';
+    };
 }
 
 export function setupUI() {
@@ -208,139 +203,83 @@ export function showConfirmModal(message, onConfirm) {
 // --- Lógica Principal de Atualização de Status ---
 
 async function atualizarStatus(pedidoId, novoStatus) {
-    const dadosUpdate = {
-        status: novoStatus,
-        editor_nome: AppState.currentUser.nome,
-    };
-
-    // Tenta pegar o valor do select de comprador dentro do card
+    let comprador = null;
     const cardElement = document.querySelector(`.pedido-card[data-id="${pedidoId}"]`);
     if (cardElement) {
         const compradorSelect = cardElement.querySelector('.comprador-select-wrapper select');
         if (compradorSelect && compradorSelect.value) {
-            dadosUpdate.comprador = compradorSelect.value;
+            comprador = compradorSelect.value;
         }
     }
 
     try {
-        const response = await fetch(`/api/pedidos/${pedidoId}/status`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(dadosUpdate)
-        });
+        // --- INÍCIO DA MUDANÇA ---
+        // A chamada fetch foi substituída por nossa função do apiClient
+        await pedidosAPI.updateStatus(pedidoId, novoStatus, comprador);
+        // --- FIM DA MUDANÇA ---
 
-        if (response.ok) {
-            showToast('Status atualizado com sucesso!', 'success');
+        showToast('Status atualizado com sucesso!', 'success');
 
-            const isQuadroPage = window.location.pathname.includes('/quadro');
-            // Define quais status devem permanecer na tela do Quadro Ativo
-            const mantemNoQuadro = ['Aguardando', 'Em Cotação'].includes(novoStatus);
-
-            if (isQuadroPage && mantemNoQuadro && cardElement) {
-                // --- CENÁRIO A: O card fica na tela (apenas atualiza visualmente) ---
-
-                // 1. Atualiza o texto do status
-                const statusSpan = cardElement.querySelector('.status-value');
-                if (statusSpan) statusSpan.textContent = novoStatus;
-
-                // 2. Atualiza a cor da borda lateral (classes CSS)
-                cardElement.classList.remove('card--status-awaiting', 'card--status-progress');
-                if (novoStatus === 'Aguardando') {
-                    cardElement.classList.add('card--status-awaiting');
-                } else if (novoStatus === 'Em Cotação') {
-                    cardElement.classList.add('card--status-progress');
-                }
-
-            } else {
-                // --- CENÁRIO B: O card saiu dessa etapa (ex: foi para 'A Caminho') ---
-                // Remove o card da tela
-                cardElement?.remove();
-
-                // Se estivermos na página de Pedidos a Caminho e mudou para OK, recarrega
-                if (window.location.pathname.includes('/pedidos-a-caminho') && window.initPedidosACaminhoPage) {
-                    window.initPedidosACaminhoPage();
-                }
-            }
-
+        // A lógica visual de atualizar o card permanece a mesma, pois o Socket.IO
+        // irá disparar uma atualização completa do quadro de qualquer maneira.
+        // Podemos simplificar isso no futuro, mas por enquanto, funciona.
+        const isQuadroPage = window.location.pathname.includes('/quadro');
+        const mantemNoQuadro = ['Aguardando', 'Em Cotação'].includes(novoStatus);
+        if (isQuadroPage && mantemNoQuadro && cardElement) {
+            const statusSpan = cardElement.querySelector('.status-value');
+            if (statusSpan) statusSpan.textContent = novoStatus;
+            cardElement.classList.remove('card--status-awaiting', 'card--status-progress');
+            if (novoStatus === 'Aguardando') cardElement.classList.add('card--status-awaiting');
+            else if (novoStatus === 'Em Cotação') cardElement.classList.add('card--status-progress');
         } else {
-            const errorData = await response.json();
-            showToast(`Não foi possível atualizar: ${errorData.message}`, 'error');
+            cardElement?.remove();
+            if (window.location.pathname.includes('/pedidos-a-caminho') && window.initPedidosACaminhoPage) {
+                window.initPedidosACaminhoPage();
+            }
         }
     } catch (error) {
-        showToast('Erro de conexão ao atualizar status.', 'error');
+        showToast(`Não foi possível atualizar: ${error.message}`, 'error');
     }
 }
 
 async function atualizarComprador(pedidoId, nomeComprador) {
-    const dadosUpdate = {
-        comprador: nomeComprador,
-        editor_nome: AppState.currentUser.nome,
-    };
-
     try {
-        const response = await fetch(`/api/pedidos/${pedidoId}/comprador`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(dadosUpdate)
-        });
+        // --- INÍCIO DA MUDANÇA ---
+        await pedidosAPI.updateComprador(pedidoId, nomeComprador);
+        // --- FIM DA MUDANÇA ---
 
-        if (response.ok) {
-            showToast('Comprador atribuído!', 'success');
-
-            // --- ATUALIZAÇÃO VISUAL IMEDIATA ---
-            // 1. Encontra o card específico
-            const cardElement = document.querySelector(`.pedido-card[data-id="${pedidoId}"]`);
-
-            if (cardElement) {
-                // 2. Procura o parágrafo que contém a informação do comprador no corpo do card
-                const paragraphs = cardElement.querySelectorAll('.card__body p');
-
-                paragraphs.forEach(p => {
-                    // Verifica se é o parágrafo correto
-                    if (p.innerHTML.includes('<strong>Comprador:</strong>')) {
-                        // Atualiza o texto com o novo nome selecionado
-                        p.innerHTML = `<strong>Comprador:</strong> ${nomeComprador || 'Não atribuído'}`;
-
-                        // Efeito visual rápido (piscar) para confirmar a alteração
-                        p.style.backgroundColor = '#e8f5e9'; // Verde bem claro
-                        setTimeout(() => {
-                            p.style.backgroundColor = 'transparent';
-                        }, 500);
-                    }
-                });
-            }
-            // ------------------------------------
-
-        } else {
-            const errorData = await response.json();
-            showToast(`Falha ao atribuir: ${errorData.message}`, 'error');
+        showToast('Comprador atribuído!', 'success');
+        const cardElement = document.querySelector(`.pedido-card[data-id="${pedidoId}"]`);
+        if (cardElement) {
+            const paragraphs = cardElement.querySelectorAll('.card__body p');
+            paragraphs.forEach(p => {
+                if (p.innerHTML.includes('<strong>Comprador:</strong>')) {
+                    p.innerHTML = `<strong>Comprador:</strong> ${nomeComprador || 'Não atribuído'}`;
+                    p.style.backgroundColor = '#e8f5e9';
+                    setTimeout(() => { p.style.backgroundColor = 'transparent'; }, 500);
+                }
+            });
         }
     } catch (error) {
-        showToast('Erro de conexão ao atribuir comprador.', 'error');
+        showToast(`Falha ao atribuir: ${error.message}`, 'error');
     }
 }
 
 async function excluirPedido(pedidoId) {
     showConfirmModal('Mover este pedido para a lixeira? A ação pode ser revertida.', async () => {
         try {
-            const response = await fetch(`/api/pedidos/${pedidoId}`, {
-                method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ editor_nome: AppState.currentUser.nome })
-            });
+            // --- INÍCIO DA MUDANÇA ---
+            await pedidosAPI.delete(pedidoId);
+            // --- FIM DA MUDANÇA ---
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                showToast(`Não foi possível excluir: ${errorData.message || errorData.error}`, 'error');
-            } else {
-                showToast('Pedido movido para a lixeira.', 'success');
-                document.querySelector(`.pedido-card[data-id="${pedidoId}"]`)?.remove();
-            }
+            showToast('Pedido movido para a lixeira.', 'success');
+            document.querySelector(`.pedido-card[data-id="${pedidoId}"]`)?.remove();
         } catch (error) {
-            showToast('Erro de conexão ao tentar excluir.', 'error');
+            showToast(`Não foi possível excluir: ${error.message || error}`, 'error');
         }
     });
 }
+
 
 // --- FUNÇÃO DE CRIAR CARD ---
 export function criarCardPedido(pedido) {

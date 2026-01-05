@@ -24,6 +24,31 @@ import { initTvExpedicaoPage } from './pages/tv_expedicao.js';
 import { initRegistroComprasPage } from './pages/registro_compras.js';
 import { initPendenciasEAlteracoesPage } from './pages/pendencias_e_alteracoes.js';
 
+// 1. Inicializa o socket
+const socket = io({
+    reconnection: true,
+    reconnectionAttempts: 5,
+    reconnectionDelay: 1000
+});
+
+AppState.socket = socket;
+
+// 2. Garante que o JOIN aconteça sempre que a conexão for estabelecida
+socket.on('connect', () => {
+    console.log("Conectado ao servidor Socket.io");
+    if (AppState.currentUser && AppState.currentUser.isLoggedIn) {
+        const uid = AppState.currentUser.data.uid;
+        socket.emit('join', { user_id: uid });
+        console.log(`Solicitado ingresso na sala privada: ${uid}`);
+    }
+});
+
+if (AppState.socket && AppState.currentUser.isLoggedIn) {
+    const userId = AppState.currentUser.data.uid;
+    // Avisa o servidor para nos colocar na nossa sala privada
+    AppState.socket.emit('join', { user_id: userId });
+}
+
 async function fetchInitialData() {
     try {
         const response = await fetch('/api/usuarios/comprador-nomes');

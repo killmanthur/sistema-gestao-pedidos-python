@@ -5,6 +5,7 @@ from sqlalchemy import func
 from ..extensions import tz_cuiaba, db
 from quadro_app.models import Pedido, Usuario, ItemExcluido
 from quadro_app.utils import registrar_log, criar_notificacao 
+from quadro_app import socketio
 
 pedidos_bp = Blueprint('pedidos', __name__, url_prefix='/api/pedidos')
 
@@ -76,16 +77,19 @@ def criar_pedido():
     registrar_log(novo_pedido.id, dados.get('vendedor'), 'CRIACAO')
     
     try:
+     # Busca todos os compradores
         compradores = Usuario.query.filter_by(role='Comprador').all()
-        tipo_texto = "Novo pedido de rua" if novo_pedido.tipo_req == 'Pedido Produto' else "Nova atualização de orçamento"
-        codigo_texto = novo_pedido.codigo or (novo_pedido.itens[0]['codigo'] if novo_pedido.itens else 'N/A')
-        mensagem = f"{tipo_texto} de {novo_pedido.vendedor}: '{codigo_texto}'"
-        
         for comprador in compradores:
-            criar_notificacao(user_id=comprador.id, mensagem=mensagem, link='/quadro')
-            
+          # A função criar_notificacao já salva no banco E emite o socketio.emit
+          criar_notificacao(
+            user_id=comprador.id, 
+            mensagem=f"Novo pedido de rua: {novo_pedido.vendedor}",
+            link='/quadro'
+        )
     except Exception as e:
-        print(f"ERRO ao criar notificação para novo pedido: {e}")
+         print(f"Erro ao notificar compradores: {e}")
+
+    socketio.emit('quadro_atualizado', {'message': 'Novo pedido criado'})
 
     return jsonify({'status': 'success', 'id': novo_pedido.id}), 201
 
@@ -137,6 +141,8 @@ def editar_pedido(pedido_id):
             codigo_pedido = pedido.codigo or (pedido.itens[0]['codigo'] if pedido.itens else 'N/A')
             mensagem = f"{editor_nome} atribuiu o pedido '{codigo_pedido}' a você."
             criar_notificacao(usuario_comprador.id, mensagem, link='/quadro')
+    
+    socketio.emit('quadro_atualizado', {'message': f'Pedido {pedido_id} editado'})
 
     return jsonify({'status': 'success'})
 
@@ -158,6 +164,9 @@ def deletar_pedido(pedido_id):
 
     db.session.delete(pedido)
     db.session.commit()
+
+    socketio.emit('quadro_atualizado', {'message': f'Pedido {pedido_id} excluído'})
+
     return jsonify({'status': 'success'})
 
 # --- ROTA DE STATUS MODIFICADA ---
@@ -202,6 +211,9 @@ def atualizar_status(pedido_id):
 
     db.session.commit()
     registrar_log(pedido_id, editor_nome, 'STATUS_ALTERADO', detalhes={'de': status_antigo, 'para': novo_status})
+
+    socketio.emit('quadro_atualizado', {'message': f'Status do pedido {pedido_id} alterado'})
+
     return jsonify({'status': 'success'})
 
 @pedidos_bp.route('/<int:pedido_id>/comprador', methods=['PUT'])
@@ -224,6 +236,8 @@ def atualizar_comprador_pedido(pedido_id):
         'COMPRADOR_ALTERADO', 
         detalhes={'de': comprador_antigo or 'N/A', 'para': novo_comprador or 'N/A'}
     )
+
+    socketio.emit('quadro_atualizado', {'message': f'Comprador atualizado no pedido {pedido_id}'})
     
     # Envia Notificação para o Comprador atribuído
     try:
@@ -236,6 +250,8 @@ def atualizar_comprador_pedido(pedido_id):
                 criar_notificacao(user_id=usuario_comprador.id, mensagem=mensagem, link='/quadro')
     except Exception as e:
         print(f"ERRO ao criar notificação de atribuição de comprador: {e}")
+    
+    socketio.emit('comprador_atualizado', {'message': f'Comprador do pedido {pedido_id} alterado'})
 
     return jsonify({'status': 'success'})
 

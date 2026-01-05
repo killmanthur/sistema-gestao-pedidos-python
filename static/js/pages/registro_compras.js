@@ -125,14 +125,14 @@ export function initRegistroComprasPage() {
         if (e.target.value !== "") document.getElementById('edit-reg-status').value = 'Em Cotação';
     });
 
-    // Timer para TV
-    if (refreshInterval) clearInterval(refreshInterval);
-    refreshInterval = setInterval(() => {
-        const m1 = elementos.modalCriar.style.display === 'flex';
-        const m2 = elementos.modalEditar.style.display === 'flex';
-        const m3 = elementos.modalBusca.style.display === 'flex';
-        if (!m1 && !m2 && !m3) carregarTabela();
-    }, 30000);
+    if (AppState.socket) {
+        AppState.socket.on('registro_compras_atualizado', () => {
+            const m1 = elementos.modalCriar.style.display === 'flex';
+            const m2 = elementos.modalEditar.style.display === 'flex';
+            // Se o usuário não estiver editando nada, atualiza a tabela
+            if (!m1 && !m2) carregarTabela();
+        });
+    }
 
     // Eventos Modais
     elementos.btnBusca.addEventListener('click', () => elementos.modalBusca.style.display = 'flex');

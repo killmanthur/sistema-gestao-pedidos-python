@@ -1,19 +1,22 @@
-# run.py (versão FINAL para servidor de rede interna)
-from waitress import serve
+# run.py
+
 from quadro_app import create_app
 
+# create_app() agora retorna o app, a instância do socketio e o modo TV
+app, socketio, TV_MODE = create_app()
+
 if __name__ == '__main__':
-    # Define a porta em que a aplicação vai rodar.
+    # PORTA padrão 5000
     PORT = 52080
     
-    # Cria a aplicação Flask
-    app, _, _ = create_app()
+    print(f"\nIniciando servidor em http://localhost:{PORT}")
+    print(f"Modo TV: {'Ativado' if TV_MODE else 'Desativado'}\n")
 
-    print(f"--- Servidor do Quadro de Pedidos ---")
-    print(f"Iniciando na porta: {PORT}")
-    print(f"Servidor pronto. Os usuários podem acessar em http://<IP_DO_SERVIDOR>:{PORT}")
-    print("Este console mostrará os logs de acesso. Para parar o servidor, pressione Ctrl+C.")
-    
-    # Inicia o servidor Waitress. 
-    # host='0.0.0.0' é CRUCIAL. Significa "aceite conexões de qualquer IP na rede".
-    serve(app, host='0.0.0.0', port=PORT, threads=8)
+    # Corrigido: Removido o argumento 'threads=8' que causava o erro.
+    # debug=True permite que o servidor reinicie sozinho ao salvar arquivos.
+    # allow_unsafe_werkzeug=True é necessário em versões recentes para rodar com SocketIO localmente.
+    socketio.run(app, 
+                 host='0.0.0.0', 
+                 port=PORT, 
+                 debug=False, 
+                 allow_unsafe_werkzeug=True)

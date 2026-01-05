@@ -485,6 +485,35 @@ export async function initSeparacoesPage() {
     // Controle de Permissões de UI
     if (AppState.currentUser.permissions?.pode_criar_separacao) document.getElementById('form-container-separacao').style.display = 'block';
 
+    if (AppState.socket) {
+        // Remove listeners antigos para não duplicar
+        AppState.socket.off('nova_separacao');
+        AppState.socket.off('separacao_atualizada');
+        AppState.socket.off('separacao_deletada');
+        AppState.socket.off('status_separacao_atualizado');
+
+        // Quando alguém cria uma separação
+        AppState.socket.on('nova_separacao', () => {
+            fetchActiveSeparacoes();
+            fetchAndRenderFila();
+        });
+
+        // Quando alguém edita (troca separador, conferente, cliente)
+        AppState.socket.on('separacao_atualizada', () => {
+            fetchActiveSeparacoes();
+        });
+
+        // Quando muda o status (Em Separação -> Conferência -> Finalizado)
+        AppState.socket.on('status_separacao_atualizado', () => {
+            fetchActiveSeparacoes();
+            carregarFinalizados(true); // Recarrega a coluna de finalizados
+        });
+
+        AppState.socket.on('separacao_deletada', () => {
+            fetchActiveSeparacoes();
+        });
+    }
+
     const isGestor = AppState.currentUser.role === 'Admin' || AppState.currentUser.role === 'Separador';
     if (isGestor) {
         document.getElementById('container-fila-separadores').style.display = 'block';

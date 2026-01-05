@@ -77,13 +77,20 @@ function renderColumn(containerId, countId, items, order) {
 }
 
 export function initTvExpedicaoPage() {
-    // Adiciona classe dark-mode forçada para melhor contraste na TV
     document.body.classList.add('dark-mode');
+    fetchAndRenderTvData(); // Carga inicial
 
-    // Primeira carga
-    fetchAndRenderTvData();
+    if (AppState.socket) {
+        // A TV atualiza para QUALQUER evento logístico
+        const updateLogistics = () => {
+            console.log("Evento logístico detectado, atualizando painel...");
+            fetchAndRenderTvData();
+        };
 
-    // Atualiza a cada 5 segundos
-    if (pollingInterval) clearInterval(pollingInterval);
-    pollingInterval = setInterval(fetchAndRenderTvData, 5000);
+        AppState.socket.on('nova_separacao', updateLogistics);
+        AppState.socket.on('separacao_atualizada', updateLogistics);
+        AppState.socket.on('status_separacao_atualizado', updateLogistics);
+        AppState.socket.on('conferencia_iniciada', updateLogistics);
+        AppState.socket.on('conferencia_finalizada', updateLogistics);
+    }
 }

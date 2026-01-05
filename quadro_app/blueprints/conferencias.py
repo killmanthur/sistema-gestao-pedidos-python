@@ -5,6 +5,7 @@ from sqlalchemy import or_
 from ..extensions import db, tz_cuiaba
 from quadro_app.models import Conferencia, ItemExcluido, Usuario
 from quadro_app.utils import registrar_log
+from quadro_app import socketio
 
 conferencias_bp = Blueprint('conferencias', __name__, url_prefix='/api/conferencias')
 
@@ -62,6 +63,8 @@ def criar_recebimento():
     db.session.add(nova_conferencia)
     db.session.commit()
     registrar_log(nova_conferencia.id, editor_nome, 'RECEBIMENTO_CRIADO', log_type='conferencias')
+    socketio.emit('novo_recebimento', {'recebimento': serialize_conferencia(nova_conferencia)})
+
     return jsonify({'status': 'success', 'id': nova_conferencia.id}), 201
 
 @conferencias_bp.route('/recebimento-rua', methods=['POST'])
@@ -86,6 +89,7 @@ def criar_recebimento_rua():
     db.session.add(novo_recebimento)
     db.session.commit()
     registrar_log(novo_recebimento.id, editor_nome, 'RECEBIMENTO_RUA_CRIADO', log_type='conferencias')
+    socketio.emit('novo_recebimento', {'recebimento': serialize_conferencia(novo_recebimento)})
     return finalizar_conferencia_logica(novo_recebimento.id)
 
 @conferencias_bp.route('/recebimentos-paginados', methods=['POST'])
@@ -155,6 +159,7 @@ def iniciar_conferencia(conferencia_id):
     db.session.commit()
     
     registrar_log(conferencia_id, editor_nome, 'INICIO_CONFERENCIA', log_type='conferencias')
+    socketio.emit('conferencia_iniciada', {'conferencia': serialize_conferencia(conferencia)})
     return jsonify({'status': 'success'})
 
 @conferencias_bp.route('/<int:conferencia_id>/finalizar-conferencia', methods=['PUT'])
@@ -196,6 +201,7 @@ def finalizar_conferencia_logica(conferencia_id):
 
     db.session.commit()
     registrar_log(conferencia_id, editor_nome, f'FINALIZADO_COMO_{conferencia.status.upper()}', detalhes={'info': observacao}, log_type='conferencias')
+    socketio.emit('conferencia_finalizada', {'conferencia': serialize_conferencia(conferencia)})
     return jsonify({'status': 'success'})
 
 # ==========================================
@@ -243,6 +249,7 @@ def resolver_item_pendencia(conferencia_id):
     conferencia.observacoes = list(obs_atuais)
     db.session.commit()
     registrar_log(conferencia_id, editor_nome, log_acao, detalhes={'info': observacao}, log_type='conferencias')
+    socketio.emit('item_pendencia_resolvido', {'conferencia': serialize_conferencia(conferencia)})
     return jsonify({'status': 'success'})
 
 @conferencias_bp.route('/<int:conferencia_id>/observacao', methods=['POST'])
@@ -255,6 +262,7 @@ def adicionar_observacao(conferencia_id):
     obs_atuais.append({'texto': texto, 'autor': editor_nome, 'timestamp': datetime.now(tz_cuiaba).isoformat()})
     conferencia.observacoes = list(obs_atuais)
     db.session.commit()
+    socketio.emit('observacao_adicionada', {'conferencia_id': conferencia_id, 'observacao': obs_atuais[-1]})
     return jsonify({'status': 'success'})
 
 # ==========================================
@@ -298,6 +306,7 @@ def reiniciar_conferencia(conferencia_id):
     conferencia.observacoes = list(obs_atuais)
     db.session.commit()
     registrar_log(conferencia_id, autor, 'CONFERENCIA_REINICIADA', detalhes={'info': motivo}, log_type='conferencias')
+    socketio.emit('conferencia_reiniciada', {'conferencia': serialize_conferencia(conferencia)})
     return jsonify({'status': 'success'})
 
 # ==========================================
@@ -318,6 +327,7 @@ def editar_conferencia(conferencia_id):
         if hasattr(conferencia, key): setattr(conferencia, key, value)
     db.session.commit()
     registrar_log(conferencia_id, editor_nome, 'EDICAO_DADOS_NF', log_type='conferencias')
+    socketio.emit('conferencia_editada', {'conferencia': serialize_conferencia(conferencia)})
     return jsonify({'status': 'success'})
 
 @conferencias_bp.route('/<int:conferencia_id>', methods=['DELETE'])
@@ -327,6 +337,7 @@ def deletar_conferencia(conferencia_id):
     db.session.add(ItemExcluido(tipo_item='Conferencia', item_id_original=str(conferencia.id), dados_item=serialize_conferencia(conferencia), excluido_por=editor_nome, data_exclusao=datetime.now(tz_cuiaba).isoformat()))
     db.session.delete(conferencia)
     db.session.commit()
+    socketio.emit('conferencia_deletada', {'conferencia_id': conferencia_id})
     return jsonify({'status': 'success'})
 
 @conferencias_bp.route('/dashboard-data', methods=['POST'])

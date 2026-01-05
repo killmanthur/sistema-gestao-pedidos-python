@@ -154,8 +154,24 @@ export function initConferenciasPage() {
     })();
 
     fetchData();
-    if (intervalId) clearInterval(intervalId);
-    intervalId = setInterval(fetchData, 10000);
+
+    if (AppState.socket) {
+        AppState.socket.off('novo_recebimento');
+        AppState.socket.off('conferencia_iniciada');
+        AppState.socket.off('conferencia_finalizada');
+        AppState.socket.off('conferencia_editada');
+        AppState.socket.off('conferencia_deletada');
+
+        const refresh = () => fetchData();
+
+        AppState.socket.on('novo_recebimento', refresh);
+        AppState.socket.on('conferencia_iniciada', refresh);
+        AppState.socket.on('conferencia_finalizada', refresh);
+        AppState.socket.on('conferencia_editada', refresh);
+        AppState.socket.on('conferencia_deletada', refresh);
+    }
+
+    fetchData(); // Carga inicial
 }
 
 function openConferenteModal(item) {

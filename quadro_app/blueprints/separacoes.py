@@ -5,6 +5,7 @@ from sqlalchemy import or_, func, and_
 from ..extensions import db, tz_cuiaba
 from quadro_app.models import Separacao, Usuario, ItemExcluido, ListaDinamica
 from quadro_app.utils import registrar_log
+from quadro_app import socketio
 
 separacoes_bp = Blueprint('separacoes', __name__, url_prefix='/api/separacoes')
 
@@ -55,6 +56,7 @@ def atualizar_fila_e_status():
         nova_fila_ordenada = sorted(separadores_novos) + separadores_antigos_mantidos
         lista_fila.itens = nova_fila_ordenada
         db.session.commit()
+        socketio.emit('fila_separadores_atualizada', {'nova_fila': nova_fila_ordenada})
         return jsonify({'status': 'success', 'nova_fila': nova_fila_ordenada})
     except Exception as e:
         db.session.rollback()
@@ -108,6 +110,7 @@ def criar_separacao():
         'separadores': ", ".join(nova_separacao.separadores_nomes), 'peças': nova_separacao.qtd_pecas
     }
     registrar_log(nova_separacao.id, editor_nome, 'CRIACAO', detalhes=log_details, log_type='separacoes')
+    socketio.emit('nova_separacao', {'separacao': serialize_separacao(nova_separacao)})
     return jsonify({'status': 'success', 'id': nova_separacao.id}), 201
 
 @separacoes_bp.route('/<int:separacao_id>', methods=['PUT'])
@@ -141,6 +144,7 @@ def editar_separacao(separacao_id):
         
     db.session.commit()
     registrar_log(separacao_id, editor_nome, 'EDICAO', log_type='separacoes')
+    socketio.emit('separacao_atualizada', {'separacao': serialize_separacao(separacao)})
     return jsonify({'status': 'success'})
 
 @separacoes_bp.route('/<int:separacao_id>', methods=['DELETE'])
@@ -160,6 +164,7 @@ def deletar_separacao(separacao_id):
     )
     db.session.delete(separacao)
     db.session.commit()
+    socketio.emit('separacao_deletada', {'separacao_id': separacao_id})
     return jsonify({'status': 'success'})
 
 @separacoes_bp.route('/<int:separacao_id>/status', methods=['PUT'])
@@ -174,6 +179,7 @@ def atualizar_status_separacao(separacao_id):
         separacao.data_finalizacao = datetime.now(tz_cuiaba).isoformat()
     db.session.commit()
     registrar_log(separacao_id, editor_nome, 'STATUS_ALTERADO', detalhes={'de': status_antigo, 'para': novo_status}, log_type='separacoes')
+    socketio.emit('status_separacao_atualizado', {'separacao_id': separacao_id, 'novo_status': novo_status})
     return jsonify({'status': 'success'})
 
 @separacoes_bp.route('/<int:separacao_id>/observacao', methods=['POST'])
@@ -190,6 +196,7 @@ def adicionar_observacao(separacao_id):
     separacao.observacoes = list(obs_atuais)
     db.session.commit()
     registrar_log(separacao_id, autor, 'OBSERVACAO_ADICIONADA', detalhes={'info': texto}, log_type='separacoes')
+    socketio.emit('observacao_adicionada', {'separacao_id': separacao_id, 'observacao': nova_obs})
     return jsonify({'status': 'success'})
 
 @separacoes_bp.route('/ativas', methods=['GET'])

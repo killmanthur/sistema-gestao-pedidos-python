@@ -37,20 +37,13 @@ def mark_as_read(user_id):
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
-# --- INÍCIO DA NOVA ROTA ---
 @notificacoes_bp.route('/<string:user_id>/clear-all', methods=['DELETE'])
-def clear_all_notifications(user_id):
-    """
-    Exclui TODAS as notificações de um usuário específico.
-    """
+def clear_all(user_id):
     try:
-        # Executa a exclusão de todas as notificações que correspondem ao user_id
-        num_deleted = Notificacao.query.filter_by(user_id=user_id).delete()
+        # Exclui todas as notificações do banco de dados para esse usuário
+        Notificacao.query.filter_by(user_id=user_id).delete()
         db.session.commit()
-        print(f"INFO: Excluídas {num_deleted} notificações para o usuário {user_id}.")
-        return jsonify({'status': 'success', 'message': f'{num_deleted} notificações foram excluídas.'})
+        return jsonify({'status': 'success'}), 200
     except Exception as e:
         db.session.rollback()
-        print(f"ERRO ao excluir notificações para o usuário {user_id}: {e}")
         return jsonify({'error': str(e)}), 500
-# --- FIM DA NOVA ROTA ---
