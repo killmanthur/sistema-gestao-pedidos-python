@@ -1,29 +1,12 @@
-# === Python ===
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-develop-eggs/
-eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-
-# === Ambientes Virtuais ===
+# === Pastas Específicas do Projeto ===
+migrations/
 venv/
-.venv/
-env/
-ENV/
+build/
+dist/
+__pycache__/
 
 # === Banco de Dados (Local) ===
-# Ignoramos o arquivo de dados, mas mantemos o schema.sql se existir
+# Ignora o banco de dados e arquivos de projeto do DB Browser
 quadro_local.db
 quadro_local.sqbpro
 *.sqlite
@@ -35,30 +18,21 @@ log.txt
 # === Configurações de IDE ===
 .vscode/
 .idea/
-*.swp
-*.swo
 
-# === Arquivos de Build e Executáveis ===
-# Ignora as pastas geradas pelo PyInstaller ao criar o .exe
-build/
-dist/
-# Se você quiser manter o arquivo de configuração de build, 
-# remova a linha abaixo. Caso contrário, ignore os .spec
-# *.spec
+# === Arquivos Python ===
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+*.egg
 
-# === Ferramentas de Terceiros ===
-# Ignora o NSSM e executáveis de auxílio
+# === Ferramentas e Executáveis ===
 nssm.exe
 nssm-2.24/
+Launcher.spec
+QuadroDePedidos.spec
 
-# === Segredos e Exportações ===
-# Arquivos de exportação do Firebase podem conter dados sensíveis
+# === Arquivos Temporários e de Exportação ===
 firebase_export.json
-.env
-
-# === Sistema Operacional ===
 .DS_Store
 Thumbs.db
-
-# === Outros ===
-migrations/
