@@ -59,3 +59,6 @@ firebase_export.json
 # === Sistema Operacional ===
 .DS_Store
 Thumbs.db
+
+# === Outros ===
+migrations/
