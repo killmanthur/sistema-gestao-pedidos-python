@@ -43,3 +43,6 @@ set_admin_password.py
 
 #servidor nssm
 nssm-2.24/
+
+# Arquivos de migração do banco de dados
+migrations/
