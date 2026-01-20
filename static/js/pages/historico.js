@@ -216,6 +216,50 @@ async function salvarRelatorio() {
     }
 }
 
+async function baixarCSV() {
+    showToast("Gerando CSV de peças...", "info");
+
+    // Pega os mesmos filtros do formulário
+    const filtros = {
+        vendedor: document.getElementById('filtro-vendedor').value,
+        comprador: document.getElementById('filtro-comprador').value,
+        codigo: document.getElementById('filtro-codigo').value,
+        dataInicio: document.getElementById('filtro-data-inicio').value,
+        dataFim: document.getElementById('filtro-data-fim').value
+    };
+
+    try {
+        const response = await fetch('/api/relatorio-csv', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(filtros)
+        });
+
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.error || 'Erro ao gerar CSV');
+        }
+
+        // Lógica padrão para download de BLOB (arquivo)
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = `relatorio_pecas_${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
+        showToast("Download do CSV iniciado!", "success");
+
+    } catch (error) {
+        console.error(error);
+        showToast(`Erro: ${error.message}`, 'error');
+    }
+}
+
 export function initHistoricoPage() {
     setupLogModal();
 
@@ -230,6 +274,11 @@ export function initHistoricoPage() {
     relatorioOutput = document.getElementById('relatorio-output');
     btnFecharRelatorio = document.getElementById('btn-fechar-relatorio');
     btnSalvarRelatorio = document.getElementById('btn-salvar-relatorio');
+
+    const btnCSV = document.getElementById('btn-baixar-csv');
+    if (btnCSV) {
+        btnCSV.addEventListener('click', baixarCSV);
+    }
 
     btnCarregarMais = document.getElementById('btn-carregar-mais');
     loadingSpinner = document.getElementById('loading-spinner');

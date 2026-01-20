@@ -2,6 +2,8 @@
 from flask import Blueprint, request, jsonify, Response
 from datetime import datetime
 from sqlalchemy import or_
+import io
+import csv
 from ..extensions import db, tz_cuiaba
 from quadro_app.models import Pedido, Sugestao
 
@@ -171,7 +173,6 @@ def get_dashboard_data():
 def gerar_relatorio_endpoint():
     filtros = request.get_json() or {}
     try:
-        # Busca OK, Finalizado e A Caminho
         query = Pedido.query.filter(or_(
             Pedido.status == 'OK', 
             Pedido.status == 'Finalizado',
@@ -183,7 +184,6 @@ def gerar_relatorio_endpoint():
         if filtros.get('comprador'):
             query = query.filter(Pedido.comprador.ilike(f"%{filtros['comprador']}%"))
         
-        # Filtra pela DATA DE CRIAÇÃO para incluir 'A Caminho' no intervalo
         if filtros.get('dataInicio'):
             query = query.filter(Pedido.data_criacao >= filtros['dataInicio'])
         if filtros.get('dataFim'):
@@ -201,18 +201,17 @@ def gerar_relatorio_endpoint():
         if not pedidos_filtrados:
             return jsonify({'relatorio': "Nenhum dado encontrado para o relatório com os filtros aplicados."})
 
+        # --- Lógica ANTIGA (Resumo por Vendedor/Comprador) ---
         stats = {
             'totalPedidos': len(pedidos_filtrados),
-            'totalACaminho': 0,  # --- NOVO CONTADOR ---
+            'totalACaminho': 0,
             'porVendedor': {},
             'porComprador': {}
         }
         
         for pedido in pedidos_filtrados:
-            # --- LÓGICA DE CONTAGEM A CAMINHO ---
             if pedido.status == 'A Caminho':
                 stats['totalACaminho'] += 1
-            # ------------------------------------
 
             vendedor, comprador, tipo_req = pedido.vendedor, pedido.comprador, pedido.tipo_req
             
@@ -235,7 +234,6 @@ def gerar_relatorio_endpoint():
         report_lines = []
         now = datetime.now(tz_cuiaba)
         
-        # --- CABEÇALHO ATUALIZADO ---
         header = f"""
 ========================================
          RELATÓRIO DE PEDIDOS
@@ -269,6 +267,59 @@ Total de Pedidos Analisados: {stats['totalPedidos']}
 
     except Exception as e:
         return jsonify({'error': f"Erro ao gerar relatório: {e}"}), 500
+
+@dashboard_bp.route('/relatorio-csv', methods=['POST'])
+def gerar_relatorio_csv():
+    filtros = request.get_json() or {}
+    try:
+        # Reutiliza a mesma lógica de filtro
+        query = Pedido.query.filter(or_(Pedido.status == 'OK', Pedido.status == 'Finalizado', Pedido.status == 'A Caminho'))
+
+        if filtros.get('vendedor'): query = query.filter(Pedido.vendedor.ilike(f"%{filtros['vendedor']}%"))
+        if filtros.get('comprador'): query = query.filter(Pedido.comprador.ilike(f"%{filtros['comprador']}%"))
+        if filtros.get('dataInicio'): query = query.filter(Pedido.data_criacao >= filtros['dataInicio'])
+        if filtros.get('dataFim'): query = query.filter(Pedido.data_criacao <= filtros['dataFim'] + 'T23:59:59')
+        if filtros.get('codigo'):
+            termo = f"%{filtros['codigo']}%"
+            query = query.filter(or_(Pedido.codigo.ilike(termo), db.cast(Pedido.itens, db.String).ilike(termo)))
+
+        pedidos = query.all()
+
+        # Agrega itens
+        stats_itens = {}
+        for pedido in pedidos:
+            if pedido.itens and isinstance(pedido.itens, list) and len(pedido.itens) > 0:
+                for item in pedido.itens:
+                    codigo = item.get('codigo', 'SEM CODIGO').strip().upper()
+                    try: qtd = float(item.get('quantidade', 1))
+                    except: qtd = 1
+                    stats_itens[codigo] = stats_itens.get(codigo, 0) + qtd
+            elif pedido.codigo:
+                codigo = pedido.codigo.strip().upper()
+                stats_itens[codigo] = stats_itens.get(codigo, 0) + 1
+
+        # Gera CSV
+        si = io.StringIO()
+        writer = csv.writer(si, delimiter=';') # Ponto e vírgula para Excel no Brasil
+        writer.writerow(['Codigo', 'Quantidade Total']) # Cabeçalho
+
+        # Ordena por maior quantidade
+        for codigo, qtd in sorted(stats_itens.items(), key=lambda x: x[1], reverse=True):
+            writer.writerow([codigo, str(qtd).replace('.', ',')]) # Troca ponto por virgula se necessario
+
+        output = si.getvalue()
+        
+        # Nome do arquivo
+        filename = f"relatorio_pecas_{datetime.now(tz_cuiaba).strftime('%Y-%m-%d')}.csv"
+
+        return Response(
+            output,
+            mimetype="text/csv",
+            headers={"Content-disposition": f"attachment; filename={filename}"}
+        )
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @dashboard_bp.route('/download-relatorio', methods=['POST'])
 def download_relatorio():
