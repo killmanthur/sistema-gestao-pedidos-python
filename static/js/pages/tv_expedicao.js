@@ -1,4 +1,5 @@
 let pollingInterval = null;
+import { AppState } from '../state.js';
 
 function createTvCard(separacao) {
     const card = document.createElement('div');

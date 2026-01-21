@@ -1294,6 +1294,27 @@ body.tv-mode .filtro-container-actions {
     display: none;
 }
 
+body.tv-mode {
+    overflow: hidden;
+    height: 100vh;
+}
+
+main {
+    height: 100vh;
+}
+
+.tv-dashboard {
+    height: 100%;
+}
+
+.tv-list {
+    overflow-y: auto;
+}
+
+::-webkit-scrollbar {
+    display: none;
+}
+
 body.tv-mode main {
     margin-top: 1rem;
 }
@@ -1730,17 +1751,15 @@ tr.status-pedido-efetuado:hover {
 
 /* O Card do Pedido (Compacto) */
 .tv-card {
-    background-color: #2d2d2d;
-    border-radius: 6px;
-    padding: 0.6rem;
-    /* Padding reduzido */
+    background-color: #2c2c2c;
+    margin-bottom: 10px;
+    padding: 15px;
+    border-radius: 8px;
     display: flex;
     align-items: center;
-    gap: 0.8rem;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    justify-content: space-between;
     border-left: 5px solid #555;
-    /* Borda lateral mais fina */
-    transition: transform 0.2s;
+    animation: slideIn 0.5s ease-out;
 }
 
 .tv-column:first-child .tv-card {
