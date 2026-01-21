@@ -272,45 +272,67 @@ Total de Pedidos Analisados: {stats['totalPedidos']}
 def gerar_relatorio_csv():
     filtros = request.get_json() or {}
     try:
-        # Reutiliza a mesma lógica de filtro
-        query = Pedido.query.filter(or_(Pedido.status == 'OK', Pedido.status == 'Finalizado', Pedido.status == 'A Caminho'))
+        # Busca pedidos com status válidos (OK, Finalizado, A Caminho)
+        query = Pedido.query.filter(or_(
+            Pedido.status == 'OK', 
+            Pedido.status == 'Finalizado', 
+            Pedido.status == 'A Caminho'
+        ))
 
-        if filtros.get('vendedor'): query = query.filter(Pedido.vendedor.ilike(f"%{filtros['vendedor']}%"))
-        if filtros.get('comprador'): query = query.filter(Pedido.comprador.ilike(f"%{filtros['comprador']}%"))
-        if filtros.get('dataInicio'): query = query.filter(Pedido.data_criacao >= filtros['dataInicio'])
-        if filtros.get('dataFim'): query = query.filter(Pedido.data_criacao <= filtros['dataFim'] + 'T23:59:59')
+        # --- CORREÇÃO: FILTRA SOMENTE PEDIDOS DE PEÇA (RUA) ---
+        query = query.filter(Pedido.tipo_req == 'Pedido Produto')
+        # ------------------------------------------------------
+
+        # Aplica os filtros recebidos do frontend
+        if filtros.get('vendedor'): 
+            query = query.filter(Pedido.vendedor.ilike(f"%{filtros['vendedor']}%"))
+        if filtros.get('comprador'): 
+            query = query.filter(Pedido.comprador.ilike(f"%{filtros['comprador']}%"))
+        if filtros.get('dataInicio'): 
+            query = query.filter(Pedido.data_criacao >= filtros['dataInicio'])
+        if filtros.get('dataFim'): 
+            query = query.filter(Pedido.data_criacao <= filtros['dataFim'] + 'T23:59:59')
         if filtros.get('codigo'):
             termo = f"%{filtros['codigo']}%"
-            query = query.filter(or_(Pedido.codigo.ilike(termo), db.cast(Pedido.itens, db.String).ilike(termo)))
+            query = query.filter(or_(
+                Pedido.codigo.ilike(termo), 
+                db.cast(Pedido.itens, db.String).ilike(termo)
+            ))
 
         pedidos = query.all()
 
-        # Agrega itens
+        # Agrega itens (Soma as quantidades)
         stats_itens = {}
         for pedido in pedidos:
+            # Caso 1: Pedido com lista de itens (Padrão do Pedido Produto)
             if pedido.itens and isinstance(pedido.itens, list) and len(pedido.itens) > 0:
                 for item in pedido.itens:
                     codigo = item.get('codigo', 'SEM CODIGO').strip().upper()
-                    try: qtd = float(item.get('quantidade', 1))
-                    except: qtd = 1
+                    try: 
+                        qtd = float(item.get('quantidade', 1))
+                    except (ValueError, TypeError): 
+                        qtd = 1
                     stats_itens[codigo] = stats_itens.get(codigo, 0) + qtd
+            
+            # Caso 2: Pedido antigo ou sem lista, mas com código direto (Fallback)
             elif pedido.codigo:
                 codigo = pedido.codigo.strip().upper()
                 stats_itens[codigo] = stats_itens.get(codigo, 0) + 1
 
-        # Gera CSV
+        # Gera o CSV
         si = io.StringIO()
-        writer = csv.writer(si, delimiter=';') # Ponto e vírgula para Excel no Brasil
-        writer.writerow(['Codigo', 'Quantidade Total']) # Cabeçalho
+        writer = csv.writer(si, delimiter=';') # Ponto e vírgula para Excel PT-BR
+        writer.writerow(['Codigo da Peca', 'Quantidade Total']) # Cabeçalho
 
         # Ordena por maior quantidade
         for codigo, qtd in sorted(stats_itens.items(), key=lambda x: x[1], reverse=True):
-            writer.writerow([codigo, str(qtd).replace('.', ',')]) # Troca ponto por virgula se necessario
+            # Formata número (troca ponto por vírgula para Excel e remove .0 se for inteiro)
+            qtd_str = str(int(qtd)) if qtd == int(qtd) else str(qtd).replace('.', ',')
+            writer.writerow([codigo, qtd_str])
 
         output = si.getvalue()
         
-        # Nome do arquivo
-        filename = f"relatorio_pecas_{datetime.now(tz_cuiaba).strftime('%Y-%m-%d')}.csv"
+        filename = f"relatorio_pecas_rua_{datetime.now(tz_cuiaba).strftime('%Y-%m-%d')}.csv"
 
         return Response(
             output,
