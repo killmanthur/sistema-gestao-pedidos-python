@@ -204,41 +204,32 @@ function criarCardElement(separacao) {
 
     const perms = AppState.currentUser.permissions || {};
     const role = AppState.currentUser.role;
-    // Verifica se é Vendedor para bloquear ações
     const isVendedor = role === 'Vendedor';
 
     const separadoresDisplay = (separacao.separadores_nomes || []).join(', ') || 'N/A';
 
     let footerActions = [];
 
-    // LÓGICA DE BOTÕES:
-    // Se NÃO for vendedor, adiciona os botões.
     if (!isVendedor) {
-        // 1. Botão Editar: Agora aparece para TODOS os status (incluindo Finalizado)
         footerActions.push(`<button class="btn btn--edit" data-action="edit">Editar</button>`);
-
-        // 2. Botão Observação: Útil em qualquer estágio
         footerActions.push(`<button class="btn btn--secondary" data-action="observation">Observação</button>`);
-
-        // 3. Botão Finalizar: Apenas se estiver Em Conferência
         if (separacao.status === 'Em Conferência' && perms.pode_finalizar_separacao) {
             footerActions.push(`<button class="btn btn--success" data-action="finalize">Finalizar</button>`);
         }
     }
 
     let conferenteSelectHTML = '';
-    // Select de conferente também some para vendedor
     if (!isVendedor && separacao.status === 'Em Separação' && perms.pode_enviar_para_conferencia) {
         let options = '<option value="" disabled selected>-- Enviar para Conferente --</option>';
         state.listasUsuarios.expedicao.forEach(nome => options += `<option value="${nome}">${nome}</option>`);
         conferenteSelectHTML = `<div class="comprador-select-wrapper"><select data-action="assign-conferente">${options}</select></div>`;
     }
 
-    // Botão Excluir (Header): Também escondemos se for Vendedor (por segurança visual)
     const deleteBtn = (perms.pode_deletar_separacao && !isVendedor)
         ? `<button class="btn btn--danger" data-action="delete">Excluir</button>`
         : '';
 
+    // --- CORREÇÃO AQUI: ADICIONADO CONFERENTE E DATA NO HTML ---
     card.innerHTML = `
         <div class="card__header">
             <h3>Mov. ${separacao.numero_movimentacao}</h3>
@@ -252,18 +243,22 @@ function criarCardElement(separacao) {
                 <p><strong>Cliente:</strong> ${separacao.nome_cliente}</p>
                 <p><strong>Vendedor:</strong> ${separacao.vendedor_nome}</p>
                 <p><strong>Separadores:</strong> ${separadoresDisplay}</p>
+                <p><strong>Conferente:</strong> ${separacao.conferente_nome || 'N/A'}</p>
                 <p><strong>Peças:</strong> ${separacao.qtd_pecas || 0}</p>
+                <p style="margin-top: 0.5rem; color: var(--text-secondary); font-size: 0.85rem;">
+                    <strong>Criado em:</strong> ${formatarData(separacao.data_criacao)}
+                </p>
             </div>
         </div>
         <div class="card__footer">
             <div class="card__actions">${footerActions.join('')}</div>
             ${conferenteSelectHTML}
         </div>`;
+    // -----------------------------------------------------------
 
     card.querySelector('[data-action="log"]').onclick = () => openLogModal(separacao.id, 'separacoes');
     card.querySelector('[data-action="delete"]')?.addEventListener('click', () => handleDelete(separacao.id));
 
-    // Listeners apenas se os botões existirem
     if (!isVendedor) {
         card.querySelector('[data-action="edit"]')?.addEventListener('click', () => openEditModal(separacao));
         card.querySelector('[data-action="observation"]')?.addEventListener('click', () => openObservacaoModal(separacao));
@@ -273,7 +268,6 @@ function criarCardElement(separacao) {
 
     return card;
 }
-
 
 // --- BUSCA DE DADOS ---
 async function fetchActiveSeparacoes() {
