@@ -213,25 +213,34 @@ async function atualizarStatus(pedidoId, novoStatus) {
     }
 
     try {
-        // --- INÍCIO DA MUDANÇA ---
-        // A chamada fetch foi substituída por nossa função do apiClient
         await pedidosAPI.updateStatus(pedidoId, novoStatus, comprador);
-        // --- FIM DA MUDANÇA ---
-
         showToast('Status atualizado com sucesso!', 'success');
 
-        // A lógica visual de atualizar o card permanece a mesma, pois o Socket.IO
-        // irá disparar uma atualização completa do quadro de qualquer maneira.
-        // Podemos simplificar isso no futuro, mas por enquanto, funciona.
         const isQuadroPage = window.location.pathname.includes('/quadro');
-        const mantemNoQuadro = ['Aguardando', 'Em Cotação'].includes(novoStatus);
+
+        // --- CORREÇÃO AQUI: Incluímos 'Aguardando Aprovação' para não remover o card ---
+        const mantemNoQuadro = ['Aguardando', 'Em Cotação', 'Aguardando Aprovação'].includes(novoStatus);
+
         if (isQuadroPage && mantemNoQuadro && cardElement) {
             const statusSpan = cardElement.querySelector('.status-value');
             if (statusSpan) statusSpan.textContent = novoStatus;
-            cardElement.classList.remove('card--status-awaiting', 'card--status-progress');
-            if (novoStatus === 'Aguardando') cardElement.classList.add('card--status-awaiting');
-            else if (novoStatus === 'Em Cotação') cardElement.classList.add('card--status-progress');
+
+            // Remove classes antigas e adiciona a nova
+            cardElement.classList.remove('card--status-awaiting', 'card--status-progress', 'card--status-approval');
+
+            if (novoStatus === 'Aguardando') {
+                cardElement.classList.add('card--status-awaiting');
+            } else if (novoStatus === 'Em Cotação') {
+                cardElement.classList.add('card--status-progress');
+            } else if (novoStatus === 'Aguardando Aprovação') {
+                cardElement.classList.add('card--status-approval'); // Aplica o estilo azul
+
+                // Opcional: Esconder o botão de aprovação já que ele já está nesse status
+                const btnApproval = cardElement.querySelector('.btn-approval');
+                if (btnApproval) btnApproval.style.display = 'none';
+            }
         } else {
+            // Se for para 'A Caminho' ou 'OK', remove do quadro ativo
             cardElement?.remove();
             if (window.location.pathname.includes('/pedidos-a-caminho') && window.initPedidosACaminhoPage) {
                 window.initPedidosACaminhoPage();
@@ -280,8 +289,6 @@ async function excluirPedido(pedidoId) {
     });
 }
 
-
-// --- FUNÇÃO DE CRIAR CARD ---
 export function criarCardPedido(pedido) {
     const isAdmin = AppState.currentUser.role === 'Admin';
     const isComprador = AppState.currentUser.role === 'Comprador';
@@ -293,8 +300,10 @@ export function criarCardPedido(pedido) {
     card.className = 'card pedido-card';
     card.dataset.id = pedido.id;
 
+    // Estilos de Status
     if (pedido.status === 'Aguardando') card.classList.add('card--status-awaiting');
     else if (pedido.status === 'Em Cotação') card.classList.add('card--status-progress');
+    else if (pedido.status === 'Aguardando Aprovação') card.classList.add('card--status-approval'); // NOVO
     else if (pedido.status === 'A Caminho') card.classList.add('card--status-info');
     else if (pedido.status === 'OK') card.classList.add('card--status-done');
 
@@ -303,32 +312,44 @@ export function criarCardPedido(pedido) {
         compradorOptions += `<option value="${c}" ${pedido.comprador === c ? 'selected' : ''}>${c}</option>`;
     });
 
+    // Botões do Cabeçalho
     const showFinalizeBtn = (isAdmin || isComprador) && pedido.status !== 'A Caminho' && pedido.status !== 'OK';
     const finalizeBtn = showFinalizeBtn ? `<button class="btn btn--success btn-finalize" title="Finalizar Pedido">✓</button>` : '';
     const logBtnHTML = `<button class="btn-icon" title="Ver Histórico"><img src="/static/history.svg" alt="Histórico"></button>`;
-    const deleteBtn = (isAdmin || isComprador) ? `<button class="btn btn--danger" title="Excluir Pedido">Excluir</button>` : '';
+
+    // MUDANÇA: Botão Excluir virou "X"
+    const deleteBtn = (isAdmin || isComprador) ? `<button class="btn btn--danger btn-delete-compact" title="Excluir Pedido">X</button>` : '';
+
+    // MUDANÇA: Botão Aguardando Aprovação (Azul com ícone de relógio)
+    // Aparece se status não for 'Aguardando Aprovação', nem 'A Caminho', nem 'OK'
+    const showApprovalBtn = canManage && pedido.status !== 'Aguardando Aprovação' && pedido.status !== 'A Caminho' && pedido.status !== 'OK';
+    const approvalBtn = showApprovalBtn ? `<button class="btn btn--info btn-approval" title="Aguardando Aprovação" style="margin-right: 5px;">🕓</button>` : '';
 
     let footerContent = '';
     let editBtnHTML = '';
 
-    const canEditACaminho = AppState.currentUser.permissions?.pode_editar_pedido_a_caminho;
-
-    if (pedido.status !== 'A Caminho' && pedido.status !== 'OK' && canEdit) {
-        editBtnHTML = `<button class="btn btn--edit">Editar</button>`;
-    } else if (pedido.status === 'A Caminho' && canEditACaminho) {
+    // MUDANÇA: Liberar botão editar para "A Caminho"
+    if (pedido.status !== 'OK' && canEdit) {
         editBtnHTML = `<button class="btn btn--edit">Editar</button>`;
     }
 
     if (pedido.status === 'A Caminho') {
+        // MUDANÇA: Adicionado botão de Chegada Parcial
+        const botoesChegada = canManage ? `
+            <div style="display:flex; gap: 0.5rem; width: 100%;">
+                <button class="btn btn--success btn-marcar-chegada" style="flex:1;">Chegada Total</button>
+                <button class="btn btn--warning btn-chegada-parcial" style="flex:1;">Parcial</button>
+            </div>
+        ` : '';
+
         footerContent = `
             <p>Status: <span class="status-value">${pedido.status}</span></p>
-            <div class="card__actions">
+            <div class="card__actions" style="flex-direction: column; gap: 0.5rem;">
                 ${editBtnHTML}
-                ${canManage ? '<button class="btn btn--success btn-marcar-chegada">Marcar Chegada</button>' : ''}
+                ${botoesChegada}
             </div>
         `;
     } else if (pedido.status !== 'OK') {
-        // --- CORREÇÃO: Classes específicas para os botões ---
         const statusActionsHTML = canManage ? `
             <button class="btn btn--warning btn-status-cotacao">Em Cotação</button>
             <button class="btn btn--primary btn-status-efetuado">Pedido Efetuado</button> 
@@ -374,6 +395,7 @@ export function criarCardPedido(pedido) {
             <div class="card__header-actions">
                 ${logBtnHTML}
                 ${deleteBtn}
+                ${approvalBtn}
                 ${finalizeBtn}
             </div>
         </div>
@@ -382,78 +404,141 @@ export function criarCardPedido(pedido) {
 
     // --- Event Listeners ---
 
+    // Botão Aprovação (NOVO)
+    card.querySelector('.btn-approval')?.addEventListener('click', () => {
+        showConfirmModal('Mudar status para "Aguardando Aprovação"?', () => {
+            atualizarStatus(pedido.id, 'Aguardando Aprovação');
+        });
+    });
+
+    // Botão Chegada Parcial (NOVO)
+    card.querySelector('.btn-chegada-parcial')?.addEventListener('click', () => {
+        openPartialArrivalModal(pedido);
+    });
+
+    // ... (restante dos listeners existentes: finalize, edit, delete, log, status-cotacao, status-efetuado, etc.) ...
+
+    // (Mantenha seus listeners originais aqui, apenas certifique-se que o deleteBtn usa a classe nova se necessário)
     card.querySelector('.btn-finalize')?.addEventListener('click', () => {
-        // 1. Tenta pegar o comprador já salvo no pedido ou o valor selecionado no dropdown agora
+        // ... lógica existente ...
         const selectComprador = card.querySelector('.comprador-select-wrapper select');
         const compradorSelecionado = selectComprador ? selectComprador.value : null;
         const temComprador = pedido.comprador || compradorSelecionado;
 
-        // 2. Validação: Backend exige comprador para finalizar
         if (!temComprador) {
             showToast('É necessário atribuir um comprador antes de finalizar.', 'error');
             if (selectComprador) selectComprador.focus();
             return;
         }
 
-        // 3. Confirmação e Envio
-        showConfirmModal('Deseja finalizar este pedido diretamente? Ele irá para o histórico.', () => {
-            // Se o usuário selecionou alguém no dropdown mas não salvou, a função atualizarStatus 
-            // já cuida de enviar esse valor junto na requisição.
+        showConfirmModal('Deseja finalizar este pedido diretamente?', () => {
             atualizarStatus(pedido.id, 'OK');
         });
     });
 
-    // Botão Editar
     card.querySelector('.btn--edit')?.addEventListener('click', () => openEditModal(pedido));
 
-    // Ações de Status
     if (pedido.status === 'A Caminho' && canManage) {
-        // --- INÍCIO DA ALTERAÇÃO ---
         card.querySelector('.btn-marcar-chegada')?.addEventListener('click', () => {
-            showConfirmModal('Confirmar que este pedido chegou?', () => {
+            showConfirmModal('Confirmar que TODOS os itens chegaram?', () => {
                 atualizarStatus(pedido.id, 'OK');
             });
         });
-        // --- FIM DA ALTERAÇÃO ---
     } else if (pedido.status !== 'OK' && canManage) {
-        // Botão "Em Cotação"
         card.querySelector('.btn-status-cotacao')?.addEventListener('click', () => atualizarStatus(pedido.id, 'Em Cotação'));
 
-        // Botão "Pedido Efetuado" (A Caminho)
         card.querySelector('.btn-status-efetuado')?.addEventListener('click', () => {
-            // 1. Validação Local de Comprador (Executa antes da confirmação para poupar tempo)
             const select = card.querySelector('.comprador-select-wrapper select');
-
             if ((!select || !select.value) && !pedido.comprador) {
                 showToast('Por favor, selecione um COMPRADOR antes de marcar como efetuado.', 'error');
                 if (select) select.focus();
                 return;
             }
-
-            // 2. Se houver um comprador, pede a confirmação
-            const compradorNome = select ? select.value : pedido.comprador;
-
-            showConfirmModal(
-                `Deseja marcar como EFETUADO? O pedido será movido para "Pedidos a Caminho"`,
-                () => {
-                    atualizarStatus(pedido.id, 'A Caminho');
-                }
-            );
+            showConfirmModal(`Deseja marcar como EFETUADO? O pedido será movido para "Pedidos a Caminho"`, () => {
+                atualizarStatus(pedido.id, 'A Caminho');
+            });
         });
 
-        // Select de Comprador
         card.querySelector('.comprador-select-wrapper select')?.addEventListener('change', (e) => atualizarComprador(pedido.id, e.target.value));
     }
 
-    // Botão Excluir
     if (isAdmin || isComprador) {
         card.querySelector('.btn--danger')?.addEventListener('click', () => excluirPedido(pedido.id));
     }
 
-    // Botão Log
     card.querySelector('.btn-icon')?.addEventListener('click', () => openLogModal(pedido.id, 'pedidos'));
 
     return card;
+}
+
+// --- FUNÇÃO PARA ABRIR MODAL DE CHEGADA PARCIAL (NOVO) ---
+function openPartialArrivalModal(pedido) {
+    const modalOverlay = document.getElementById('partial-arrival-modal-overlay');
+    const form = document.getElementById('form-partial-arrival');
+    const container = document.getElementById('partial-items-container');
+
+    if (!modalOverlay || !form || !container) return;
+
+    container.innerHTML = '';
+
+    if (!pedido.itens || pedido.itens.length === 0) {
+        // Se for pedido antigo sem itens estruturados
+        container.innerHTML = `<p>Este pedido não possui itens estruturados para chegada parcial.</p>`;
+    } else {
+        pedido.itens.forEach((item, index) => {
+            const div = document.createElement('div');
+            div.style.marginBottom = '0.5rem';
+            div.innerHTML = `
+                <label style="display:flex; align-items:center; cursor:pointer;">
+                    <input type="checkbox" name="item_chegou" value="${index}" style="margin-right: 10px; width: 20px; height: 20px;">
+                    <span><strong>${item.quantidade}x</strong> ${item.codigo}</span>
+                </label>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    // Configurar o submit do formulário
+    form.onsubmit = async (e) => {
+        e.preventDefault();
+        const checkboxes = container.querySelectorAll('input[type="checkbox"]:checked');
+
+        if (checkboxes.length === 0) {
+            showToast('Selecione pelo menos um item que chegou.', 'error');
+            return;
+        }
+
+        const indicesItemsChegaram = Array.from(checkboxes).map(cb => parseInt(cb.value));
+        const btnSubmit = form.querySelector('button[type="submit"]');
+
+        toggleButtonLoading(btnSubmit, true, 'Processando...');
+
+        try {
+            const response = await fetch(`/api/pedidos/${pedido.id}/chegada-parcial`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    indices_itens: indicesItemsChegaram,
+                    editor_nome: AppState.currentUser.nome
+                })
+            });
+
+            if (!response.ok) throw new Error((await response.json()).error || 'Erro ao processar chegada parcial.');
+
+            showToast('Chegada parcial registrada! Pedido dividido.', 'success');
+            modalOverlay.style.display = 'none';
+
+            // Recarrega a página atual
+            if (window.initPedidosACaminhoPage) window.initPedidosACaminhoPage();
+
+        } catch (error) {
+            showToast(error.message, 'error');
+        } finally {
+            toggleButtonLoading(btnSubmit, false, 'Confirmar Chegada');
+        }
+    };
+
+    modalOverlay.style.display = 'flex';
 }
 
 // ... (Funções openEditModal, createModalItemRowHTML e setupEditModal permanecem iguais) ...
@@ -521,7 +606,7 @@ function createModalItemRowHTML(index, codigo = '', quantidade = 1) {
         <div class="item-row">
             <div class="item-row-header">
                 <h4>Item ${index}</h4>
-                <button type="button" class="close-modal" title="Remover Item">×</button>
+                <button type="button" class="close-modal close-modal-icon" title="Remover Item">×</button>
             </div>
             <div class="item-row-fields">
                 <div class="form-group" style="flex-grow: 1;">

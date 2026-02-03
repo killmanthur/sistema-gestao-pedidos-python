@@ -724,9 +724,9 @@ body.dark-mode .card__header-actions .btn-icon img {
 .card__actions .btn--primary {
     background-color: transparent;
     /* Azul sólido */
-    color: var(--clr-primary-light);
+    color: var(--clr-success);
     /* Texto branco forçado */
-    border-color: var(--clr-primary-main);
+    border-color: var(--clr-success);
 }
 
 .card__actions .btn--primary:hover:not([disabled]) {
@@ -734,8 +734,9 @@ body.dark-mode .card__header-actions .btn-icon img {
 }
 
 .card__actions .btn--primary:hover:not([disabled]) {
-    background-color: var(--clr-primary-dark);
-    border-color: var(--clr-primary-dark);
+    background-color: var(--clr-success);
+    border-color: var(--clr-success);
+    color: white !important;
     opacity: 0.95;
 }
 
@@ -1832,4 +1833,37 @@ tr.status-pedido-efetuado:hover {
 .tv-list::-webkit-scrollbar-thumb {
     background: #444;
     border-radius: 3px;
+}
+
+/* --- ADICIONAR AO FINAL DO ARQUIVO CSS --- */
+
+/* Status Aguardando Aprovação (Azul) */
+.card--status-approval::before {
+    background-color: var(--clr-info);
+    
+}
+
+/* Botão Info (Azul) */
+.btn--info {
+    background-color: var(--clr-info);
+    color: var(--clr-white);
+    padding: 4.8px 9.6px;
+}
+
+.btn--info:hover {
+    background-color: #1976D2;
+    /* Azul um pouco mais escuro */
+}
+
+/* Botão de Exclusão Compacto (X) */
+.btn-delete-compact {
+    padding: 0.3rem 0.6rem;
+    font-weight: bold;
+    min-width: 30px;
+}
+
+/* Badge para status Aprovação */
+.status-approval {
+    background-color: var(--clr-info);
+    color: white;
 }

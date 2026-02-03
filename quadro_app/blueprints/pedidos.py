@@ -6,6 +6,7 @@ from ..extensions import tz_cuiaba, db
 from quadro_app.models import Pedido, Usuario, ItemExcluido
 from quadro_app.utils import registrar_log, criar_notificacao 
 from quadro_app import socketio
+import copy
 
 pedidos_bp = Blueprint('pedidos', __name__, url_prefix='/api/pedidos')
 
@@ -146,6 +147,73 @@ def editar_pedido(pedido_id):
 
     return jsonify({'status': 'success'})
 
+@pedidos_bp.route('/<int:pedido_id>/chegada-parcial', methods=['POST'])
+def chegada_parcial(pedido_id):
+    dados = request.get_json()
+    indices_itens = dados.get('indices_itens', []) # Lista de índices [0, 2]
+    editor_nome = dados.get('editor_nome', 'Sistema')
+    
+    pedido_original = Pedido.query.get_or_404(pedido_id)
+    
+    if not pedido_original.itens or len(pedido_original.itens) == 0:
+        return jsonify({'error': 'Pedido sem itens para dividir.'}), 400
+
+    if not indices_itens:
+        return jsonify({'error': 'Nenhum item selecionado.'}), 400
+
+    # Separar itens
+    itens_atuais = copy.deepcopy(pedido_original.itens)
+    itens_chegaram = []
+    itens_restantes = []
+
+    for i, item in enumerate(itens_atuais):
+        if i in indices_itens:
+            itens_chegaram.append(item)
+        else:
+            itens_restantes.append(item)
+
+    if not itens_chegaram:
+        return jsonify({'error': 'Nenhum item válido selecionado.'}), 400
+
+    # 1. Atualizar Pedido Original (Fica com os restantes)
+    # Se não sobrar nada, o pedido original vira OK (chegada total na prática)
+    if not itens_restantes:
+        pedido_original.status = 'OK'
+        pedido_original.data_finalizacao = datetime.now(tz_cuiaba).isoformat()
+        log_msg = "Todos os itens marcados como chegados (via parcial)."
+    else:
+        pedido_original.itens = itens_restantes
+        log_msg = f"Itens removidos para novo pedido de chegada parcial. Restantes: {len(itens_restantes)}"
+
+    # 2. Criar Novo Pedido "Filho" (Já Finalizado/OK com os itens que chegaram)
+    if itens_restantes: # Só cria o filho se houve divisão real
+        novo_pedido = Pedido(
+            vendedor=pedido_original.vendedor,
+            status='OK', # Já nasce finalizado
+            tipo_req=pedido_original.tipo_req,
+            comprador=pedido_original.comprador,
+            data_criacao=pedido_original.data_criacao, # Mantém data original? Ou nova? Usarei nova para log.
+            data_finalizacao=datetime.now(tz_cuiaba).isoformat(),
+            observacao_geral=f"[PARCIAL de ID {pedido_original.id}] {pedido_original.observacao_geral}",
+            itens=itens_chegaram,
+            codigo=pedido_original.codigo,
+            descricao=pedido_original.descricao
+        )
+        db.session.add(novo_pedido)
+        db.session.flush() # Para ter o ID
+        
+        # Log no novo pedido
+        registrar_log(novo_pedido.id, editor_nome, 'CRIACAO_PARCIAL', detalhes={'origem_id': pedido_original.id}, log_type='pedidos')
+
+    # Log no pedido original
+    db.session.commit()
+    registrar_log(pedido_original.id, editor_nome, 'CHEGADA_PARCIAL', detalhes={'info': log_msg}, log_type='pedidos')
+    
+    socketio.emit('quadro_atualizado', {'message': f'Chegada parcial pedido {pedido_id}'})
+    
+    return jsonify({'status': 'success'})
+
+
 @pedidos_bp.route('/<int:pedido_id>', methods=['DELETE'])
 def deletar_pedido(pedido_id):
     editor_nome = request.json.get('editor_nome', 'Sistema')
@@ -257,18 +325,17 @@ def atualizar_comprador_pedido(pedido_id):
 
 @pedidos_bp.route('/ativos', methods=['GET'])
 def get_pedidos_ativos():
-    # --- INÍCIO DA ALTERAÇÃO ---
     user_role = request.args.get('user_role')
     user_name = request.args.get('user_name')
 
-    query = Pedido.query.filter(Pedido.status.in_(['Aguardando', 'Em Cotação']))
+    # --- CORREÇÃO AQUI: Adicionado 'Aguardando Aprovação' na lista ---
+    status_visiveis = ['Aguardando', 'Em Cotação', 'Aguardando Aprovação']
+    query = Pedido.query.filter(Pedido.status.in_(status_visiveis))
     
-    # Se for Vendedor, filtra pelo nome dele
     if user_role == 'Vendedor' and user_name:
         query = query.filter(Pedido.vendedor == user_name)
 
     pedidos = query.order_by(Pedido.data_criacao.desc()).all()
-    # --- FIM DA ALTERAÇÃO ---
     
     return jsonify([serialize_pedido(p) for p in pedidos])
 
@@ -294,8 +361,11 @@ def get_pedidos_a_caminho():
 @pedidos_bp.route('/status-quadro', methods=['GET'])
 def get_quadro_status():
     try:
-        count = db.session.query(func.count(Pedido.id)).filter(Pedido.status.in_(['Aguardando', 'Em Cotação'])).scalar()
-        latest_timestamp_obj = db.session.query(func.max(Pedido.data_criacao)).filter(Pedido.status.in_(['Aguardando', 'Em Cotação'])).first()
+        # --- CORREÇÃO AQUI: Adicionado 'Aguardando Aprovação' na lista ---
+        status_visiveis = ['Aguardando', 'Em Cotação', 'Aguardando Aprovação']
+        
+        count = db.session.query(func.count(Pedido.id)).filter(Pedido.status.in_(status_visiveis)).scalar()
+        latest_timestamp_obj = db.session.query(func.max(Pedido.data_criacao)).filter(Pedido.status.in_(status_visiveis)).first()
         latest_timestamp = latest_timestamp_obj[0] if latest_timestamp_obj else None
 
         return jsonify({
