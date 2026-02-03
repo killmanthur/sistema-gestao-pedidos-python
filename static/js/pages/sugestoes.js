@@ -16,7 +16,7 @@ const STATUS_MAP = {
     pendentes: 'pendente',
     cogitadas: 'cogitado',
     parciais: 'parcialmente_atendido',
-    atendidas: 'atendido'
+    //atendidas: 'atendido'
 };
 
 let elementosDOM = {};
@@ -572,7 +572,7 @@ export async function initSugestoesPage() {
             pendentes: document.getElementById('lista-sugestoes-pendentes'),
             cogitadas: document.getElementById('lista-sugestoes-cogitadas'),
             parciais: document.getElementById('lista-sugestoes-parciais'),
-            atendidas: document.getElementById('lista-sugestoes-atendidas')
+            //atendidas: document.getElementById('lista-sugestoes-atendidas')
         },
         filtroInput: document.getElementById('filtro-sugestoes')
     };

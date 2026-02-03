@@ -23,6 +23,7 @@ import { setupNotifications } from './notifications.js';
 import { initTvExpedicaoPage } from './pages/tv_expedicao.js';
 import { initRegistroComprasPage } from './pages/registro_compras.js';
 import { initPendenciasEAlteracoesPage } from './pages/pendencias_e_alteracoes.js';
+import { initHistoricoSugestoesPage } from './pages/historico-sugestoes.js';
 
 // 1. Inicializa o socket
 const socket = io({
@@ -78,6 +79,9 @@ export async function initializeAuthenticatedApp() {
 
     if (path.includes('/historico-conferencias')) {
         initHistoricoConferenciasPage();
+    }
+    else if (path.includes('/historico-sugestoes')) {
+        initHistoricoSugestoesPage();
     }
     else if (path.includes('/tv-expedicao')) {
         initTvExpedicaoPage();

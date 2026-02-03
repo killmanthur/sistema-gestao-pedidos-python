@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Histórico de Sugestões{% endblock %}
+
+{% block content %}
+<section class="form-container" style="max-width: 1200px;">
+    <h2>Histórico de Sugestões Finalizadas</h2>
+    <div style="margin: 2rem 0;">
+        <input type="text" id="filtro-historico-sugestoes" placeholder="🔎 Buscar por código, vendedor, comprador...">
+    </div>
+</section>
+
+<section class="form-container" style="max-width: 1400px; padding: 0; background: transparent; box-shadow: none;">
+    <!-- Usamos grid de 4 colunas para exibir os cards arquivados -->
+    <div id="container-historico-sugestoes" class="layout-grid-3-cols">
+        <!-- Cards inseridos via JS -->
+    </div>
+
+    <div id="pagination-container" class="pagination-container" style="margin-top: 2rem;">
+        <div id="loading-spinner" class="spinner" style="display: none;"></div>
+        <button id="btn-carregar-mais" class="btn btn--secondary" style="display: none;">Carregar mais antigas</button>
+    </div>
+</section>
+{% endblock %}

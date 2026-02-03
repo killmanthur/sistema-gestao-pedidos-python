@@ -1857,7 +1857,7 @@ tr.status-pedido-efetuado:hover {
 
 /* Botão de Exclusão Compacto (X) */
 .btn-delete-compact {
-    padding: 0.3rem 0.6rem;
+    padding: 6.5px 12px;
     font-weight: bold;
     min-width: 30px;
 }

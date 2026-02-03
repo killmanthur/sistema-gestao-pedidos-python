@@ -39,6 +39,10 @@ def atualizacao_orcamento_form():
 def sugestoes_page(): 
     return render_template('sugestoes.html')
 
+@main_views_bp.route('/historico-sugestoes')
+def historico_sugestoes_page(): 
+    return render_template('historico_sugestoes.html')
+
 @main_views_bp.route('/dashboard')
 def dashboard_page(): 
     return render_template('dashboard.html')

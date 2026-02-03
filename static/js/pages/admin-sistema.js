@@ -7,6 +7,7 @@ const ALL_PAGES = {
     pedidos_a_caminho: "Pedidos a Caminho",
     historico: "Histórico de Pedidos",
     historico_conferencias: "Histórico de Conferências",
+    historico_sugestoes: "Histórico de Sugestões",
     criar_pedido: "Pedidos Rua (Criar)",
     atualizacao_orcamento: "Atualizar Orçamento (Criar)",
     registro_compras: "Registro de Compras",

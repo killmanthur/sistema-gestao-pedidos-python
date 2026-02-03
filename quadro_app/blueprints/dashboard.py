@@ -199,9 +199,8 @@ def gerar_relatorio_endpoint():
         pedidos_filtrados = query.all()
 
         if not pedidos_filtrados:
-            return jsonify({'relatorio': "Nenhum dado encontrado para o relatório com os filtros aplicados."})
+            return jsonify({'relatorio': "Nenhum dado encontrado..."})
 
-        # --- Lógica ANTIGA (Resumo por Vendedor/Comprador) ---
         stats = {
             'totalPedidos': len(pedidos_filtrados),
             'totalACaminho': 0,
@@ -216,21 +215,34 @@ def gerar_relatorio_endpoint():
             vendedor, comprador, tipo_req = pedido.vendedor, pedido.comprador, pedido.tipo_req
             
             if vendedor:
-                stats['porVendedor'].setdefault(vendedor, {'total': 0, 'pedidosRua': 0, 'orcamentos': 0})
+                # Inicializa estrutura se não existir, AGORA COM 'aCaminho'
+                stats['porVendedor'].setdefault(vendedor, {'total': 0, 'pedidosRua': 0, 'orcamentos': 0, 'aCaminho': 0})
+                
                 stats['porVendedor'][vendedor]['total'] += 1
                 if tipo_req == 'Atualização Orçamento': 
                     stats['porVendedor'][vendedor]['orcamentos'] += 1
                 else: 
                     stats['porVendedor'][vendedor]['pedidosRua'] += 1
+                
+                # Conta 'A Caminho' para este vendedor
+                if pedido.status == 'A Caminho':
+                    stats['porVendedor'][vendedor]['aCaminho'] += 1
             
             if comprador:
-                stats['porComprador'].setdefault(comprador, {'total': 0, 'pedidosRua': 0, 'orcamentos': 0})
+                # Inicializa estrutura para comprador também
+                stats['porComprador'].setdefault(comprador, {'total': 0, 'pedidosRua': 0, 'orcamentos': 0, 'aCaminho': 0})
+                
                 stats['porComprador'][comprador]['total'] += 1
                 if tipo_req == 'Atualização Orçamento': 
                     stats['porComprador'][comprador]['orcamentos'] += 1
                 else: 
                     stats['porComprador'][comprador]['pedidosRua'] += 1
 
+                # Conta 'A Caminho' para este comprador
+                if pedido.status == 'A Caminho':
+                    stats['porComprador'][comprador]['aCaminho'] += 1
+
+        # --- GERAÇÃO DO TEXTO DO RELATÓRIO ---
         report_lines = []
         now = datetime.now(tz_cuiaba)
         
@@ -244,7 +256,7 @@ Total de Pedidos Analisados: {stats['totalPedidos']}
 > A Caminho: {stats['totalACaminho']}
 ----------------------------------------
 """
-        report_lines.append(header.strip())
+        report_lines.append(header)
         report_lines.append("\nREQUISIÇÕES POR VENDEDOR:")
         vendedores = sorted(stats['porVendedor'].keys())
         for vendedor in vendedores:
@@ -252,6 +264,9 @@ Total de Pedidos Analisados: {stats['totalPedidos']}
             report_lines.append(f"  - {vendedor} ({data['total']} total):")
             report_lines.append(f"    - {data['pedidosRua']} Pedido(s) de Rua")
             report_lines.append(f"    - {data['orcamentos']} Atualização(ões) de Orçamento")
+            # NOVA LINHA NO RELATÓRIO
+            if data['aCaminho'] > 0:
+                report_lines.append(f"    > {data['aCaminho']} A Caminho")
         
         report_lines.append("\n----------------------------------------\n")
         report_lines.append("ATENDIMENTOS POR COMPRADOR:")
@@ -261,7 +276,9 @@ Total de Pedidos Analisados: {stats['totalPedidos']}
             report_lines.append(f"  - {comprador} ({data['total']} total):")
             report_lines.append(f"    - {data['pedidosRua']} Pedido(s) de Rua")
             report_lines.append(f"    - {data['orcamentos']} Atualização(ões) de Orçamento")
-        report_lines.append("\n========================================")
+            # NOVA LINHA NO RELATÓRIO
+            if data['aCaminho'] > 0:
+                report_lines.append(f"    > {data['aCaminho']} A Caminho")
 
         return jsonify({'relatorio': '\n'.join(report_lines)})
 
