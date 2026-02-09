@@ -199,7 +199,7 @@ def gerar_relatorio_endpoint():
         pedidos_filtrados = query.all()
 
         if not pedidos_filtrados:
-            return jsonify({'relatorio': "Nenhum dado encontrado..."})
+            return jsonify({'relatorio': "Nenhum dado encontrado para o relatório com os filtros aplicados."})
 
         stats = {
             'totalPedidos': len(pedidos_filtrados),
@@ -242,21 +242,39 @@ def gerar_relatorio_endpoint():
                 if pedido.status == 'A Caminho':
                     stats['porComprador'][comprador]['aCaminho'] += 1
 
-        # --- GERAÇÃO DO TEXTO DO RELATÓRIO ---
+         # --- GERAÇÃO DO TEXTO DO RELATÓRIO (MODIFICADO) ---
         report_lines = []
         now = datetime.now(tz_cuiaba)
         
+        # Montar string de filtros aplicados
+        filtros_info = []
+        if filtros.get('vendedor'): filtros_info.append(f"Vendedor: {filtros['vendedor']}")
+        if filtros.get('comprador'): filtros_info.append(f"Comprador: {filtros['comprador']}")
+        if filtros.get('codigo'): filtros_info.append(f"Código: {filtros['codigo']}")
+        
+        data_str = "Todo o período"
+        if filtros.get('dataInicio') and filtros.get('dataFim'):
+            data_str = f"De {filtros['dataInicio']} até {filtros['dataFim']}"
+        elif filtros.get('dataInicio'):
+            data_str = f"A partir de {filtros['dataInicio']}"
+        elif filtros.get('dataFim'):
+            data_str = f"Até {filtros['dataFim']}"
+        filtros_info.append(f"Período: {data_str}")
+
+        filtros_texto = ", ".join(filtros_info)
+
         header = f"""
 ========================================
          RELATÓRIO DE PEDIDOS
 ========================================
 Gerado em: {now.strftime('%d/%m/%Y %H:%M:%S')}
-Filtro de Data: Baseado na Data de Criação
+Filtros Aplicados: {filtros_texto}
+----------------------------------------
 Total de Pedidos Analisados: {stats['totalPedidos']}
 > A Caminho: {stats['totalACaminho']}
 ----------------------------------------
 """
-        report_lines.append(header)
+        report_lines.append(header.strip())
         report_lines.append("\nREQUISIÇÕES POR VENDEDOR:")
         vendedores = sorted(stats['porVendedor'].keys())
         for vendedor in vendedores:

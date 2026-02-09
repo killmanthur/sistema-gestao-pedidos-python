@@ -117,15 +117,28 @@ def gerar_relatorio_registro():
         report.append("      RELATÓRIO DE REGISTRO DE COMPRAS")
         report.append("========================================")
         report.append(f"Gerado em: {now.strftime('%d/%m/%Y %H:%M:%S')}")
-        report.append(f"Total de Registros Analisados: {total_geral}")
         
+        # --- NOVO BLOCO DE INFORMAÇÕES DE FILTRO ---
         f_info = []
         if filtros.get('fornecedor'): f_info.append(f"Fornecedor: {filtros['fornecedor']}")
         if filtros.get('comprador'): f_info.append(f"Comprador: {filtros['comprador']}")
         if filtros.get('status'): f_info.append(f"Status: {filtros['status']}")
-        if filtros.get('dataInicio'): f_info.append(f"Desde: {filtros['dataInicio']}")
-        report.append(f"Filtros: {', '.join(f_info) if f_info else 'Nenhum'}")
+        
+        data_str = "Todo o período"
+        if filtros.get('dataInicio') and filtros.get('dataFim'):
+            data_str = f"{filtros['dataInicio']} a {filtros['dataFim']}"
+        elif filtros.get('dataInicio'):
+            data_str = f"A partir de {filtros['dataInicio']}"
+        elif filtros.get('dataFim'):
+            data_str = f"Até {filtros['dataFim']}"
+        f_info.append(f"Período: {data_str}")
+
+        report.append(f"Filtros Aplicados: {', '.join(f_info)}")
+        report.append("----------------------------------------")
+        
+        report.append(f"Total de Registros Analisados: {total_geral}")
         report.append("----------------------------------------\n")
+
 
         report.append("PRODUTIVIDADE POR COMPRADOR:")
         for comp in sorted(stats_compradores.keys()):
