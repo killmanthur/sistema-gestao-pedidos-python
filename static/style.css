@@ -699,6 +699,10 @@ body.dark-mode .card__header-actions .btn-icon img {
     border-color: var(--border-strong);
 }
 
+.btn--edit {
+    background-color: transparent;
+}
+
 .card__actions .btn--edit:hover:not([disabled]) {
     background-color: var(--text-secondary);
     color: white;
