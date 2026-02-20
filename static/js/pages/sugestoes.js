@@ -170,7 +170,7 @@ function criarItemSugestao(sugestao) {
         // Se estiver PENDENTE: pode ATENDER ou COGITAR
         else if (sugestao.status === 'pendente') {
             actionsHTML += `<button class="btn btn-sm btn-ghost btn-cogitar">Cogitar</button>`;
-            actionsHTML += `<button class="btn btn-sm btn-atender btn-ghost">Atender Itens</button>`;
+            actionsHTML += `<button class="btn btn-sm btn-ghost btn-mover-cotacao">Mover p/ Cotação</button>`;
         }
     }
 
