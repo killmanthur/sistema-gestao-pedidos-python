@@ -29,33 +29,30 @@
 <div class="layout-grid-3-cols">
     <section class="sugestoes-coluna">
         <h2>Sugestões Pendentes</h2>
-        <div id="lista-sugestoes-pendentes" class="quadro-container"
-            style="display: flex; flex-direction: column; gap: 1rem;"></div>
+        <div id="lista-sugestoes-pendentes" class="quadro-container"></div>
         <div class="pagination-container" id="pagination-pendente">
             <div class="spinner" style="display: none;"></div>
             <button class="btn btn--secondary btn-ver-mais" style="display: none;">Ver mais</button>
         </div>
     </section>
+
     <section class="sugestoes-coluna">
-        <h2>Sugestões Cogitadas</h2>
-        <div id="lista-sugestoes-cogitadas" class="quadro-container"
-            style="display: flex; flex-direction: column; gap: 1rem;"></div>
-        <div class="pagination-container" id="pagination-cogitado">
-            <div class="spinner" style="display: none;"></div>
-            <button class="btn btn--secondary btn-ver-mais" style="display: none;">Ver mais</button>
-        </div>
-    </section>
-    <section class="sugestoes-coluna">
-        <h2>Parcialmente Atendidos</h2>
-        <div id="lista-sugestoes-parciais" class="quadro-container"
-            style="display: flex; flex-direction: column; gap: 1rem;"></div>
-        <div class="pagination-container" id="pagination-parcialmente_atendido">
+        <h2>Em Cotação</h2> <!-- Nome Alterado -->
+        <div id="lista-sugestoes-cotacao" class="quadro-container"></div> <!-- ID Alterado -->
+        <div class="pagination-container" id="pagination-em_cotacao"> <!-- ID Alterado -->
             <div class="spinner" style="display: none;"></div>
             <button class="btn btn--secondary btn-ver-mais" style="display: none;">Ver mais</button>
         </div>
     </section>
 
-    <!-- REMOVIDA A SEÇÃO DE PEDIDOS FINALIZADOS -->
+    <section class="sugestoes-coluna">
+        <h2>Sugestões Cogitadas</h2>
+        <div id="lista-sugestoes-cogitadas" class="quadro-container"></div>
+        <div class="pagination-container" id="pagination-cogitado">
+            <div class="spinner" style="display: none;"></div>
+            <button class="btn btn--secondary btn-ver-mais" style="display: none;">Ver mais</button>
+        </div>
+    </section>
 </div>
 
 <div id="edit-sugestao-modal-overlay" class="modal-overlay" style="display:none;">

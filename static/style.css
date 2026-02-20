@@ -598,7 +598,7 @@ body.dark-mode textarea {
 .card__header,
 .card__body,
 .card__footer {
-    padding: 0.8rem 1rem;
+    padding: 8px 12px !important;
 }
 
 .card__header {
@@ -608,10 +608,11 @@ body.dark-mode textarea {
     border-bottom: 1px solid var(--border-main);
 }
 
+/* Ajuste no Header do Card para as ações */
 .card__header-actions {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.25rem; /* Espaço reduzido entre ícones */
 }
 
 .card__header-actions .btn-icon {
@@ -677,19 +678,25 @@ body.dark-mode .card__header-actions .btn-icon img {
     flex-wrap: wrap;
 }
 
-/* Estilo base para botões dentro dos cards */
-.card__actions .btn {
-    flex-grow: 1;
-    padding: 0.4rem 0.5rem;
-    font-size: 0.8rem;
-    font-weight: 600;
-    /* Um pouco mais de peso na fonte */
-    border: 1px solid transparent;
-    /* Borda transparente por padrão para botões sólidos */
-    border-radius: 6px;
-    transition: var(--transition-main);
-    text-transform: uppercase;
-    /* Removemos background-color: transparent global para permitir botões sólidos */
+/* Botões menores e mais discretos */
+.card__actions .btn-sm {
+    padding: 4px 10px;
+    font-size: 0.72rem;
+    height: 28px;
+    font-weight: 700;
+}
+
+/* Botão Editar estilo "Ghost" (apenas borda suave) */
+.btn-ghost {
+    background: transparent !important;
+    border: 1px solid var(--border-main) !important;
+    color: var(--text-secondary) !important;
+}
+
+.btn-ghost:hover {
+    background: var(--bg-muted) !important;
+    border-color: var(--text-primary) !important;
+    color: var(--text-primary) !important;
 }
 
 /* Botão Editar (Outline/Borda) */
@@ -701,6 +708,78 @@ body.dark-mode .card__header-actions .btn-icon img {
 
 .btn--edit {
     background-color: transparent;
+}
+
+/* Botão Atender com destaque sutil */
+.btn-atender {
+    background-color: transparent !important;
+    border: 1px solid var(--border-strong) !important;
+    color: var(--text-secondary) !important;
+}
+
+.btn-atender:hover {
+    background-color: var(--bg-muted) !important;
+    border-color: var(--text-primary) !important;
+    color: var(--text-on-primary) !important;
+}
+
+/* Estilo do Botão de Excluir (X) no topo */
+.btn-delete-card {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 1.4rem;
+    line-height: 1;
+    color: var(--text-muted);
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: var(--transition-main);
+}
+
+.btn-delete-card:hover {
+    background-color: var(--bg-danger-soft);
+    color: var(--clr-danger);
+}
+
+/* Demais botões em estilo Outline para não brigar visualmente */
+.btn-cogitar, .btn-mover-cotacao, .btn--edit {
+    background-color: transparent !important;
+    border: 1px solid var(--border-strong) !important;
+    color: var(--text-secondary) !important;
+}
+
+.btn-cogitar:hover, .btn-mover-cotacao:hover, .btn--edit:hover {
+    background-color: var(--bg-muted) !important;
+    border-color: var(--text-primary) !important;
+    color: var(--text-primary) !important;
+}
+
+/* Ajuste no Checkbox da lista */
+.item-list-selectable li {
+    padding: 4px 0;
+    list-style: none;
+}
+
+.item-list-selectable .item-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Cotação agora é Azul (Info) */
+.card-sugestao-cotacao::before {
+    background-color: var(--clr-info) !important;
+}
+
+/* Cogitado agora é Amarelo (Warning) */
+.card-sugestao-cogitado::before {
+    background-color: var(--clr-warning) !important;
+}
+
+.card__footer .card__actions {
+    display: flex;
+    justify-content: flex-end !important; /* Agrupa tudo à direita */
+    gap: 6px; /* Espaço pequeno e elegante entre botões */
 }
 
 .card__actions .btn--edit:hover:not([disabled]) {

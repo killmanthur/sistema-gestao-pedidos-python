@@ -92,28 +92,53 @@ def editar_sugestao(sugestao_id):
 @sugestoes_bp.route('/<int:sugestao_id>/atender-itens', methods=['POST'])
 def atender_itens_sugestao(sugestao_id):
     dados = request.get_json()
-    itens_para_atender = dados.get('itens', [])
+    itens_codigos = [i['codigo'] for i in dados.get('itens', [])]
+    sugestao_original = Sugestao.query.get_or_404(sugestao_id)
+
+    itens_atuais = sugestao_original.itens or []
+    atendidos = []
+    permanecem = []
+
+    for item in itens_atuais:
+        if item.get('codigo') in itens_codigos:
+            item['status'] = 'atendido'
+            atendidos.append(item)
+        else:
+            permanecem.append(item)
+
+    if not atendidos:
+        return jsonify({'error': 'Nenhum item selecionado'}), 400
+
+    try:
+        # Cria uma nova sugestão finalizada para o histórico
+        nova_finalizada = Sugestao(
+            vendedor=sugestao_original.vendedor,
+            comprador=sugestao_original.comprador,
+            status='atendido',
+            data_criacao=datetime.now(tz_cuiaba).isoformat(),
+            itens=atendidos,
+            observacao_geral=f"Atendido de Ref #{sugestao_original.id}"
+        )
+        db.session.add(nova_finalizada)
+
+        if permanecem:
+            # Se sobrou algo, atualiza a original e move para cotação
+            sugestao_original.itens = permanecem
+            sugestao_original.status = 'em_cotacao'
+        else:
+            # Se não sobrou nada, deleta a original (ou marca como deletada)
+            db.session.delete(sugestao_original)
+
+        db.session.commit()
+        return jsonify({'status': 'success'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@sugestoes_bp.route('/<int:sugestao_id>/mover-para-cotacao', methods=['PUT'])
+def mover_para_cotacao(sugestao_id):
     sugestao = Sugestao.query.get_or_404(sugestao_id)
-
-    itens_atuais = sugestao.itens or []
-    for item_db in itens_atuais:
-        for item_req in itens_para_atender:
-            if (item_db.get('codigo') == item_req.get('codigo') and 
-                str(item_db.get('quantidade', '1')) == str(item_req.get('quantidade', '1'))):
-                item_db['status'] = 'atendido'
-                break
-    
-    from sqlalchemy.orm.attributes import flag_modified
-    flag_modified(sugestao, "itens")
-
-    todos_atendidos = all(item.get('status') == 'atendido' for item in itens_atuais)
-    algum_atendido = any(item.get('status') == 'atendido' for item in itens_atuais)
-
-    if todos_atendidos:
-        sugestao.status = 'atendido'
-    elif algum_atendido:
-        sugestao.status = 'parcialmente_atendido'
-        
+    sugestao.status = 'em_cotacao'
     db.session.commit()
     return jsonify({'status': 'success'})
 
@@ -195,48 +220,3 @@ def get_sugestoes_paginadas():
         'sugestoes': [serialize_sugestao_local(s) for s in sugestoes],
         'temMais': tem_mais
     })
-
-@sugestoes_bp.route('/<int:sugestao_id>/finalizar-parcial', methods=['POST'])
-def finalizar_sugestao_parcial(sugestao_id):
-    sugestao_original = Sugestao.query.get_or_404(sugestao_id)
-
-    if sugestao_original.status != 'parcialmente_atendido':
-        return jsonify({'error': 'Apenas sugestões parcialmente atendidas podem ser finalizadas desta forma.'}), 400
-
-    itens_atendidos = [item for item in (sugestao_original.itens or []) if item.get('status') == 'atendido']
-    itens_pendentes = [item for item in (sugestao_original.itens or []) if item.get('status') != 'atendido']
-
-    now_iso = datetime.now(tz_cuiaba).isoformat()
-
-    try:
-        if itens_atendidos:
-            nova_sugestao_atendida = Sugestao(
-                vendedor=sugestao_original.vendedor,
-                comprador=sugestao_original.comprador,
-                observacao_geral=sugestao_original.observacao_geral,
-                data_criacao=now_iso,
-                status='atendido',
-                itens=itens_atendidos
-            )
-            db.session.add(nova_sugestao_atendida)
-
-        if itens_pendentes:
-            nova_sugestao_pendente = Sugestao(
-                vendedor=sugestao_original.vendedor,
-                comprador=sugestao_original.comprador,
-                observacao_geral=sugestao_original.observacao_geral,
-                data_criacao=now_iso,
-                status='cogitado',
-                itens=itens_pendentes
-            )
-            db.session.add(nova_sugestao_pendente)
-        
-        db.session.delete(sugestao_original)
-        
-        db.session.commit()
-        return jsonify({'status': 'success'})
-
-    except Exception as e:
-        db.session.rollback()
-        print(f"ERRO ao finalizar sugestão parcial: {e}")
-        return jsonify({'error': str(e)}), 500
