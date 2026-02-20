@@ -161,6 +161,7 @@ function criarItemSugestao(sugestao) {
         }
         else if (sugestao.status === 'cogitado') {
             actionsHTML += `<button class="btn btn-sm btn-ghost btn-mover-cotacao">Mover p/ Cotação</button>`;
+            actionsHTML += `<button class="btn btn-sm btn-atender btn--success">Atender</button>`;
         }
     }
 
