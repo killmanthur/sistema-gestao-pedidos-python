@@ -1950,3 +1950,40 @@ tr.status-pedido-efetuado:hover {
     background-color: var(--clr-info);
     color: white;
 }
+/* --- Estilização Global de Selects para Legibilidade --- */
+
+select {
+    background-color: var(--bg-surface);
+    color: var(--text-primary);
+    border: 1px solid var(--border-strong);
+    padding: 0.4rem;
+    cursor: pointer;
+}
+
+/* Força a cor das opções para não herdar transparências indesejadas */
+select option {
+    background-color: var(--bg-surface);
+    color: var(--text-primary);
+}
+
+/* Correção crucial para o Modo Escuro */
+body.dark-mode select {
+    background-color: var(--bg-muted);
+    color: var(--text-primary);
+    /* Informa ao navegador para usar o tema escuro nativo no popup do dropdown */
+    color-scheme: dark; 
+}
+
+body.dark-mode select option {
+    background-color: var(--bg-muted);
+    color: var(--text-primary);
+}
+
+/* Classe utilitária para selects compactos em cards */
+.select-compact {
+    padding: 2px 4px;
+    font-size: 0.75rem;
+    border-radius: 4px;
+    height: auto;
+    width: 100%;
+}

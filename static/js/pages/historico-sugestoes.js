@@ -109,54 +109,98 @@ function criarCardHistorico(sugestao) {
     const card = document.createElement('div');
     card.className = 'card card--status-done';
 
+    const { role, nome, permissions } = AppState.currentUser;
+    const canManage = role === 'Admin' || role === 'Comprador';
+    const isOwner = nome === sugestao.vendedor;
+    const canEdit = canManage || isOwner || permissions?.pode_editar_sugestao_finalizada;
+
     let itensHTML = '<ul class="item-list-selectable">';
     (sugestao.itens || []).forEach(item => {
         itensHTML += `
             <li>
                 <div class="item-content">
-                    <span style="color: var(--text-muted);">•</span>
+                    <span style="color: var(--clr-success); font-size:1.1rem; line-height:1;">✓</span>
                     <div class="item-text-wrapper">
                         <span><strong>${item.quantidade || 1}x</strong> ${item.codigo}</span>
-                        <span class="item-status-badge item-status-badge--atendido">Atendido</span>
                     </div>
                 </div>
             </li>`;
     });
     itensHTML += '</ul>';
 
-    const copyBtnHTML = `
-        <button class="btn-icon btn-copy-sugestao" title="Copiar Itens" style="width: 28px; height: 28px; margin-left: auto;">
-            <img src="/static/copy.svg" alt="Copiar" style="filter: invert(0.5);">
-        </button>`;
+    const copyBtnHTML = `<button class="btn-icon btn-copy-sugestao" title="Copiar"><img src="/static/copy.svg" style="width:14px; opacity:0.5;"></button>`;
+    const deleteBtnHTML = (canManage) ? `<button class="btn-delete-card" title="Excluir">&times;</button>` : '';
 
-    // Permissões de edição
-    const { role, nome, permissions } = AppState.currentUser;
-    const isOwner = nome === sugestao.vendedor;
-    const canEdit = role === 'Admin' || role === 'Comprador' || isOwner || permissions?.pode_editar_sugestao_finalizada;
-
-    let editBtnHTML = '';
-    if (canEdit) {
-        editBtnHTML = `<button class="btn btn--edit btn-sm" style="margin-top:0.5rem;">Editar</button>`;
+    // --- LÓGICA DO SELETOR DE COMPRADOR ---
+    let compradorHTML = '';
+    if (canManage) {
+        let optionsHTML = '<option value="">- Comprador -</option>';
+        (AppState.compradorNomes || []).forEach(c => {
+            optionsHTML += `<option value="${c}" ${sugestao.comprador === c ? 'selected' : ''}>${c}</option>`;
+        });
+        // Select limpo, sem flex-grow
+        compradorHTML = `<select class="select-compact" style="width: 100%; margin: 0;">${optionsHTML}</select>`;
+    } else {
+        compradorHTML = `<span style="font-size:0.7rem; opacity:0.7;">Comp: ${sugestao.comprador || 'N/A'}</span>`;
     }
 
     card.innerHTML = `
-        <div class="card__header" style="display: flex; align-items: center;">
-             <p style="margin: 0;"><strong>Vendedor:</strong> ${sugestao.vendedor}</p>
-             ${copyBtnHTML}
+        <div class="card__header">
+             <span style="font-size: 0.85rem; opacity: 0.8;"><strong>Vendedor:</strong> ${sugestao.vendedor}</span>
+             <div class="card__header-actions">${copyBtnHTML}${deleteBtnHTML}</div>
         </div>
-        <div class="card__body">
+        <div class="card__body" style="padding: 12px;">
             ${itensHTML}
-            ${sugestao.observacao_geral ? `<p><strong>Obs:</strong> ${sugestao.observacao_geral}</p>` : ''}
-            <p><small>Criado em: ${formatarData(sugestao.data_criacao)}</small></p>
-            <p><strong>Comprador:</strong> ${sugestao.comprador || 'N/A'}</p>
-            ${editBtnHTML}
+            ${sugestao.observacao_geral ? `<p style="margin-top:8px; font-size:0.8rem; background:var(--bg-muted); padding:4px 8px; border-radius:4px; color:var(--text-secondary);"><strong>Obs:</strong> ${sugestao.observacao_geral}</p>` : ''}
+            <div style="margin-top:10px; opacity:0.6; font-size:0.7rem;">
+                <span>Criado em: ${formatarData(sugestao.data_criacao)}</span>
+            </div>
+        </div>
+        
+        <div class="card__footer" style="padding: 8px 12px; background: rgba(0,0,0,0.03); border-top: 1px solid var(--border-main);">
+            <div class="card__actions" style="display: flex; align-items: center; width: 100%; justify-content: flex-start;">
+                
+                <!-- 1. SELETOR (margin-right: auto força a separação) -->
+                <div style="margin-right: auto; flex: 0 1 140px; text-align: left;">
+                    ${compradorHTML}
+                </div>
+                
+                <!-- 2. BOTÃO EDITAR (Ponta direita) -->
+                <div style="display: flex; flex-shrink: 0;">
+                    ${canEdit ? `<button class="btn btn-sm btn-ghost btn--edit" style="white-space: nowrap;">Editar Itens</button>` : ''}
+                </div>
+                
+            </div>
         </div>
     `;
 
+    // --- Listeners (Mantenha os mesmos) ---
     card.querySelector('.btn-copy-sugestao').addEventListener('click', () => handleCopySugestao(sugestao));
+    card.querySelector('.btn-delete-card')?.addEventListener('click', () => {
+        showConfirmModal("Excluir permanentemente?", async () => {
+            try {
+                const res = await fetch(`/api/sugestoes/${sugestao.id}`, { method: 'DELETE' });
+                if (res.ok) { card.remove(); showToast("Excluído!"); }
+            } catch (e) { showToast("Erro ao excluir", "error"); }
+        });
+    });
 
     if (canEdit) {
-        card.querySelector('.btn--edit').addEventListener('click', () => openEditModal(sugestao));
+        card.querySelector('.btn--edit')?.addEventListener('click', () => openEditModal(sugestao));
+    }
+
+    if (canManage) {
+        card.querySelector('.comprador-select-wrapper select, select.select-compact')?.addEventListener('change', async (e) => {
+            const novoComprador = e.target.value;
+            try {
+                await fetch(`/api/sugestoes/${sugestao.id}/comprador`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ comprador: novoComprador }),
+                });
+                showToast('Comprador atualizado!', 'success');
+            } catch (error) { showToast('Falha ao atualizar.', 'error'); }
+        });
     }
 
     return card;
