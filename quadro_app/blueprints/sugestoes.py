@@ -182,51 +182,44 @@ def cogitar_sugestao(sugestao_id):
 def mover_itens_sugestao(sugestao_id):
     dados = request.get_json()
     itens_selecionados_codigos = [i['codigo'] for i in dados.get('itens', [])]
-    novo_status = dados.get('novo_status') # 'em_cotacao' ou 'cogitado'
-    
+    novo_status = dados.get('novo_status')
+    comprador_atual = dados.get('comprador') # Pegamos o comprador enviado
+
     sugestao_original = Sugestao.query.get_or_404(sugestao_id)
-    itens_atuais = sugestao_original.itens or []
     
-    # Se não enviou itens, move o card inteiro (comportamento antigo)
+    # Atualiza o comprador na original também, por segurança
+    sugestao_original.comprador = comprador_atual 
+
     if not itens_selecionados_codigos:
         sugestao_original.status = novo_status
         db.session.commit()
-        return jsonify({'status': 'success', 'modo': 'total'})
+        return jsonify({'status': 'success'})
 
-    # Lógica de Divisão (Split)
+    # Lógica de Divisão
     a_mover = []
     permanecem = []
-
-    for item in itens_atuais:
+    for item in sugestao_original.itens:
         if item.get('codigo') in itens_selecionados_codigos:
             a_mover.append(item)
         else:
             permanecem.append(item)
 
-    try:
-        if not permanecem:
-            # Se selecionou todos, apenas muda o status da original
-            sugestao_original.status = novo_status
-        else:
-            # Cria um novo card com os itens selecionados
-            nova_sugestao = Sugestao(
-                vendedor=sugestao_original.vendedor,
-                comprador=sugestao_original.comprador,
-                status=novo_status,
-                data_criacao=sugestao_original.data_criacao, # Mantém a data original
-                itens=a_mover,
-                observacao_geral=sugestao_original.observacao_geral
-            )
-            db.session.add(nova_sugestao)
-            
-            # Atualiza a original apenas com o que sobrou
-            sugestao_original.itens = permanecem
+    if not permanecem:
+        sugestao_original.status = novo_status
+    else:
+        nova_sugestao = Sugestao(
+            vendedor=sugestao_original.vendedor,
+            comprador=comprador_atual, # NOVO: Garante o comprador no novo card
+            status=novo_status,
+            data_criacao=sugestao_original.data_criacao,
+            itens=a_mover,
+            observacao_geral=sugestao_original.observacao_geral
+        )
+        db.session.add(nova_sugestao)
+        sugestao_original.itens = permanecem
 
-        db.session.commit()
-        return jsonify({'status': 'success', 'modo': 'parcial'})
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+    db.session.commit()
+    return jsonify({'status': 'success'})
 
 @sugestoes_bp.route('/sugestoes-paginadas', methods=['GET'])
 def get_sugestoes_paginadas():

@@ -126,6 +126,7 @@ function renderizarColuna(status) {
 
 /** Cria o elemento HTML para um card de sugestão. */
 function criarItemSugestao(sugestao) {
+    // ... (mantenha as definições iniciais de role, nome, cores, etc.)
     const card = document.createElement('div');
     card.className = 'card';
     card.dataset.id = sugestao.id;
@@ -135,16 +136,15 @@ function criarItemSugestao(sugestao) {
     const isOwner = nome === sugestao.vendedor;
     const isFinalizado = sugestao.status === 'atendido';
 
-    // Cores (Cotação: Azul, Cogitado: Amarelo, Pendente: Vermelho)
     if (sugestao.status === 'em_cotacao') card.classList.add('card-sugestao-cotacao');
     else if (sugestao.status === 'cogitado') card.classList.add('card-sugestao-cogitado');
     else card.classList.add('card--status-awaiting');
 
     // Cabeçalho
-    const copyBtnHTML = `<button class="btn-icon btn-copy-sugestao" title="Copiar"><img src="/static/copy.svg" style="width:14px; opacity:0.5;"></button>`;
-    const deleteBtnHTML = (canManage && !isFinalizado) ? `<button class="btn-delete-card" title="Excluir">&times;</button>` : '';
+    const copyBtnHTML = `<button class="btn-icon btn-copy-sugestao"><img src="/static/copy.svg" style="width:14px; opacity:0.5;"></button>`;
+    const deleteBtnHTML = (canManage && !isFinalizado) ? `<button class="btn-delete-card">&times;</button>` : '';
 
-    // Botões de Ação
+    // Lógica de botões
     let actionsHTML = '';
     if (!isFinalizado && (canManage || isOwner)) {
         actionsHTML += `<button class="btn btn-sm btn-ghost btn--edit">Editar</button>`;
@@ -157,34 +157,33 @@ function criarItemSugestao(sugestao) {
         }
         else if (sugestao.status === 'em_cotacao') {
             actionsHTML += `<button class="btn btn-sm btn-ghost btn-mover-cogitado">Mover p/ Cogitado</button>`;
-            actionsHTML += `<button class="btn btn-sm btn-atender btn--success">Atender</button>`;
+            actionsHTML += `<button class="btn btn-sm btn-atender btn-ghost">Atender</button>`; // Verde
         }
         else if (sugestao.status === 'cogitado') {
             actionsHTML += `<button class="btn btn-sm btn-ghost btn-mover-cotacao">Mover p/ Cotação</button>`;
-            actionsHTML += `<button class="btn btn-sm btn-atender btn--success">Atender</button>`;
+            actionsHTML += `<button class="btn btn-sm btn-atender btn-ghost">Atender</button>`;
         }
     }
 
-    // Itens
+    // Lista de Itens
     let itensHTML = '<ul class="item-list-selectable">';
     (sugestao.itens || []).forEach(item => {
         const showCheckbox = canManage && (sugestao.status === 'em_cotacao' || sugestao.status === 'cogitado');
         const checkbox = showCheckbox
-            ? `<input type="checkbox" class="mover-item-checkbox" data-codigo="${item.codigo}">`
+            ? `<input type="checkbox" class="mover-item-checkbox" data-codigo="${item.codigo}" data-quantidade="${item.quantidade}">`
             : '<span style="color:var(--text-muted); font-size:1.1rem; line-height:1;">•</span>';
         itensHTML += `<li><div class="item-content">${checkbox}<span><strong>${item.quantidade || 1}x</strong> ${item.codigo}</span></div></li>`;
     });
     itensHTML += '</ul>';
 
-    // Seletor de Comprador (Preparado para o footer)
+    // Comprador HTML
     let compradorHTML = '';
     if (canManage && !isFinalizado) {
         let optionsHTML = '<option value="">- Comprador -</option>';
         (AppState.compradorNomes || []).forEach(c => {
             optionsHTML += `<option value="${c}" ${sugestao.comprador === c ? 'selected' : ''}>${c}</option>`;
         });
-    // Forçamos o select a ocupar toda a largura do seu pequeno container à esquerda
-        compradorHTML = `<select class="select-compact" style="width: 100%; margin: 0;">${optionsHTML}</select>`;
+        compradorHTML = `<select class="select-compact comprador-select-realtime">${optionsHTML}</select>`;
     } else {
         compradorHTML = `<span style="font-size:0.7rem; opacity:0.7;">Comp: ${sugestao.comprador || 'N/A'}</span>`;
     }
@@ -197,52 +196,48 @@ function criarItemSugestao(sugestao) {
         <div class="card__body" style="padding: 12px;">
             ${itensHTML}
             ${sugestao.observacao_geral ? `<p style="margin-top:8px; font-size:0.8rem; background:var(--bg-muted); padding:4px 8px; border-radius:4px; color:var(--text-secondary);"><strong>Obs:</strong> ${sugestao.observacao_geral}</p>` : ''}
-            <div style="margin-top:10px; opacity:0.6; font-size:0.7rem;">
-                <span>${formatarData(sugestao.data_criacao)}</span>
-            </div>
+            <div style="margin-top:10px; opacity:0.6; font-size:0.7rem;"><span>${formatarData(sugestao.data_criacao)}</span></div>
         </div>
-        
         <div class="card__footer" style="padding: 8px 12px; background: rgba(0,0,0,0.03); border-top: 1px solid var(--border-main);">
-            <!-- CONTAINER FLEX PRINCIPAL -->
             <div class="card__actions" style="display: flex; align-items: center; width: 100%; justify-content: flex-start;">
-                
-                <!-- 1. SELETOR (margin-right: auto empurra o resto para a direita) -->
-                <div style="margin-right: auto; flex: 0 1 140px; text-align: left;">
-                    ${compradorHTML}
-                </div>
-                
-                <!-- 2. BOTÕES (agrupados na ponta direita) -->
-                <div style="display: flex; gap: 6px; flex-shrink: 0;">
-                    ${actionsHTML}
-                </div>
-                
+                <div style="margin-right: auto; flex: 0 1 130px; text-align: left;">${compradorHTML}</div>
+                <div style="display: flex; gap: 6px; flex-shrink: 0;">${actionsHTML}</div>
             </div>
         </div>`;
 
-    // --- FUNÇÃO PARA MOVER ITENS ---
+    // FUNÇÃO DE MOVER INTERNA (Corrigida para levar o comprador atual)
     const handleMoveRequest = (novoStatus, label) => {
-        const selected = Array.from(card.querySelectorAll('.mover-item-checkbox:checked')).map(cb => ({ codigo: cb.dataset.codigo }));
-        const msg = selected.length > 0 ? `Mover apenas itens selecionados para ${label}?` : `Mover card INTEIRO para ${label}?`;
+        const selected = Array.from(card.querySelectorAll('.mover-item-checkbox:checked')).map(cb => ({ 
+            codigo: cb.dataset.codigo 
+        }));
+        
+        // Pegamos o comprador que está selecionado no select AGORA
+        const compradorAtual = card.querySelector('.comprador-select-realtime')?.value || sugestao.comprador;
+
+        const msg = selected.length > 0 ? `Mover itens selecionados para ${label}?` : `Mover card INTEIRO para ${label}?`;
+        
         showConfirmModal(msg, () => {
             handleApiAction(fetch(`/api/sugestoes/${sugestao.id}/mover-itens`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ novo_status: novoStatus, itens: selected })
+                body: JSON.stringify({ 
+                    novo_status: novoStatus, 
+                    itens: selected,
+                    comprador: compradorAtual // Enviamos o comprador atual para o backend
+                })
             }), `Movido para ${label}!`);
         });
     };
 
-    // Listeners
+    // Listeners ... (mantenha os mesmos: btn-atender, btn-mover, etc.)
+    card.querySelector('.btn-atender')?.addEventListener('click', (e) => handleAtenderParcial(e, sugestao.id));
     card.querySelector('.btn-mover-cotacao')?.addEventListener('click', () => handleMoveRequest('em_cotacao', 'Cotação'));
     card.querySelector('.btn-mover-cogitado')?.addEventListener('click', () => handleMoveRequest('cogitado', 'Cogitados'));
     card.querySelector('.btn-cogitar')?.addEventListener('click', () => handleMoveRequest('cogitado', 'Cogitados'));
-    card.querySelector('.btn-atender')?.addEventListener('click', (e) => handleAtenderParcial(e, sugestao.id));
     card.querySelector('.btn--edit')?.addEventListener('click', () => openEditSugestaoModal(sugestao));
     card.querySelector('.btn-delete-card')?.addEventListener('click', () => excluirSugestao(sugestao.id));
     card.querySelector('.btn-copy-sugestao')?.addEventListener('click', () => handleCopySugestao(sugestao));
-    
-    // Listener do Comprador (agora no footer)
-    card.querySelector('.comprador-select-wrapper select')?.addEventListener('change', (e) => handleCompradorSugestaoChange(sugestao.id, e.target.value));
+    card.querySelector('.comprador-select-realtime')?.addEventListener('change', (e) => handleCompradorSugestaoChange(sugestao.id, e.target.value));
 
     return card;
 }
@@ -280,24 +275,35 @@ async function handleApiAction(actionPromise, successMessage) {
 
 function handleAtenderParcial(event, sugestaoId) {
     const cardElement = event.target.closest('.card');
-    const checkboxes = cardElement.querySelectorAll('.atender-item-checkbox:checked');
+    
+    // Captura os itens marcados
+    const checkboxes = cardElement.querySelectorAll('.mover-item-checkbox:checked');
     
     if (checkboxes.length === 0) {
         showToast('Selecione pelo menos um item para atender.', 'info');
         return;
     }
 
+    // Prepara a lista de itens para enviar
     const itensParaAtender = Array.from(checkboxes).map(cb => ({
         codigo: cb.dataset.codigo,
         quantidade: cb.dataset.quantidade
     }));
 
-    const promise = fetch(`/api/sugestoes/${sugestaoId}/atender-itens`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ itens: itensParaAtender }),
+    // --- ADICIONADA A CONFIRMAÇÃO AQUI ---
+    const mensagem = itensParaAtender.length > 1 
+        ? `Confirmar o atendimento de ${itensParaAtender.length} itens? Eles serão movidos para o histórico.`
+        : `Confirmar o atendimento do item "${itensParaAtender[0].codigo}"?`;
+
+    showConfirmModal(mensagem, () => {
+        const promise = fetch(`/api/sugestoes/${sugestaoId}/atender-itens`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ itens: itensParaAtender }),
+        });
+        
+        handleApiAction(promise, 'Itens atendidos e movidos para o histórico!');
     });
-    handleApiAction(promise, 'Itens atendidos e movidos para o histórico!');
 }
 
 function changeSugestaoStatus(sugestaoId, action) {
