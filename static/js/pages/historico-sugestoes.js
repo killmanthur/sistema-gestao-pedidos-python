@@ -1,5 +1,5 @@
 import { AppState } from '../state.js';
-import { formatarData, toggleButtonLoading } from '../ui.js';
+import { formatarData, toggleButtonLoading, showConfirmModal } from '../ui.js';
 import { showToast } from '../toasts.js';
 
 let paginaAtual = 0;

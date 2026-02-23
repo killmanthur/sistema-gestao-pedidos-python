@@ -1987,3 +1987,305 @@ body.dark-mode select option {
     height: auto;
     width: 100%;
 }
+
+/* Padding padronizado para todos os cards do sistema */
+.pedido-card .card__header,
+.pedido-card .card__footer {
+    padding: 8px 12px !important;
+}
+
+.pedido-card .card__body {
+    padding: 12px !important;
+}
+
+/* Garante que o select dentro do footer do card fique alinhado */
+.pedido-card .select-compact {
+    height: 28px;
+    font-size: 0.75rem;
+    padding: 2px 4px;
+}
+
+/* Estilo para o botão de excluir (X) no topo igual ao de sugestões */
+.btn-delete-card {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 1.4rem;
+    line-height: 1;
+    color: var(--text-muted);
+    padding: 0 5px;
+    margin-left: 5px;
+    transition: var(--transition-main);
+}
+
+.btn-delete-card:hover {
+    color: var(--clr-danger);
+}
+
+/* Ajuste na lista de itens para consistência */
+.item-list-selectable li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-primary);
+}
+
+/* Efeito de hover nos botões ghost dentro do card */
+.card__actions .btn-ghost {
+    background: transparent;
+    border: 1px solid var(--border-strong);
+    color: var(--text-secondary);
+    padding: 4px 8px;
+}
+
+.card__actions .btn-ghost:hover {
+    background: var(--bg-muted);
+    border-color: var(--text-primary);
+    color: var(--text-primary);
+}
+
+/* Botão de "Atender/Chegada" com verde suave */
+.btn-atender {
+    border: 1px solid var(--clr-success) !important;
+    color: var(--clr-success) !important;
+}
+
+.btn-atender:hover {
+    background-color: var(--clr-success) !important;
+    color: white !important;
+}
+/* Badges de Status Compactos */
+.badge-status {
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    color: #fff;
+    display: inline-block;
+}
+
+/* Cores específicas para os badges no quadro de pedidos */
+.bg-status-awaiting { background-color: var(--clr-danger); }      /* Vermelho para Aguardando */
+.bg-status-progress { background-color: var(--clr-warning); color: #000; } /* Amarelo para Cotação */
+.status-approval    { background-color: var(--clr-info); }        /* Azul para Aprovação */
+.bg-status-success  { background-color: var(--clr-success); }     /* Verde para OK */
+
+/* Ajuste do footer-right para os botões não "atropelarem" o status */
+.pedido-card .footer-right {
+    display: flex;
+    gap: 4px;
+    justify-content: flex-end;
+}
+
+/* Ajuste no modo escuro para o badge de cotação não sumir */
+body.dark-mode .bg-status-progress {
+    color: #121826;
+    font-weight: 900;
+}
+
+/* Estilo genérico para pedidos a caminho se quiser diferenciar */
+.card--status-info .badge-status {
+    background-color: var(--clr-info);
+}
+
+/* Título do Card */
+.card-tipo-req {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--clr-primary-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 140px; /* Evita que nomes longos empurrem o badge para fora */
+}
+
+/* Badges de Status no Topo */
+.badge-status {
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    color: #fff;
+    text-transform: uppercase;
+}
+
+/* Cores dos Badges */
+.bg-status-awaiting { background-color: var(--clr-danger); }      /* Vermelho */
+.bg-status-progress { background-color: var(--clr-warning); color: #000; } /* Amarelo */
+.status-approval    { background-color: var(--clr-info); }        /* Azul */
+.bg-status-success  { background-color: var(--clr-success); }     /* Verde */
+
+/* Ajuste do cabeçalho para alinhar badge e ícones */
+.pedido-card .card__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+}
+
+/* Estilo do botão de excluir igual à sugestão */
+.btn-delete-card {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 1.4rem;
+    color: var(--text-muted);
+    line-height: 1;
+    padding: 0 4px;
+    transition: 0.2s;
+}
+
+.btn-delete-card:hover {
+    color: var(--clr-danger);
+    transform: scale(1.1);
+}
+
+/* Estilo Base Botão Ghost */
+.pedido-card .btn-ghost {
+    background: transparent;
+    border: 1px solid var(--border-strong);
+    color: var(--text-secondary);
+    transition: all 0.2s ease;
+}
+
+/* Hover Amarelo (Cotação) */
+.pedido-card .btn-status-cotacao:hover {
+    background-color: var(--clr-warning) !important;
+    border-color: var(--clr-warning) !important;
+    color: #000 !important;
+}
+
+/* Hover Azul (Aprovação / Info) */
+.pedido-card .btn-status-approval:hover,
+.pedido-card .btn-chegada-parcial:hover {
+    background-color: var(--clr-info) !important;
+    border-color: var(--clr-info) !important;
+    color: #fff !important;
+}
+
+/* Hover Verde (Efetuado / Finalizado) */
+.pedido-card .btn-status-efetuado:hover,
+.pedido-card .btn-marcar-chegada:hover {
+    background-color: var(--clr-success) !important;
+    border-color: var(--clr-success) !important;
+    color: #fff !important;
+}
+
+/* Hover Cinza Escuro (Editar) */
+.pedido-card .btn--edit:hover {
+    background-color: var(--text-secondary) !important;
+    border-color: var(--text-secondary) !important;
+    color: #fff !important;
+}
+
+/* Ajuste no Badge de Status para ficar idêntico às sugestões */
+.badge-status {
+    font-size: 0.6rem;
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: #fff;
+    white-space: nowrap;
+}
+
+/* Ajuste de alinhamento no header */
+.pedido-card .card__header {
+    height: 40px;
+    padding: 0 12px;
+}
+
+.card-tipo-req {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--clr-primary-main);
+}
+
+/* --- ESTILO DO TOOLTIP (CAIXA DE TEXTO NO HOVER) --- */
+
+/* O elemento que tem o tooltip precisa de posição relativa */
+[data-tooltip] {
+    position: relative;
+    cursor: pointer;
+}
+
+/* Criando a caixa de texto */
+[data-tooltip]::after {
+    content: attr(data-tooltip); /* Pega o texto do atributo data-tooltip */
+    position: absolute;
+    bottom: 130%; /* Posiciona acima do botão */
+    left: 50%;
+    transform: translateX(-50%);
+    
+    /* Cores baseadas na sua imagem */
+    background-color: #1a1c23; /* Fundo bem escuro */
+    color: #ffcc66;           /* Texto dourado/alaranjado */
+    border: 1px solid #444;   /* Borda fina discreta */
+    
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    white-space: nowrap;      /* Impede que o texto quebre linha */
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    
+    /* Efeito de esconder/mostrar */
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    z-index: 10000;
+    pointer-events: none;     /* Impede que o mouse "pegue" no tooltip */
+}
+
+/* Pequena seta embaixo da caixa */
+[data-tooltip]::before {
+    content: '';
+    position: absolute;
+    bottom: 110%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 6px 6px 0 6px;
+    border-style: solid;
+    border-color: #444 transparent transparent transparent;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease;
+    z-index: 10000;
+}
+
+/* Mostra ao passar o mouse */
+[data-tooltip]:hover::after,
+[data-tooltip]:hover::before {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(-5px);
+}
+
+/* Ajuste para não cortar o tooltip em containers com overflow hidden */
+.card__header-actions {
+    overflow: visible !important;
+}
+
+/* 1. Garante que o Card e suas seções não cortem o conteúdo que sai deles */
+.card, 
+.pedido-card,
+.card__header, 
+.card__footer,
+.card__header-actions {
+    overflow: visible !important; /* Permite que o tooltip apareça fora das bordas */
+}
+
+/* 2. MUITO IMPORTANTE: Garante que o card que você está passando o mouse 
+   fique acima dos outros na camada visual (Z-INDEX) */
+.pedido-card:hover {
+    z-index: 100; /* Faz o card atual "flutuar" sobre os vizinhos */
+}
+
+/* 3. Ajuste fino no posicionamento do Tooltip para evitar colisões */
+[data-tooltip]::after {
+    bottom: 110%; /* Ajuste a altura para não ficar tão longe do botão */
+}
+[data-tooltip]::before {
+    bottom: 95%;  /* Ajuste a setinha também */
+}

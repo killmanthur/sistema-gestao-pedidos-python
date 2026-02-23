@@ -300,175 +300,180 @@ export function criarCardPedido(pedido) {
     card.className = 'card pedido-card';
     card.dataset.id = pedido.id;
 
-    // Estilos de Status
-    if (pedido.status === 'Aguardando') card.classList.add('card--status-awaiting');
-    else if (pedido.status === 'Em Cotação') card.classList.add('card--status-progress');
-    else if (pedido.status === 'Aguardando Aprovação') card.classList.add('card--status-approval'); // NOVO
-    else if (pedido.status === 'A Caminho') card.classList.add('card--status-info');
-    else if (pedido.status === 'OK') card.classList.add('card--status-done');
-
-    let compradorOptions = '<option value="">- Atribuir -</option>';
-    (AppState.compradorNomes || []).forEach(c => {
-        compradorOptions += `<option value="${c}" ${pedido.comprador === c ? 'selected' : ''}>${c}</option>`;
-    });
-
-    // Botões do Cabeçalho
-    const showFinalizeBtn = (isAdmin || isComprador) && pedido.status !== 'A Caminho' && pedido.status !== 'OK';
-    const finalizeBtn = showFinalizeBtn ? `<button class="btn btn--success btn-finalize" title="Finalizar Pedido">✓</button>` : '';
-    const logBtnHTML = `<button class="btn-icon" title="Ver Histórico"><img src="/static/history.svg" alt="Histórico"></button>`;
-
-    // MUDANÇA: Botão Excluir virou "X"
-    const deleteBtn = (isAdmin || isComprador) ? `<button class="btn btn--danger btn-delete-compact" title="Excluir Pedido">X</button>` : '';
-
-    // MUDANÇA: Botão Aguardando Aprovação (Azul com ícone de relógio)
-    // Aparece se status não for 'Aguardando Aprovação', nem 'A Caminho', nem 'OK'
-    const showApprovalBtn = canManage && pedido.status !== 'Aguardando Aprovação' && pedido.status !== 'A Caminho' && pedido.status !== 'OK';
-    const approvalBtn = showApprovalBtn ? `<button class="btn btn--info btn-approval" title="Aguardando Aprovação" style="margin-right: 5px;">🕓</button>` : '';
-
-    let footerContent = '';
-    let editBtnHTML = '';
-
-    // MUDANÇA: Liberar botão editar para "A Caminho"
-    if (pedido.status !== 'OK' && canEdit) {
-        editBtnHTML = `<button class="btn btn--edit">Editar</button>`;
+    // --- Definição de Cores e Classes de Status ---
+    let statusClass = '';
+    if (pedido.status === 'Aguardando') {
+        card.classList.add('card--status-awaiting');
+        statusClass = 'bg-status-awaiting';
+    } else if (pedido.status === 'Em Cotação') {
+        card.classList.add('card--status-progress');
+        statusClass = 'bg-status-progress';
+    } else if (pedido.status === 'Aguardando Aprovação') {
+        card.classList.add('card--status-approval');
+        statusClass = 'status-approval';
+    } else if (pedido.status === 'A Caminho') {
+        card.classList.add('card--status-info');
+        statusClass = 'status-approval'; 
+    } else if (pedido.status === 'OK') {
+        card.classList.add('card--status-done');
+        statusClass = 'bg-status-success';
     }
 
-    if (pedido.status === 'A Caminho') {
-        // MUDANÇA: Adicionado botão de Chegada Parcial
-        const botoesChegada = canManage ? `
-            <div style="display:flex; gap: 0.5rem; width: 100%;">
-                <button class="btn btn--success btn-marcar-chegada" style="flex:1;">Chegada Total</button>
-                <button class="btn btn--warning btn-chegada-parcial" style="flex:1;">Parcial</button>
-            </div>
-        ` : '';
-
-        footerContent = `
-            <p>Status: <span class="status-value">${pedido.status}</span></p>
-            <div class="card__actions" style="flex-direction: column; gap: 0.5rem;">
-                ${editBtnHTML}
-                ${botoesChegada}
-            </div>
-        `;
-    } else if (pedido.status !== 'OK') {
-        const statusActionsHTML = canManage ? `
-            <button class="btn btn--warning btn-status-cotacao">Em Cotação</button>
-            <button class="btn btn--primary btn-status-efetuado">Pedido Efetuado</button> 
-        ` : '';
-
-        const selectHTML = canManage ? `<div class="comprador-select-wrapper"><label>Comprador:</label><select>${compradorOptions}</select></div>` : '';
-
-        footerContent = `
-            <p>Status: <span class="status-value">${pedido.status}</span></p>
-            <div class="card__actions">${editBtnHTML}${statusActionsHTML}</div>
-            ${selectHTML}
-        `;
-    } else {
-        footerContent = `<div class="finalizado-badge">Finalizado</div>`;
-    }
-
-    let cardBodyContent = `
-        <p><strong>Criação:</strong> ${formatarData(pedido.data_criacao)}</p>
-        ${pedido.status === 'OK' ? `<p><strong>Finalização:</strong> ${formatarData(pedido.data_finalizacao)}</p>` : ''}
-        <p><strong>Vendedor:</strong> ${pedido.vendedor}</p>
-    `;
-
-    if (pedido.itens) {
-        let itensHTML = '<ul style="list-style: none; padding-left: 0;">';
-        (pedido.itens || []).forEach(item => {
-            itensHTML += `<li><strong>${item.quantidade}x</strong> ${item.codigo}</li>`;
-        });
-        itensHTML += '</ul>';
-        cardBodyContent += itensHTML;
-    } else {
-        cardBodyContent += `<p><strong>Nº Orçamento:</strong> ${pedido.codigo || pedido.código}</p>`;
-    }
-
-    const observacao = pedido.observacao_geral || pedido.descricao;
-    if (observacao) {
-        cardBodyContent += `<p><strong>Obs:</strong> ${observacao}</p>`;
-    }
-    cardBodyContent += `<p><strong>Comprador:</strong> ${pedido.comprador || 'Não atribuído'}</p>`;
+    // --- Cabeçalho (Header) - Ações de Registro/Log ---
+    const logBtnHTML = `<button class="btn-icon btn-log" data-tooltip="Ver Histórico"><img src="/static/history.svg" style="width:14px; opacity:0.5;"></button>`;
+    const deleteBtn = (isAdmin || isComprador) ? `<button class="btn-delete-card" data-tooltip="Excluir Pedido">×</button>` : '';
+    
+    // Botão de Finalização Rápida (Mantido no topo para emergências, opcional)
+    const finalizeBtn = (canManage && !['A Caminho', 'OK'].includes(pedido.status))
+        ? `<button class="btn-icon btn-finalize-quick" data-tooltip="Finalizar pedido imediato" style="color:var(--clr-success); font-weight:bold;">✓</button>` : '';
 
     card.innerHTML = `
         <div class="card__header">
-            <h3>${pedido.tipo_req}</h3>
+            <div style="display:flex; align-items:center; gap:8px; min-width:0; flex:1;">
+                <span class="card-tipo-req">${pedido.tipo_req}</span>
+                <span class="badge-status ${statusClass}">${pedido.status.toUpperCase()}</span>
+            </div>
             <div class="card__header-actions">
                 ${logBtnHTML}
-                ${deleteBtn}
-                ${approvalBtn}
                 ${finalizeBtn}
+                ${deleteBtn}
             </div>
         </div>
-        <div class="card__body">${cardBodyContent}</div>
-        <div class="card__footer">${footerContent}</div>`;
+        <div class="card__body" style="padding: 12px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.75rem; opacity:0.7;">
+                <span>Vendedor: <strong>${pedido.vendedor}</strong></span>
+                <span>${formatarData(pedido.data_criacao)}</span>
+            </div>
+            <div class="itens-lista">
+                ${renderizarListaItens(pedido)}
+            </div>
+            ${pedido.observacao_geral || pedido.descricao ? `
+            <p style="margin-top: 12px; font-size: 0.85rem; color: var(--text-secondary); line-height: 1.4; padding-top: 8px;">
+            <strong style="color: white; font-size: 0.8rem; text-transform: uppercase;">Obs:</strong> 
+            ${pedido.observacao_geral || pedido.descricao}
+            </p>` : ''}
+        </div>
+        <div class="card__footer" style="padding: 8px 12px; background: rgba(0,0,0,0.03); border-top: 1px solid var(--border-main);">
+            <div class="card__actions" style="display: flex; align-items: center; width: 100%; justify-content: flex-start; gap:8px;">
+                <div class="footer-left" style="flex: 0 1 130px; min-width: 0;">
+                    ${renderFooterComprador(pedido, canManage)}
+                </div>
+                <div class="footer-right" style="display: flex; gap: 4px; flex: 1; justify-content: flex-end; flex-wrap: wrap;">
+                    ${renderFooterButtons(pedido, canManage, canEdit)}
+                </div>
+            </div>
+        </div>
+    `;
 
-    // --- Event Listeners ---
+    adicionarListenersCard(card, pedido, canManage);
+    return card;
+}
 
-    // Botão Aprovação (NOVO)
-    card.querySelector('.btn-approval')?.addEventListener('click', () => {
-        showConfirmModal('Mudar status para "Aguardando Aprovação"?', () => {
-            atualizarStatus(pedido.id, 'Aguardando Aprovação');
+// Auxiliar para renderizar o comprador no rodapé
+function renderFooterComprador(pedido, canManage) {
+    if (pedido.status === 'OK') {
+        return `<span style="font-size:0.7rem; opacity:0.8; font-weight:500;">Comp: ${pedido.comprador || 'N/A'}</span>`;
+    }
+    if (canManage) {
+        let options = '<option value="">- Comprador -</option>';
+        (AppState.compradorNomes || []).forEach(c => {
+            options += `<option value="${c}" ${pedido.comprador === c ? 'selected' : ''}>${c}</option>`;
         });
+        return `<select class="select-compact comprador-select-realtime">${options}</select>`;
+    }
+    return `<span style="font-size:0.7rem; opacity:0.7;">Comp: ${pedido.comprador || 'N/A'}</span>`;
+}
+
+function renderizarListaItens(pedido) {
+    if (pedido.itens && pedido.itens.length > 0) {
+        let html = '<ul class="item-list-selectable" style="list-style:none; padding:0; margin:0;">';
+        pedido.itens.forEach(item => {
+            html += `<li style="font-size:0.9rem; margin-bottom:2px;">
+                        <span style="color:var(--text-muted); margin-right:5px;">•</span>
+                        <strong>${item.quantidade}x</strong> ${item.codigo}
+                     </li>`;
+        });
+        return html + '</ul>';
+    }
+    return `<p style="font-size:0.9rem;"><strong>Orçamento:</strong> ${pedido.codigo || pedido.código}</p>`;
+}
+
+function renderFooterLeft(pedido, canManage) {
+    if (pedido.status === 'OK') {
+        return `<span class="badge-status bg-status-success" style="font-size:0.65rem;">FINALIZADO</span>`;
+    }
+    
+    if (canManage) {
+        let options = '<option value="">- Comprador -</option>';
+        (AppState.compradorNomes || []).forEach(c => {
+            options += `<option value="${c}" ${pedido.comprador === c ? 'selected' : ''}>${c}</option>`;
+        });
+        return `<select class="select-compact comprador-select-realtime">${options}</select>`;
+    }
+    
+    return `<span style="font-size:0.7rem; opacity:0.7;">Comp: ${pedido.comprador || 'N/A'}</span>`;
+}
+
+function renderFooterButtons(pedido, canManage, canEdit) {
+    if (pedido.status === 'OK') return '';
+    let btns = '';
+
+    if (canEdit) btns += `<button class="btn btn-sm btn-ghost btn--edit" data-tooltip="Editar informações">Editar</button>`;
+
+    if (canManage) {
+        // Botão Aguardando Aprovação (Só aparece se não estiver em aprovação, a caminho ou OK)
+        if (!['Aguardando Aprovação', 'A Caminho'].includes(pedido.status)) {
+            btns += `<button class="btn btn-sm btn-ghost btn-status-approval" data-tooltip="Aguardando Aprovação">Aprovação</button>`;
+        }
+        // Botão Em Cotação
+        if (pedido.status !== 'Em Cotação' && pedido.status !== 'A Caminho') {
+            btns += `<button class="btn btn-sm btn-ghost btn-status-cotacao" data-tooltip="Em Cotação">Cotação</button>`;
+        }
+        // Botão Efetuado (A Caminho)
+        if (pedido.status !== 'A Caminho') {
+            btns += `<button class="btn btn-sm btn-ghost btn-status-efetuado" data-tooltip="Pedido a caminho">Efetuado</button>`;
+        } else {
+            btns += `<button class="btn btn-sm btn-ghost btn-marcar-chegada" data-tooltip="Chegada Total">Chegada Total</button>`;
+            btns += `<button class="btn btn-sm btn-ghost btn-chegada-parcial" data-tooltip="Chegada Parcial">Parcial</button>`;
+        }
+    }
+    return btns;
+}
+
+function adicionarListenersCard(card, pedido, canManage) {
+    card.querySelector('.btn-log')?.addEventListener('click', () => openLogModal(pedido.id, 'pedidos'));
+    card.querySelector('.btn-delete-card')?.addEventListener('click', () => excluirPedido(pedido.id));
+    card.querySelector('.btn--edit')?.addEventListener('click', () => openEditModal(pedido));
+    card.querySelector('.comprador-select-realtime')?.addEventListener('change', (e) => atualizarComprador(pedido.id, e.target.value));
+
+    card.querySelector('.btn-status-approval')?.addEventListener('click', () => {
+        showConfirmModal('Mudar para "Aguardando Aprovação"?', () => atualizarStatus(pedido.id, 'Aguardando Aprovação'));
     });
 
-    // Botão Chegada Parcial (NOVO)
-    card.querySelector('.btn-chegada-parcial')?.addEventListener('click', () => {
-        openPartialArrivalModal(pedido);
+    card.querySelector('.btn-status-cotacao')?.addEventListener('click', () => {
+        atualizarStatus(pedido.id, 'Em Cotação');
     });
 
-    // ... (restante dos listeners existentes: finalize, edit, delete, log, status-cotacao, status-efetuado, etc.) ...
-
-    // (Mantenha seus listeners originais aqui, apenas certifique-se que o deleteBtn usa a classe nova se necessário)
-    card.querySelector('.btn-finalize')?.addEventListener('click', () => {
-        // ... lógica existente ...
-        const selectComprador = card.querySelector('.comprador-select-wrapper select');
-        const compradorSelecionado = selectComprador ? selectComprador.value : null;
-        const temComprador = pedido.comprador || compradorSelecionado;
-
-        if (!temComprador) {
-            showToast('É necessário atribuir um comprador antes de finalizar.', 'error');
-            if (selectComprador) selectComprador.focus();
+    card.querySelector('.btn-status-efetuado')?.addEventListener('click', () => {
+        const select = card.querySelector('.comprador-select-realtime');
+        if ((!select || !select.value) && !pedido.comprador) {
+            showToast('Selecione um COMPRADOR primeiro.', 'error');
             return;
         }
-
-        showConfirmModal('Deseja finalizar este pedido diretamente?', () => {
-            atualizarStatus(pedido.id, 'OK');
-        });
+        showConfirmModal('Marcar como EFETUADO e mover para "A Caminho"?', () => atualizarStatus(pedido.id, 'A Caminho'));
     });
 
-    card.querySelector('.btn--edit')?.addEventListener('click', () => openEditModal(pedido));
+    card.querySelector('.btn-finalize-quick')?.addEventListener('click', () => {
+        const comp = card.querySelector('.comprador-select-realtime')?.value || pedido.comprador;
+        if (!comp) { showToast('Atribua um comprador.', 'error'); return; }
+        showConfirmModal('Finalizar pedido agora?', () => atualizarStatus(pedido.id, 'OK'));
+    });
 
-    if (pedido.status === 'A Caminho' && canManage) {
-        card.querySelector('.btn-marcar-chegada')?.addEventListener('click', () => {
-            showConfirmModal('Confirmar que TODOS os itens chegaram?', () => {
-                atualizarStatus(pedido.id, 'OK');
-            });
-        });
-    } else if (pedido.status !== 'OK' && canManage) {
-        card.querySelector('.btn-status-cotacao')?.addEventListener('click', () => atualizarStatus(pedido.id, 'Em Cotação'));
+    card.querySelector('.btn-marcar-chegada')?.addEventListener('click', () => {
+        showConfirmModal('Confirmar chegada total?', () => atualizarStatus(pedido.id, 'OK'));
+    });
 
-        card.querySelector('.btn-status-efetuado')?.addEventListener('click', () => {
-            const select = card.querySelector('.comprador-select-wrapper select');
-            if ((!select || !select.value) && !pedido.comprador) {
-                showToast('Por favor, selecione um COMPRADOR antes de marcar como efetuado.', 'error');
-                if (select) select.focus();
-                return;
-            }
-            showConfirmModal(`Deseja marcar como EFETUADO? O pedido será movido para "Pedidos a Caminho"`, () => {
-                atualizarStatus(pedido.id, 'A Caminho');
-            });
-        });
-
-        card.querySelector('.comprador-select-wrapper select')?.addEventListener('change', (e) => atualizarComprador(pedido.id, e.target.value));
-    }
-
-    if (isAdmin || isComprador) {
-        card.querySelector('.btn--danger')?.addEventListener('click', () => excluirPedido(pedido.id));
-    }
-
-    card.querySelector('.btn-icon')?.addEventListener('click', () => openLogModal(pedido.id, 'pedidos'));
-
-    return card;
+    card.querySelector('.btn-chegada-parcial')?.addEventListener('click', () => openPartialArrivalModal(pedido));
 }
 
 // --- FUNÇÃO PARA ABRIR MODAL DE CHEGADA PARCIAL (NOVO) ---
