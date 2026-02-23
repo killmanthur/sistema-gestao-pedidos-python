@@ -20,8 +20,8 @@
     --text-on-primary: #ffffff;
     --text-on-dark: #e9ecef;
 
-    --bg-main: #f4f7fa;
-    --bg-surface: #ffffff;
+    --bg-main: #e7ecf0;
+    --bg-surface: #f3f3f3;
     --bg-muted: #f8f9fa;
 
     --bg-success-soft: #d4edda;
@@ -2275,7 +2275,6 @@ body.dark-mode .bg-status-progress {
 .card__header-actions {
     overflow: visible !important; /* Permite que o tooltip apareça fora das bordas */
 }
-
 /* 2. MUITO IMPORTANTE: Garante que o card que você está passando o mouse 
    fique acima dos outros na camada visual (Z-INDEX) */
 .pedido-card:hover {
@@ -2288,4 +2287,7 @@ body.dark-mode .bg-status-progress {
 }
 [data-tooltip]::before {
     bottom: 95%;  /* Ajuste a setinha também */
+}
+.card__body {
+    background-color: var(--bg-muted);
 }

@@ -349,7 +349,7 @@ export function criarCardPedido(pedido) {
             </div>
             ${pedido.observacao_geral || pedido.descricao ? `
             <p style="margin-top: 12px; font-size: 0.85rem; color: var(--text-secondary); line-height: 1.4; padding-top: 8px;">
-            <strong style="color: white; font-size: 0.8rem; text-transform: uppercase;">Obs:</strong> 
+            <strong style="color: var(--text-primary); font-size: 0.8rem; text-transform: uppercase;">Obs:</strong> 
             ${pedido.observacao_geral || pedido.descricao}
             </p>` : ''}
         </div>
