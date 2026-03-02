@@ -1,7 +1,7 @@
 // static/js/main.js
 import { AppState } from './state.js';
 import { setupAuthObserver, handleLogout, initLoginPage } from './auth.js';
-import { setupEditModal, initializeTheme, setupLogModal, setupAllModalCloseHandlers, setupUI } from './ui.js';
+import { setupEditModal, initializeTheme, setupLogModal, setupAllModalCloseHandlers, setupUI, setupBackToTop } from './ui.js';
 import { initQuadroPage } from './pages/quadro.js';
 import { initHistoricoPage } from './pages/historico.js';
 import { initSugestoesPage } from './pages/sugestoes.js';
@@ -74,6 +74,7 @@ export async function initializeAuthenticatedApp() {
     setupEditModal();
     setupLogModal();
     setupNotifications();
+    setupBackToTop();
 
     const path = window.location.pathname;
 

@@ -329,9 +329,9 @@ export function criarCardPedido(pedido) {
 
     card.innerHTML = `
         <div class="card__header">
-            <div style="display:flex; align-items:center; gap:8px; min-width:0; flex:1;">
-                <span class="card-tipo-req">${pedido.tipo_req}</span>
-                <span class="badge-status ${statusClass}">${pedido.status.toUpperCase()}</span>
+            <div style="display:flex; justify-content:space-between; margin-bottom:10px; font-size: 0.75rem; opacity:0.8;">
+               <span>Vendedor: <strong>${pedido.vendedor}</strong>--</span>
+               <span> ${formatarData(pedido.data_criacao)}</span>
             </div>
             <div class="card__header-actions">
                 ${logBtnHTML}
@@ -340,16 +340,12 @@ export function criarCardPedido(pedido) {
             </div>
         </div>
         <div class="card__body" style="padding: 12px;">
-            <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.75rem; opacity:0.7;">
-                <span>Vendedor: <strong>${pedido.vendedor}</strong></span>
-                <span>${formatarData(pedido.data_criacao)}</span>
-            </div>
             <div class="itens-lista">
                 ${renderizarListaItens(pedido)}
             </div>
             ${pedido.observacao_geral || pedido.descricao ? `
-            <p style="margin-top: 12px; font-size: 0.85rem; color: var(--text-secondary); line-height: 1.4; padding-top: 8px;">
-            <strong style="color: var(--text-primary); font-size: 0.8rem; text-transform: uppercase;">Obs:</strong> 
+            <p style="margin-top: 14px; font-size: 0.95rem; color: var(--text-secondary); line-height: 1.5; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">
+            <strong style="color: var(--text-primary); font-size: 0.9rem; text-transform: uppercase; opacity: 0.8;">Obs:</strong> 
             ${pedido.observacao_geral || pedido.descricao}
             </p>` : ''}
         </div>
@@ -388,14 +384,16 @@ function renderizarListaItens(pedido) {
     if (pedido.itens && pedido.itens.length > 0) {
         let html = '<ul class="item-list-selectable" style="list-style:none; padding:0; margin:0;">';
         pedido.itens.forEach(item => {
-            html += `<li style="font-size:0.9rem; margin-bottom:2px;">
-                        <span style="color:var(--text-muted); margin-right:5px;">•</span>
+            // Aumentado de 0.9rem para 1.15rem (Bem mais visível)
+            html += `<li style="font-size: 1rem; margin-bottom: 4px; color: var(--text-primary);">
+                        <span style="color:var(--clr-primary-light); margin-right:8px;">•</span>
                         <strong>${item.quantidade}x</strong> ${item.codigo}
                      </li>`;
         });
         return html + '</ul>';
     }
-    return `<p style="font-size:0.9rem;"><strong>Orçamento:</strong> ${pedido.codigo || pedido.código}</p>`;
+    // Aumentado Orçamento para 1.15rem
+    return `<p style="font-size: 1rem; color: var(--text-primary);"><strong>Orçamento:</strong> ${pedido.codigo || pedido.código}</p>`;
 }
 
 function renderFooterLeft(pedido, canManage) {
@@ -696,4 +694,26 @@ export function setupEditModal() {
             toggleButtonLoading(saveBtn, false, 'Salvar Alterações');
         }
     };
+}
+
+export function setupBackToTop() {
+    const backToTopBtn = document.getElementById('back-to-top');
+    
+    if (!backToTopBtn) return;
+
+    window.addEventListener('scroll', () => {
+        // Mostra o botão após scrollar 400px para baixo
+        if (window.scrollY > 400) {
+            backToTopBtn.classList.add('show');
+        } else {
+            backToTopBtn.classList.remove('show');
+        }
+    });
+
+    backToTopBtn.addEventListener('click', () => {
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth' // Scroll suave
+        });
+    });
 }

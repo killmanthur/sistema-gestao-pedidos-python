@@ -329,9 +329,50 @@ function handleCompradorSugestaoChange(sugestaoId, novoComprador) {
     handleApiAction(promise, 'Comprador atualizado!');
 }
 
+// Substitua a função handleCopySugestao em sugestoes.js por esta:
 function handleCopySugestao(sugestao) {
-    const texto = sugestao.itens.map(i => `${i.quantidade || 1}x ${i.codigo}`).join('\n');
-    navigator.clipboard.writeText(texto).then(() => showToast('Copiado!', 'success'));
+    const textoParaCopiar = sugestao.itens.map(i => `${i.quantidade || 1}x ${i.codigo}`).join('\n');
+
+    // Tenta usar a API moderna (Clipboard API) - Requer HTTPS ou Localhost
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(textoParaCopiar)
+            .then(() => showToast('Copiado!', 'success'))
+            .catch(() => {
+                // Se falhar mesmo em HTTPS, tenta o fallback
+                fallbackCopyText(textoParaCopiar);
+            });
+    } else {
+        // Se não houver Clipboard API (HTTP), usa o fallback
+        fallbackCopyText(textoParaCopiar);
+    }
+}
+
+// Função de suporte para copiar em conexões não seguras (HTTP)
+function fallbackCopyText(text) {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    
+    // Garante que o textarea não seja visível mas esteja no DOM
+    textArea.style.position = "fixed";
+    textArea.style.left = "-9999px";
+    textArea.style.top = "0";
+    document.body.appendChild(textArea);
+    
+    textArea.focus();
+    textArea.select();
+
+    try {
+        const successful = document.execCommand('copy');
+        if (successful) {
+            showToast('Copiado!', 'success');
+        } else {
+            showToast('Não foi possível copiar.', 'error');
+        }
+    } catch (err) {
+        showToast('Erro ao copiar.', 'error');
+    }
+
+    document.body.removeChild(textArea);
 }
 
 // ==========================================================================

@@ -20,7 +20,7 @@
     --text-on-primary: #ffffff;
     --text-on-dark: #e9ecef;
 
-    --bg-main: #e7ecf0;
+    --bg-main: #f8f8f8;
     --bg-surface: #f3f3f3;
     --bg-muted: #f8f9fa;
 
@@ -2290,4 +2290,64 @@ body.dark-mode .bg-status-progress {
 }
 .card__body {
     background-color: var(--bg-muted);
+}
+
+/* Texto do Comprador no rodapé */
+.pedido-card .footer-left span {
+    font-size: 0.9rem !important; /* Aumentado de 0.7rem */
+}
+
+/* Mantendo os botões pequenos (conforme seu pedido) */
+.pedido-card .btn-sm {
+    font-size: 0.75rem !important; /* Garante que os botões não cresçam */
+    padding: 4px 10px !important;
+}
+
+/* Ajuste no seletor de comprador para não ficar pequeno demais perto do resto */
+.pedido-card .select-compact {
+    font-size: 0.9rem;
+    height: 32px;
+}
+
+/* --- Botão Voltar ao Topo --- */
+.btn-back-to-top {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    background-color: var(--clr-primary-main);
+    color: white;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    font-weight: bold;
+    box-shadow: var(--shadow-lg);
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    z-index: 999; /* Fica abaixo dos modais, mas acima dos cards */
+}
+
+.btn-back-to-top.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.btn-back-to-top:hover {
+    background-color: var(--clr-primary-dark);
+    transform: translateY(-5px);
+}
+
+.btn-back-to-top .arrow-up {
+    margin-bottom: 2px; /* Ajuste fino do caractere ↑ */
+}
+
+/* No Modo Escuro ele já segue a cor primária, mas podemos dar um brilho extra se desejar */
+body.dark-mode .btn-back-to-top {
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.4);
 }

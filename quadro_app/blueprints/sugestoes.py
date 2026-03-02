@@ -117,7 +117,7 @@ def atender_itens_sugestao(sugestao_id):
             status='atendido',
             data_criacao=datetime.now(tz_cuiaba).isoformat(),
             itens=atendidos,
-            observacao_geral=f"Atendido de Ref #{sugestao_original.id}"
+            observacao_geral=sugestao_original.observacao_geral
         )
         db.session.add(nova_finalizada)
 

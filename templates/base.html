@@ -216,10 +216,12 @@
         </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+    <button id="back-to-top" class="btn-back-to-top" title="Voltar ao topo">
+        <span class="arrow-up">↑</span>
+    </button>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
     <script type="module" src="{{ url_for('static', filename='js/main.js') }}?v={{ cache_id }}"></script>
 </body>
-
 </html>
