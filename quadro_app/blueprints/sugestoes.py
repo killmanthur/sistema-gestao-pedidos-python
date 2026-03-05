@@ -77,7 +77,7 @@ def gerenciar_sugestao_especifica(sugestao_id):
         db.session.commit()
         return jsonify({'status': 'success'})
 
-@sugestoes_bp.route('/<int:sugestao_id>', methods=['PUT'])
+'''@sugestoes_bp.route('/<int:sugestao_id>', methods=['PUT'])
 def editar_sugestao(sugestao_id):
     dados = request.get_json()
     sugestao = Sugestao.query.get_or_404(sugestao_id)
@@ -87,7 +87,7 @@ def editar_sugestao(sugestao_id):
     sugestao.vendedor = dados.get('vendedor', sugestao.vendedor)
     
     db.session.commit()
-    return jsonify({'status': 'success'})
+    return jsonify({'status': 'success'})'''
 
 @sugestoes_bp.route('/<int:sugestao_id>/atender-itens', methods=['POST'])
 def atender_itens_sugestao(sugestao_id):
@@ -228,16 +228,13 @@ def get_sugestoes_paginadas():
     page = int(request.args.get('page', 0))
     search_term = request.args.get('search', '').lower().strip()
     
-    # --- INÍCIO DA ALTERAÇÃO ---
     user_role = request.args.get('user_role')
     user_name = request.args.get('user_name')
     
     query = Sugestao.query.filter_by(status=status)
 
-    # Lógica de restrição para Vendedores
     if user_role == 'Vendedor' and user_name:
         query = query.filter(Sugestao.vendedor == user_name)
-    # --- FIM DA ALTERAÇÃO ---
 
     if search_term:
         search_filter = or_(
@@ -247,7 +244,8 @@ def get_sugestoes_paginadas():
         )
         query = query.filter(search_filter)
 
-    pagination = query.order_by(Sugestao.data_criacao.desc()).paginate(page=page + 1, per_page=limit, error_out=False)
+    # Ordenação: data_criacao DESC (mais recentes primeiro) e ID como desempate
+    pagination = query.order_by(Sugestao.data_criacao.desc(), Sugestao.id.desc()).paginate(page=page + 1, per_page=limit, error_out=False)
     
     def serialize_sugestao_local(s):
         return {

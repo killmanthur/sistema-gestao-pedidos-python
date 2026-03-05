@@ -59,6 +59,7 @@ function openEditModal(sugestao) {
     populateSelect(vendedorSelect, listaDeVendedores, sugestao.vendedor);
 
     form.dataset.sugestaoId = sugestao.id;
+    form.dataset.originalData = JSON.stringify(sugestao);
     itensContainer.innerHTML = '';
 
     if (sugestao.itens && sugestao.itens.length > 0) {
@@ -108,6 +109,8 @@ function handleCopySugestao(sugestao) {
 function criarCardHistorico(sugestao) {
     const card = document.createElement('div');
     card.className = 'card card--status-done';
+
+    card.dataset.id = sugestao.id;
 
     const { role, nome, permissions } = AppState.currentUser;
     const canManage = role === 'Admin' || role === 'Comprador';
@@ -303,7 +306,8 @@ export async function initHistoricoSugestoesPage() {
                 const codigo = row.querySelector('.item-codigo').value.trim();
                 const quantidade = row.querySelector('.item-quantidade').value;
                 if (codigo && quantidade) {
-                    itens.push({ codigo, quantidade: parseInt(quantidade, 10) || 1, status: 'atendido' }); // Mantém como atendido
+                    // Mantém status 'atendido' ao editar
+                    itens.push({ codigo, quantidade: parseInt(quantidade, 10) || 1, status: 'atendido' }); 
                 } else if (codigo || quantidade) {
                     hasError = true;
                 }
@@ -315,10 +319,13 @@ export async function initHistoricoSugestoesPage() {
                 return;
             }
 
-            const dados = {
+            const novoVendedor = document.getElementById('edit-sug-vendedor').value;
+            const novaObs = document.getElementById('edit-sug-descricao').value.trim();
+
+            const dadosParaEnviar = {
                 itens: itens,
-                observacao_geral: document.getElementById('edit-sug-descricao').value.trim(),
-                vendedor: document.getElementById('edit-sug-vendedor').value
+                observacao_geral: novaObs,
+                vendedor: novoVendedor
             };
 
             try {
@@ -326,17 +333,43 @@ export async function initHistoricoSugestoesPage() {
                 const res = await fetch(`/api/sugestoes/${id}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(dados)
+                    body: JSON.stringify(dadosParaEnviar)
                 });
 
                 if (res.ok) {
                     showToast('Sugestão atualizada!', 'success');
                     modalOverlay.style.display = 'none';
-                    carregarDados(true); // Recarrega o histórico
+
+                    // --- ALTERAÇÃO AQUI: ATUALIZAÇÃO LOCAL (SEM REFRESH) ---
+                    
+                    // 1. Recupera os dados originais que salvamos ao abrir o modal
+                    const dadosOriginais = JSON.parse(form.dataset.originalData || '{}');
+                    
+                    // 2. Mescla os dados originais com os novos dados editados
+                    const sugestaoAtualizada = {
+                        ...dadosOriginais,
+                        itens: itens,
+                        observacao_geral: novaObs,
+                        vendedor: novoVendedor
+                    };
+
+                    // 3. Encontra o card antigo na tela usando o ID
+                    const cardAntigo = containerCards.querySelector(`.card[data-id="${id}"]`);
+                    
+                    // 4. Se o card estiver na tela, cria um novo e substitui (mantendo o scroll)
+                    if (cardAntigo) {
+                        const novoCardElemento = criarCardHistorico(sugestaoAtualizada);
+                        cardAntigo.replaceWith(novoCardElemento);
+                    }
+                    
+                    // REMOVIDO: carregarDados(true); 
+                    // Isso impedia manter a posição da tela.
+
                 } else {
                     throw new Error('Falha ao salvar');
                 }
             } catch (err) {
+                console.error(err);
                 showToast(err.message, 'error');
             } finally {
                 toggleButtonLoading(btnSave, false, 'Salvar Alterações');
