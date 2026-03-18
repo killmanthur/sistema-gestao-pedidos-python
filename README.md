@@ -1,86 +1,145 @@
-# 📦 Quadro de Pedidos - Sistema de Gestão Interna
+# Quadro de Pedidos — Sistema de Gestão Interna
 
-Sistema web completo para gestão centralizada de compras, logística e conferência de mercadorias em rede local. Monitore todo o fluxo desde requisições de vendedores até finalização do estoque com indicadores em tempo real.
+Sistema web completo para gestão centralizada de compras, logística e conferência de mercadorias em rede local. Cobre todo o fluxo desde requisições de vendedores até a entrada no estoque, com indicadores em tempo real via WebSocket.
 
-## 🚀 Funcionalidades Principais
+---
 
-### 🛒 Módulo de Compras
-- **Pedidos de Rua** - Requisições de produtos por vendedores
-- **Orçamentos** - Atualização de preços e disponibilidades
-- **Sugestão de Compras** - Produtos necessários ao estoque
-- **Pedidos em Trânsito** - Monitoramento de ordens efetuadas
-- **Histórico de Compras** - Análise de negociações com fornecedores
+## Funcionalidades
 
-### 🚛 Módulo de Logística
-- **Gerenciador de Separações** - Fila organizada com atribuição de responsáveis
-- **Conferência de Notas** - Fluxo de validação (NF-e entrada/saída)
-- **Painel TV** - Interface otimizada para monitores no armazém
-- **Gestão de Pendências** - Tratamento de avarias e erros
+### Compras
+| Módulo | Descrição |
+|---|---|
+| Pedidos de Rua | Requisições de produtos feitas por vendedores |
+| Orçamentos | Atualização de preços e disponibilidade |
+| Sugestão de Compras | Controle de necessidades de reposição |
+| Pedidos a Caminho | Monitoramento de ordens em trânsito |
+| Histórico de Compras | Análise de negociações com fornecedores |
+| Registro de Compras | Consolidação de compras realizadas |
 
-### 📊 Inteligência e Relatórios
-- **Dashboards** - Gráficos de performance (vendedores, compradores, etc.)
-- **Relatórios Analíticos** - Exportação para auditoria
-- **Lixeira** - Recuperação de itens excluídos
-- **Logs de Auditoria** - Rastreamento completo de ações
+### Logística
+| Módulo | Descrição |
+|---|---|
+| Separações | Fila organizada com atribuição de responsáveis |
+| Conferência de Notas | Validação de NF-e (entrada e saída) |
+| Painel TV | Interface otimizada para monitores no armazém (`/tv-expedicao`) |
+| Gestão de Pendências | Tratamento de avarias e divergências |
 
-## 🛠️ Tecnologias
+### Administração
+| Módulo | Descrição |
+|---|---|
+| Dashboard | Gráficos de performance por vendedor, comprador e período |
+| Notificações | Alertas em tempo real via Socket.IO |
+| Lixeira | Recuperação de itens excluídos |
+| Logs de Auditoria | Rastreamento completo de ações por usuário |
+| Configurações | Listas dinâmicas, parâmetros do sistema |
+| Gestão de Usuários | Controle de acesso e permissões |
 
-| Camada | Tecnologias |
-|--------|------------|
-| **Backend** | Python 3.10+, Flask, SQLAlchemy, SQLite, Flask-SocketIO |
-| **Frontend** | HTML5, CSS3, JavaScript (ES6), Socket.IO, Chart.js, Toastify |
+---
 
-## 📋 Instalação Rápida
+## Tecnologias
+
+| Camada | Stack |
+|---|---|
+| **Backend** | Python 3.10+, Flask 3, SQLAlchemy 2, Flask-Migrate, Waitress |
+| **Tempo Real** | Flask-SocketIO, python-socketio, python-engineio |
+| **Banco de Dados** | SQLite (local) + Google Cloud Firestore (sincronização) |
+| **Storage** | Google Cloud Storage |
+| **Auth** | PyJWT, Firebase Admin SDK |
+| **Frontend** | HTML5, CSS3, JavaScript ES6+, Socket.IO, Chart.js, Toastify |
+| **Desktop** | pywebview (wrapper opcional para app desktop) |
+| **WSGI** | Waitress (produção) |
+
+---
+
+## Instalação
 
 ### Pré-requisitos
 - Python 3.10+
+- pip
 
 ### Passos
+
 ```bash
 # Clone o repositório
 git clone https://github.com/seu-usuario/quadro-de-pedidos.git
 cd quadro-de-pedidos
 
-# Ambiente virtual
+# Crie e ative o ambiente virtual
 python -m venv venv
-source venv/bin/activate  # Linux/Mac
-# ou
-venv\Scripts\activate  # Windows
+source venv/bin/activate        # Linux/Mac
+venv\Scripts\activate           # Windows
 
-# Dependências
+# Instale as dependências
 pip install -r requirements.txt
 
-# Inicie o sistema
+# Inicie o servidor
 python run.py
 ```
 
 Acesse: **http://localhost:52080**
 
-> O banco de dados é criado automaticamente no primeiro acesso.
+> O banco de dados SQLite é criado automaticamente no primeiro acesso.
 
-## ⚙️ Configuração Inicial
+---
 
-1. Crie o primeiro usuário administrador
-2. Atribua permissão: **Administrador de Sistema**
+## Configuração Inicial
 
-## 🌙 Recursos Adicionais
+1. Acesse o sistema pela primeira vez
+2. Crie o usuário administrador
+3. Atribua a permissão **Administrador de Sistema**
+4. (Opcional) Configure credenciais do Firebase/Firestore em `configuracoes` para sincronização em nuvem
 
-- **Modo Escuro** - Tema automático com persistência local
-- **Modo TV** - Acesso via `/tv-expedicao` (otimizado para monitores)
+---
 
-## 📁 Estrutura do Projeto
+## Estrutura do Projeto
 
 ```
 quadro_app/
-├── blueprints/     # Rotas da API
-├── static/         # CSS, JS e imagens
-├── templates/      # Templates Jinja2
-├── models.py       # Modelos do banco
-└── extensions.py   # Configurações
+├── blueprints/
+│   ├── pedidos.py              # Pedidos de rua e orçamentos
+│   ├── separacoes.py           # Módulo de separações
+│   ├── conferencias.py         # Conferência de notas fiscais
+│   ├── sugestoes.py            # Sugestões de compra
+│   ├── registro_compras.py     # Histórico e registro de compras
+│   ├── dashboard.py            # Indicadores e gráficos
+│   ├── notificacoes.py         # Sistema de notificações
+│   ├── usuarios.py             # Autenticação e permissões
+│   ├── admin.py                # Administração do sistema
+│   ├── lixeira.py              # Recuperação de itens
+│   ├── logs.py                 # Auditoria
+│   ├── configuracoes.py        # Configurações gerais
+│   ├── listas_dinamicas.py     # Listas configuráveis
+│   └── main_views.py           # Rotas principais
+├── models.py                   # Modelos ORM (SQLAlchemy)
+├── extensions.py               # Inicialização de extensões Flask
+└── __init__.py                 # Factory da aplicação
 
-run.py              # Inicializador
-requirements.txt    # Dependências
-quadro_local.db     # SQLite (auto-gerado)
+static/
+├── js/
+│   ├── pages/                  # Lógica por página
+│   ├── apiClient.js            # Cliente HTTP centralizado
+│   ├── auth.js                 # Fluxo de autenticação
+│   ├── ui.js                   # Componentes de interface
+│   ├── forms.js                # Manipulação de formulários
+│   └── main.js                 # Inicialização global
+└── style.css                   # Estilos globais
+
+templates/                      # Templates Jinja2
+migrations/                     # Migrações Alembic
+run.py                          # Ponto de entrada
+requirements.txt                # Dependências Python
+quadro_local.db                 # Banco SQLite (auto-gerado, não versionado)
 ```
 
-Desenvolvido com ❤️ para otimizar processos logísticos.
+---
+
+## Recursos da Interface
+
+- **Modo Escuro** — tema persistido via `localStorage`
+- **Painel TV** — rota `/tv-expedicao` otimizada para monitores do armazém
+- **Atualizações em tempo real** — sem necessidade de recarregar a página
+- **Notificações toast** — feedback visual imediato para todas as ações
+
+---
+
+Desenvolvido para otimizar processos logísticos e de compras em redes locais.
