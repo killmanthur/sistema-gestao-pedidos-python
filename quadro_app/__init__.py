@@ -3,7 +3,8 @@
 import sys
 import os
 import time
-from flask import Flask
+import secrets
+from flask import Flask, request, jsonify, session, redirect, url_for
 from flask_socketio import SocketIO, join_room # <-- ADICIONADO: join_room
 from flask_migrate import Migrate
 from .extensions import db
@@ -21,6 +22,17 @@ def create_app():
                 static_folder=os.path.join(project_root, 'static'),
                 template_folder=os.path.join(project_root, 'templates'))
     
+    # Chave secreta persistente para assinar os cookies de sessão
+    secret_key_file = os.path.join(project_root, '.secret_key')
+    if os.path.exists(secret_key_file):
+        with open(secret_key_file, 'rb') as f:
+            app.config['SECRET_KEY'] = f.read()
+    else:
+        key = secrets.token_bytes(32)
+        with open(secret_key_file, 'wb') as f:
+            f.write(key)
+        app.config['SECRET_KEY'] = key
+
     # Configuração do Banco de Dados SQLite
     db_path = os.path.join(project_root, 'quadro_local.db')
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + db_path
@@ -36,6 +48,22 @@ def create_app():
     @app.context_processor
     def inject_global_vars():
         return dict(tv_mode=TV_MODE, cache_id=int(time.time()))
+
+    # --- HANDLER DE ERROS ---
+    @app.errorhandler(403)
+    def acesso_negado(e):
+        return redirect(url_for('main_views.inicio') + '?acesso_negado=1')
+
+    # --- PROTEÇÃO DAS ROTAS DE API ---
+    @app.before_request
+    def verificar_autenticacao():
+        if request.path.startswith('/api/'):
+            # Rotas públicas que não exigem sessão
+            rotas_publicas = {'/api/usuarios/login'}
+            if request.path in rotas_publicas:
+                return None
+            if 'user_id' not in session:
+                return jsonify({'error': 'Não autorizado. Faça login para continuar.'}), 401
 
     # --- REGISTRO DE EVENTOS SOCKET.IO ---
     

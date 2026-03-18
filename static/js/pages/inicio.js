@@ -1,22 +1,9 @@
 // static/js/pages/inicio.js
 import { AppState } from '../state.js';
-
-// Mapeia as chaves de página para seus nomes e URLs
-const PAGE_MAP = {
-    quadro: { name: "Quadro Ativo", url: "/quadro" },
-    historico: { name: "Histórico", url: "/historico" },
-    criar_pedido: { name: "Criar Pedido de Rua", url: "/criar-pedido" },
-    atualizacao_orcamento: { name: "Atualizar Orçamento", url: "/atualizacao-orcamento" },
-    sugestoes: { name: "Sugestão de Compras", url: "/sugestoes" },
-    tv_expedicao: { name: "TV Expedição", url: "/tv-expedicao" }, // Adiciona a nova página
-    pendencias_e_alteracoes: { name: "Pendências e Alterações", url: "/pendencias-e-alteracoes" }, // Adiciona a nova página
-    dashboard: { name: "Dashboard", url: "/dashboard" },
-    admin_sistema: { name: "Gerenciar Sistema", url: "/admin/sistema" } // Corrigido para o nome correto da página
-};
+import { showToast } from '../toasts.js';
 
 export function initInicioPage() {
     const welcomeMessage = document.getElementById('welcome-message');
-    const quickLinksContainer = document.getElementById('quick-links-container');
     const noAccessMessage = document.getElementById('no-access-message');
 
     if (!welcomeMessage || !noAccessMessage) return;
@@ -25,26 +12,18 @@ export function initInicioPage() {
     if (user && user.isLoggedIn) {
         welcomeMessage.textContent = `Bem-vindo(a), ${user.nome}!`;
 
-        let accessiblePages = user.accessible_pages || [];
-        if (user.role === 'Admin') {
-            accessiblePages = Object.keys(PAGE_MAP); // Admin tem acesso a tudo
-        }
-
-        if (quickLinksContainer && accessiblePages.length > 0) {
-            quickLinksContainer.innerHTML = ''; // Limpa links antigos
-            accessiblePages.forEach(pageKey => {
-                const pageInfo = PAGE_MAP[pageKey];
-                if (pageInfo) {
-                    const link = document.createElement('a');
-                    link.href = pageInfo.url;
-                    link.className = 'quick-link-btn'; // Uma classe para estilizar os botões
-                    link.textContent = pageInfo.name;
-                    quickLinksContainer.appendChild(link);
-                }
-            });
-        } else if (accessiblePages.length === 0) {
-            if (quickLinksContainer) quickLinksContainer.style.display = 'none';
+        const acessoRestrito = user.accessible_pages?.length === 0 && user.role !== 'Admin';
+        if (acessoRestrito) {
             noAccessMessage.style.display = 'block';
         }
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('acesso_negado') === '1') {
+        showToast('Você não tem permissão para acessar essa página.', 'error');
+        // Remove o parâmetro da URL sem recarregar a página
+        const url = new URL(window.location.href);
+        url.searchParams.delete('acesso_negado');
+        history.replaceState(null, '', url.toString());
     }
 }
