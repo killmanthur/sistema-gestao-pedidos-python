@@ -1,11 +1,10 @@
 // static/js/pages/quadro.js
 import { AppState } from '../state.js';
 import { showToast } from '../toasts.js';
-import { criarCardPedido, setupLogModal } from '../ui.js';
+import { criarCardPedido } from '../ui.js';
 
 let quadroPedidosRua, quadroOrcamentos, filtroInput;
 let activePedidos = [];
-// --- REMOVIDO: let pollingInterval = null; ---
 
 /**
  * Filtra os pedidos carregados localmente e renderiza nas colunas corretas
@@ -69,7 +68,6 @@ async function fetchActivePedidos() {
  * Inicialização principal da página de Quadro Ativo
  */
 export function initQuadroPage() {
-    setupLogModal();
     quadroPedidosRua = document.getElementById('quadro-pedidos-rua');
     quadroOrcamentos = document.getElementById('quadro-orcamentos');
     filtroInput = document.getElementById('filtro-quadro-ativo');

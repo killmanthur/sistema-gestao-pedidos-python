@@ -5,6 +5,7 @@ import { formatarData, showConfirmModal } from '../ui.js';
 
 let allItems = [];
 let elements = {};
+let tipoAtivo = '';
 
 function getDescricaoPrincipal(item) {
     const dados = item.dados_item;
@@ -62,13 +63,13 @@ async function restaurarItem(itemId) {
 
 function renderTable() {
     const searchTerm = elements.filtroInput.value.toLowerCase().trim();
-    const filteredItems = searchTerm
-        ? allItems.filter(item =>
-            item.tipo_item.toLowerCase().includes(searchTerm) ||
+    const filteredItems = allItems.filter(item => {
+        if (tipoAtivo && item.tipo_item !== tipoAtivo) return false;
+        if (!searchTerm) return true;
+        return item.tipo_item.toLowerCase().includes(searchTerm) ||
             getDescricaoPrincipal(item).toLowerCase().includes(searchTerm) ||
-            item.excluido_por.toLowerCase().includes(searchTerm)
-        )
-        : allItems;
+            item.excluido_por.toLowerCase().includes(searchTerm);
+    });
 
     elements.tableBody.innerHTML = '';
     if (filteredItems.length === 0) {
@@ -121,6 +122,15 @@ export function initLixeiraPage() {
 
     elements.btnAtualizar.addEventListener('click', fetchAndRenderLixeira);
     elements.filtroInput.addEventListener('input', renderTable);
+
+    document.querySelectorAll('.filter-pill[data-tipo]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.filter-pill[data-tipo]').forEach(b => b.classList.remove('filter-pill--active'));
+            btn.classList.add('filter-pill--active');
+            tipoAtivo = btn.dataset.tipo;
+            renderTable();
+        });
+    });
 
     elements.tableBody.addEventListener('click', (e) => {
         const target = e.target;

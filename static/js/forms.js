@@ -3,9 +3,46 @@ import { AppState } from './state.js';
 import { toggleButtonLoading } from './ui.js';
 import { showToast } from './toasts.js';
 
+let todosCodigos = null;
+
+async function ensureCodigos() {
+    if (todosCodigos !== null) return;
+    todosCodigos = [];
+    try {
+        const res = await fetch('/api/pedidos/codigos-historico');
+        if (res.ok) todosCodigos = await res.json();
+    } catch (e) { /* silently ignore */ }
+}
+
+function getOrCreateDatalist() {
+    let dl = document.getElementById('codigos-historico-list');
+    if (!dl) {
+        dl = document.createElement('datalist');
+        dl.id = 'codigos-historico-list';
+        document.body.appendChild(dl);
+    }
+    return dl;
+}
+
+function attachAutocomplete(input) {
+    input.setAttribute('list', 'codigos-historico-list');
+    input.setAttribute('autocomplete', 'off');
+    input.addEventListener('input', () => {
+        const termo = input.value.trim().toUpperCase();
+        const dl = getOrCreateDatalist();
+        if (!termo || !todosCodigos) { dl.innerHTML = ''; return; }
+        const matches = todosCodigos
+            .filter(c => c.includes(termo))
+            .slice(0, 5);
+        dl.innerHTML = matches.map(c => `<option value="${c}">`).join('');
+    });
+}
+
 export function renderNewItemRow(containerId, itemLabel = 'Item') {
     const itensContainer = document.getElementById(containerId);
     if (!itensContainer) return null;
+
+    ensureCodigos();
 
     const itemCounter = itensContainer.children.length + 1;
     const itemRow = document.createElement('div');
@@ -42,6 +79,7 @@ export function renderNewItemRow(containerId, itemLabel = 'Item') {
     });
 
     itensContainer.appendChild(itemRow);
+    attachAutocomplete(itemRow.querySelector('.item-codigo'));
     return itemRow;
 }
 

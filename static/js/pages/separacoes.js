@@ -226,7 +226,7 @@ function criarCardElement(separacao) {
     }
 
     const deleteBtn = (perms.pode_deletar_separacao && !isVendedor)
-        ? `<button class="btn btn--danger" data-action="delete">Excluir</button>`
+        ? `<button class="btn-delete-card" data-tooltip="Excluir" data-action="delete" title="Excluir">×</button>`
         : '';
 
     // --- CORREÇÃO AQUI: ADICIONADO CONFERENTE E DATA NO HTML ---
@@ -234,7 +234,7 @@ function criarCardElement(separacao) {
         <div class="card__header">
             <h3>Mov. ${separacao.numero_movimentacao}</h3>
             <div class="card__header-actions">
-                <button class="btn-icon" data-action="log" title="Histórico"><img src="/static/history.svg"></button>
+                <button class="btn-icon btn-log" data-action="log" data-tooltip="Histórico"><img src="/static/history.svg" style="width:14px; opacity:0.5;"></button>
                 ${deleteBtn}
             </div>
         </div>

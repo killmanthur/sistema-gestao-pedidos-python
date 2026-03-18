@@ -1,5 +1,5 @@
 // static/js/pages/historico.js
-import { criarCardPedido, setupLogModal } from '../ui.js';
+import { criarCardPedido } from '../ui.js';
 import { showToast } from '../toasts.js';
 
 // --- Variáveis de Estado Independentes para cada coluna ---
@@ -261,8 +261,6 @@ async function baixarCSV() {
 }
 
 export function initHistoricoPage() {
-    setupLogModal();
-
     quadroRua = document.getElementById('quadro-historico-rua');
     quadroOrcamentos = document.getElementById('quadro-historico-orcamentos');
 

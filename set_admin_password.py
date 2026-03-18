@@ -18,7 +18,7 @@ def setup_initial_admin():
         garantir_listas_padrao()
 
         # 3. Configurações do Administrador
-        admin_email = "admin@tratormax.net.br"
+        admin_email = "admin@empresa.com"
         admin_nome = "Administrador Sistema"
         admin_senha = "admin123"  # <--- ALTERE ESTA SENHA APÓS O PRIMEIRO LOGIN
 

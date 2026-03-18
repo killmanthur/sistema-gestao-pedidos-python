@@ -1,11 +1,11 @@
 # quadro_app/blueprints/dashboard.py
 from flask import Blueprint, request, jsonify, Response
 from datetime import datetime
-from sqlalchemy import or_
+from sqlalchemy import or_, func
 import io
 import csv
 from ..extensions import db, tz_cuiaba
-from quadro_app.models import Pedido, Sugestao
+from quadro_app.models import Pedido, Sugestao, Separacao, Conferencia
 
 dashboard_bp = Blueprint('dashboard', __name__, url_prefix='/api')
 
@@ -387,6 +387,25 @@ def download_relatorio():
         mimetype="text/plain",
         headers={"Content-disposition": f"attachment; filename={filename}"}
     )
+
+@dashboard_bp.route('/resumo-operacional', methods=['GET'])
+def get_resumo_operacional():
+    try:
+        status_ativos = ['Aguardando', 'Em Cotação', 'Aguardando Aprovação']
+        pedidos_ativos = db.session.query(func.count(Pedido.id)).filter(Pedido.status.in_(status_ativos)).scalar() or 0
+        pedidos_a_caminho = db.session.query(func.count(Pedido.id)).filter(Pedido.status == 'A Caminho').scalar() or 0
+        sugestoes_pendentes = db.session.query(func.count(Sugestao.id)).filter(Sugestao.status == 'pendente').scalar() or 0
+        separacoes_ativas = db.session.query(func.count(Separacao.id)).filter(Separacao.status.in_(['Em Separação', 'Em Conferência'])).scalar() or 0
+        conferencias_ativas = db.session.query(func.count(Conferencia.id)).filter(Conferencia.status.in_(['Aguardando Conferência', 'Em Conferência'])).scalar() or 0
+        return jsonify({
+            'pedidos_ativos': pedidos_ativos,
+            'pedidos_a_caminho': pedidos_a_caminho,
+            'sugestoes_pendentes': sugestoes_pendentes,
+            'separacoes_ativas': separacoes_ativas,
+            'conferencias_ativas': conferencias_ativas,
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @dashboard_bp.route('/sugestoes-paginadas', methods=['GET'])
 def get_sugestoes_paginadas():

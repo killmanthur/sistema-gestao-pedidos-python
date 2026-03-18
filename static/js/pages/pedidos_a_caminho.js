@@ -1,7 +1,7 @@
 // static/js/pages/pedidos_a_caminho.js
 import { AppState } from '../state.js';
 import { showToast } from '../toasts.js';
-import { criarCardPedido, setupLogModal } from '../ui.js';
+import { criarCardPedido } from '../ui.js';
 
 let quadroContainer, filtroInput;
 let aCaminhoPedidos = [];
@@ -48,7 +48,6 @@ async function fetchACaminhoPedidos() {
 }
 
 export function initPedidosACaminhoPage() {
-    setupLogModal();
     quadroContainer = document.getElementById('quadro-pedidos-a-caminho-container');
     filtroInput = document.getElementById('filtro-pedidos-a-caminho');
 

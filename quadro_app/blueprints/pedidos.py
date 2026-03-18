@@ -358,6 +358,26 @@ def get_pedidos_a_caminho():
     return jsonify([serialize_pedido(p) for p in pedidos])
 
 
+@pedidos_bp.route('/codigos-historico', methods=['GET'])
+def get_codigos_historico():
+    try:
+        pedidos = Pedido.query.all()
+        contagem = {}
+        for p in pedidos:
+            if isinstance(p.itens, list):
+                for item in p.itens:
+                    codigo = (item.get('codigo') or '').strip().upper()
+                    if codigo:
+                        contagem[codigo] = contagem.get(codigo, 0) + 1
+            elif p.codigo:
+                codigo = p.codigo.strip().upper()
+                if codigo:
+                    contagem[codigo] = contagem.get(codigo, 0) + 1
+        codigos_sorted = sorted(contagem.items(), key=lambda x: x[1], reverse=True)
+        return jsonify([c[0] for c in codigos_sorted[:200]])
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @pedidos_bp.route('/status-quadro', methods=['GET'])
 def get_quadro_status():
     try:

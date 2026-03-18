@@ -8,6 +8,11 @@ async function apiCall(endpoint, options = {}) {
 
     const response = await fetch(endpoint, config);
     if (!response.ok) {
+        if (response.status === 401) {
+            sessionStorage.removeItem('currentUser');
+            window.location.href = '/login';
+            return;
+        }
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || `Erro ${response.status}`);
     }

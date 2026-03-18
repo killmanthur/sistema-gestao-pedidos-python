@@ -174,7 +174,6 @@ export async function openLogModal(itemId, logType = 'pedidos') {
     }
 }
 
-export function setupLogModal() { }
 
 export function showConfirmModal(message, onConfirm) {
     const modalOverlay = document.getElementById('confirm-modal-overlay');
@@ -396,21 +395,6 @@ function renderizarListaItens(pedido) {
     return `<p style="font-size: 1rem; color: var(--text-primary);"><strong>Orçamento:</strong> ${pedido.codigo || pedido.código}</p>`;
 }
 
-function renderFooterLeft(pedido, canManage) {
-    if (pedido.status === 'OK') {
-        return `<span class="badge-status bg-status-success" style="font-size:0.65rem;">FINALIZADO</span>`;
-    }
-    
-    if (canManage) {
-        let options = '<option value="">- Comprador -</option>';
-        (AppState.compradorNomes || []).forEach(c => {
-            options += `<option value="${c}" ${pedido.comprador === c ? 'selected' : ''}>${c}</option>`;
-        });
-        return `<select class="select-compact comprador-select-realtime">${options}</select>`;
-    }
-    
-    return `<span style="font-size:0.7rem; opacity:0.7;">Comp: ${pedido.comprador || 'N/A'}</span>`;
-}
 
 function renderFooterButtons(pedido, canManage, canEdit) {
     if (pedido.status === 'OK') return '';

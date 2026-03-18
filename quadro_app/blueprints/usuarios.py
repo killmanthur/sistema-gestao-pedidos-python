@@ -1,5 +1,5 @@
 # quadro_app/blueprints/usuarios.py
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, session
 from ..extensions import db
 from quadro_app.models import Usuario, ListaDinamica 
 import uuid
@@ -33,9 +33,16 @@ def login():
     usuario = Usuario.query.filter_by(email=final_email).first()
 
     if usuario and check_password_hash(usuario.password_hash, password):
+        session.permanent = False
+        session['user_id'] = usuario.id
         return jsonify(serialize_usuario(usuario))
-    
+
     return jsonify({'error': 'Usuário ou senha inválidos'}), 401
+
+@usuarios_bp.route('/logout', methods=['POST'])
+def logout():
+    session.clear()
+    return jsonify({'status': 'ok'})
 
 @usuarios_bp.route('', methods=['GET'])
 def get_all_users():

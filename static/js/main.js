@@ -1,7 +1,7 @@
 // static/js/main.js
 import { AppState } from './state.js';
 import { setupAuthObserver, handleLogout, initLoginPage } from './auth.js';
-import { setupEditModal, initializeTheme, setupLogModal, setupAllModalCloseHandlers, setupUI, setupBackToTop } from './ui.js';
+import { setupEditModal, initializeTheme, setupAllModalCloseHandlers, setupUI, setupBackToTop } from './ui.js';
 import { initQuadroPage } from './pages/quadro.js';
 import { initHistoricoPage } from './pages/historico.js';
 import { initSugestoesPage } from './pages/sugestoes.js';
@@ -37,11 +37,16 @@ AppState.socket = socket;
 // 2. Garante que o JOIN aconteça sempre que a conexão for estabelecida
 socket.on('connect', () => {
     console.log("Conectado ao servidor Socket.io");
+    document.getElementById('connection-banner')?.classList.add('connection-banner--hidden');
     if (AppState.currentUser && AppState.currentUser.isLoggedIn) {
         const uid = AppState.currentUser.data.uid;
         socket.emit('join', { user_id: uid });
         console.log(`Solicitado ingresso na sala privada: ${uid}`);
     }
+});
+
+socket.on('disconnect', () => {
+    document.getElementById('connection-banner')?.classList.remove('connection-banner--hidden');
 });
 
 if (AppState.socket && AppState.currentUser.isLoggedIn) {
@@ -72,7 +77,6 @@ export async function initializeAuthenticatedApp() {
     handleLogout();
     setupAllModalCloseHandlers();
     setupEditModal();
-    setupLogModal();
     setupNotifications();
     setupBackToTop();
 

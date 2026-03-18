@@ -362,9 +362,6 @@ export async function initHistoricoSugestoesPage() {
                         cardAntigo.replaceWith(novoCardElemento);
                     }
                     
-                    // REMOVIDO: carregarDados(true); 
-                    // Isso impedia manter a posição da tela.
-
                 } else {
                     throw new Error('Falha ao salvar');
                 }

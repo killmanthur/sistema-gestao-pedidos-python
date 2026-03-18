@@ -11,7 +11,14 @@
     <p>Visualize todos os itens que foram excluídos. A partir daqui, você pode auditar os dados ou restaurá-los para
         seus quadros originais.</p>
 
-    <div style="margin: 2rem 0;">
+    <div class="filter-pills" style="margin: 1.5rem 0 0.75rem;">
+        <button class="filter-pill filter-pill--active" data-tipo="">Todos</button>
+        <button class="filter-pill" data-tipo="Pedido">Pedidos</button>
+        <button class="filter-pill" data-tipo="Sugestao">Sugestões</button>
+        <button class="filter-pill" data-tipo="Separacao">Separações</button>
+        <button class="filter-pill" data-tipo="Conferencia">Conferências</button>
+    </div>
+    <div style="margin-bottom: 1.5rem;">
         <input type="search" id="filtro-tabela-lixeira" placeholder="🔎 Buscar por tipo, ID, dados...">
     </div>
 

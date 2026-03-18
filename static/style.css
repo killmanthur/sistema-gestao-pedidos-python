@@ -284,6 +284,24 @@ body.dark-mode .btn-icon img {
 }
 
 /* --- 5. Header --- */
+.connection-banner {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 99999;
+    background-color: var(--clr-danger);
+    color: #fff;
+    text-align: center;
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+.connection-banner--hidden {
+    transform: translateY(-100%);
+    opacity: 0;
+    pointer-events: none;
+}
+
 header {
     position: sticky;
     top: 0;
@@ -612,7 +630,8 @@ body.dark-mode textarea {
 .card__header-actions {
     display: flex;
     align-items: center;
-    gap: 0.25rem; /* Espaço reduzido entre ícones */
+    gap: 0.25rem;
+    overflow: visible !important;
 }
 
 .card__header-actions .btn-icon {
@@ -729,16 +748,18 @@ body.dark-mode .card__header-actions .btn-icon img {
     border: none;
     cursor: pointer;
     font-size: 1.4rem;
-    line-height: 1;
     color: var(--text-muted);
-    padding: 4px 8px;
+    line-height: 1;
+    padding: 0 4px;
+    margin-left: 5px;
     border-radius: 4px;
-    transition: var(--transition-main);
+    transition: 0.2s;
 }
 
 .btn-delete-card:hover {
     background-color: var(--bg-danger-soft);
     color: var(--clr-danger);
+    transform: scale(1.1);
 }
 
 /* Demais botões em estilo Outline para não brigar visualmente */
@@ -1021,6 +1042,32 @@ body.dark-mode .btn[disabled] {
     color: var(--clr-danger);
     background-color: var(--bg-danger-soft);
     transform: rotate(90deg);
+}
+
+/* --- Filter Pills --- */
+.filter-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+.filter-pill {
+    padding: 0.3rem 0.9rem;
+    border-radius: 20px;
+    border: 1px solid var(--border-main);
+    background: var(--bg-surface);
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+.filter-pill:hover {
+    border-color: var(--clr-primary);
+    color: var(--clr-primary);
+}
+.filter-pill--active {
+    background: var(--clr-primary);
+    color: #fff;
+    border-color: var(--clr-primary);
 }
 
 /* --- 9. Tables --- */
@@ -1698,31 +1745,6 @@ tr.status-finalizado:hover {
     gap: 0.4rem;
 }
 
-.badge-status {
-    padding: 4px 10px;
-    border-radius: 20px;
-    font-size: 0.75rem;
-    font-weight: bold;
-    text-transform: uppercase;
-    color: #fff;
-}
-
-.bg-status-awaiting {
-    background-color: #3498db;
-}
-
-/* Azul */
-.bg-status-progress {
-    background-color: #f1c40f;
-    color: #000;
-}
-
-/* Amarelo */
-.bg-status-success {
-    background-color: #2ecc71;
-}
-
-/* Verde */
 
 /* Cores para as linhas da tabela de Registro de Compras */
 
@@ -2005,23 +2027,6 @@ body.dark-mode select option {
     padding: 2px 4px;
 }
 
-/* Estilo para o botão de excluir (X) no topo igual ao de sugestões */
-.btn-delete-card {
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    font-size: 1.4rem;
-    line-height: 1;
-    color: var(--text-muted);
-    padding: 0 5px;
-    margin-left: 5px;
-    transition: var(--transition-main);
-}
-
-.btn-delete-card:hover {
-    color: var(--clr-danger);
-}
-
 /* Ajuste na lista de itens para consistência */
 .item-list-selectable li {
     display: flex;
@@ -2099,22 +2104,6 @@ body.dark-mode .bg-status-progress {
     max-width: 140px; /* Evita que nomes longos empurrem o badge para fora */
 }
 
-/* Badges de Status no Topo */
-.badge-status {
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-weight: 800;
-    letter-spacing: 0.3px;
-    color: #fff;
-    text-transform: uppercase;
-}
-
-/* Cores dos Badges */
-.bg-status-awaiting { background-color: var(--clr-danger); }      /* Vermelho */
-.bg-status-progress { background-color: var(--clr-warning); color: #000; } /* Amarelo */
-.status-approval    { background-color: var(--clr-info); }        /* Azul */
-.bg-status-success  { background-color: var(--clr-success); }     /* Verde */
-
 /* Ajuste do cabeçalho para alinhar badge e ícones */
 .pedido-card .card__header {
     display: flex;
@@ -2122,23 +2111,6 @@ body.dark-mode .bg-status-progress {
     align-items: center;
     gap: 10px;
     padding: 8px 12px;
-}
-
-/* Estilo do botão de excluir igual à sugestão */
-.btn-delete-card {
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    font-size: 1.4rem;
-    color: var(--text-muted);
-    line-height: 1;
-    padding: 0 4px;
-    transition: 0.2s;
-}
-
-.btn-delete-card:hover {
-    color: var(--clr-danger);
-    transform: scale(1.1);
 }
 
 /* Estilo Base Botão Ghost */
@@ -2194,12 +2166,6 @@ body.dark-mode .bg-status-progress {
 .pedido-card .card__header {
     height: 40px;
     padding: 0 12px;
-}
-
-.card-tipo-req {
-    font-size: 0.85rem;
-    font-weight: 700;
-    color: var(--clr-primary-main);
 }
 
 /* --- ESTILO DO TOOLTIP (CAIXA DE TEXTO NO HOVER) --- */
@@ -2262,18 +2228,12 @@ body.dark-mode .bg-status-progress {
     transform: translateX(-50%) translateY(-5px);
 }
 
-/* Ajuste para não cortar o tooltip em containers com overflow hidden */
-.card__header-actions {
-    overflow: visible !important;
-}
-
-/* 1. Garante que o Card e suas seções não cortem o conteúdo que sai deles */
-.card, 
+/* Garante que o Card e suas seções não cortem o tooltip */
+.card,
 .pedido-card,
-.card__header, 
-.card__footer,
-.card__header-actions {
-    overflow: visible !important; /* Permite que o tooltip apareça fora das bordas */
+.card__header,
+.card__footer {
+    overflow: visible !important;
 }
 /* 2. MUITO IMPORTANTE: Garante que o card que você está passando o mouse 
    fique acima dos outros na camada visual (Z-INDEX) */

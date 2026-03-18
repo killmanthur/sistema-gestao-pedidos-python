@@ -64,9 +64,10 @@ function handleLogin() {
 export function handleLogout() {
     const btnLogout = document.getElementById('btn-logout');
     if (btnLogout) {
-        btnLogout.onclick = (e) => {
+        btnLogout.onclick = async (e) => {
             e.preventDefault();
             sessionStorage.removeItem('currentUser');
+            await fetch('/api/usuarios/logout', { method: 'POST' }).catch(() => {});
             window.location.href = '/login';
         };
     }
