@@ -5,6 +5,9 @@ build/
 dist/
 __pycache__/
 
+# === Segurança ===
+.secret_key
+
 # === Banco de Dados (Local) ===
 # Ignora o banco de dados e arquivos de projeto do DB Browser
 quadro_local.db
