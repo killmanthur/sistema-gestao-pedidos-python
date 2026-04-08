@@ -37,6 +37,7 @@ def create_app():
     db_path = os.path.join(project_root, 'quadro_local.db')
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + db_path
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 
     # Inicialização das extensões no App
     db.init_app(app)

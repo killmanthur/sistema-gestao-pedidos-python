@@ -4,7 +4,7 @@ from datetime import datetime
 from sqlalchemy import or_, func, and_
 from ..extensions import db, tz_cuiaba
 from quadro_app.models import Separacao, Usuario, ItemExcluido, ListaDinamica
-from quadro_app.utils import registrar_log
+from quadro_app.utils import registrar_log, criar_notificacao
 from quadro_app import socketio
 
 separacoes_bp = Blueprint('separacoes', __name__, url_prefix='/api/separacoes')
@@ -180,6 +180,16 @@ def atualizar_status_separacao(separacao_id):
     db.session.commit()
     registrar_log(separacao_id, editor_nome, 'STATUS_ALTERADO', detalhes={'de': status_antigo, 'para': novo_status}, log_type='separacoes')
     socketio.emit('status_separacao_atualizado', {'separacao_id': separacao_id, 'novo_status': novo_status})
+
+    # Notifica o vendedor responsável quando a separação é finalizada
+    if novo_status == 'Finalizado' and separacao.vendedor_nome:
+        vendedor = Usuario.query.filter_by(nome=separacao.vendedor_nome).first()
+        if vendedor:
+            criar_notificacao(
+                vendedor.id,
+                f"Separação Mov. {separacao.numero_movimentacao} ({separacao.nome_cliente}) foi finalizada.",
+                link='/separacoes'
+            )
     return jsonify({'status': 'success'})
 
 @separacoes_bp.route('/<int:separacao_id>/observacao', methods=['POST'])

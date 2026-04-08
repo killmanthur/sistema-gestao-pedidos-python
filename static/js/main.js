@@ -80,6 +80,17 @@ export async function initializeAuthenticatedApp() {
     setupNotifications();
     setupBackToTop();
 
+    // Solicita permissão de notificação nativa do SO após primeira interação
+    if ('Notification' in window && Notification.permission === 'default') {
+        const askOnce = () => {
+            Notification.requestPermission();
+            document.removeEventListener('click', askOnce);
+            document.removeEventListener('keydown', askOnce);
+        };
+        document.addEventListener('click', askOnce, { once: true });
+        document.addEventListener('keydown', askOnce, { once: true });
+    }
+
     const path = window.location.pathname;
 
     if (path.includes('/historico-conferencias')) {

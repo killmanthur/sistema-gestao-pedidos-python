@@ -169,6 +169,7 @@ main {
 .quadro-container {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    align-items: start;
     gap: 1.25rem;
     min-height: 200px;
 }
@@ -1204,7 +1205,7 @@ body.dark-mode .btn[disabled] {
     top: 110%;
     right: 0;
     width: 380px;
-    max-height: 400px;
+    max-height: min(70vh, 500px);
     background-color: var(--bg-surface);
     color: var(--text-primary);
     border: 1px solid var(--border-main);
@@ -1213,13 +1214,42 @@ body.dark-mode .btn[disabled] {
     z-index: 2001;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
 #notification-list {
     list-style: none;
     padding: 0;
     margin: 0;
-    overflow-y: auto;
+    overflow-y: scroll;
+    flex: 1 1 auto;
+    min-height: 0;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
+}
+
+#notification-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+#notification-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#notification-list::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+    border-radius: 4px;
+}
+
+#notification-list::-webkit-scrollbar-thumb:hover {
+    background: var(--clr-primary-main);
+}
+
+.notification-time {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    margin-top: 0.25rem;
+    font-weight: 400;
 }
 
 /* Remove marcadores */
@@ -1252,16 +1282,16 @@ body.dark-mode .btn[disabled] {
 }
 
 #container-fila-separadores {
-    padding: 0.5rem 1.5rem 0;
-    margin-bottom: 0.5rem;
+    padding: 0.3rem 1rem 0;
+    margin-bottom: 0.25rem;
 }
 
 .fila-separadores {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem;
+    gap: 0.3rem;
     list-style: none;
-    padding: 0.5rem 0.75rem;
+    padding: 0.3rem 0.5rem;
     margin: 0;
     background-color: var(--bg-surface);
     border-radius: var(--border-radius);
@@ -1284,46 +1314,282 @@ body.dark-mode .btn[disabled] {
 }
 
 #form-container-separacao {
-    padding: 0.75rem 1.5rem;
+    padding: 0.5rem 1rem;
     margin-top: 0;
 }
 
 #form-separacao input,
 #form-separacao select,
 #form-separacao .btn {
-    padding-top: 0.4rem;
-    padding-bottom: 0.4rem;
-    font-size: 0.9rem;
+    padding: 0.35rem 0.5rem;
+    font-size: 0.8rem;
     height: auto;
 }
 
-#form-separacao label {
-    font-size: 0.8rem;
-    margin-bottom: 0.25rem;
+#form-separacao input::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.7;
 }
 
-/* CORREÇÃO CARD DE SEPARAÇÃO SUPER COMPACTO */
+#form-separacao input[type="number"]::-webkit-inner-spin-button,
+#form-separacao input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+#form-separacao input[type="number"] {
+    -moz-appearance: textfield;
+}
+
+.mov-suggestion-wrapper {
+    position: relative;
+    flex-grow: 1;
+}
+
+.mov-suggestion-wrapper input {
+    width: 100%;
+}
+
+.mov-ghost-text {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    padding: 0.35rem 0.5rem;
+    font-size: 0.8rem;
+    pointer-events: none;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.mov-ghost-text .ghost-typed {
+    color: transparent;
+}
+
+.mov-ghost-text .ghost-rest {
+    color: var(--text-secondary);
+    opacity: 0.6;
+}
+
+/* TAG INPUT COM AUTOCOMPLETE */
+.tag-input-container {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.2rem;
+    padding: 0.2rem 0.4rem;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--border-radius);
+    background: var(--bg-card);
+    min-height: 34px;
+    position: relative;
+    cursor: text;
+}
+
+.tag-input-container:focus-within {
+    border-color: var(--clr-primary);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+
+.tag-input-field {
+    border: none !important;
+    outline: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    flex: 1;
+    min-width: 60px;
+    font-size: 0.8rem;
+    padding: 0.15rem 0 !important;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.tag-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    padding: 0.1rem 0.4rem;
+    background: var(--clr-primary);
+    color: white;
+    border-radius: 3px;
+    font-size: 0.72rem;
+    white-space: nowrap;
+    animation: tag-pop 0.15s ease-out;
+}
+
+@keyframes tag-pop {
+    from { transform: scale(0.8); opacity: 0; }
+    to   { transform: scale(1);   opacity: 1; }
+}
+
+.tag-remove {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    font-size: 0.8rem;
+    padding: 0;
+    opacity: 0.7;
+    line-height: 1;
+}
+
+.tag-remove:hover {
+    opacity: 1;
+}
+
+.tag-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-strong);
+    border-top: none;
+    border-radius: 0 0 var(--border-radius) var(--border-radius);
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 150px;
+    overflow-y: auto;
+    z-index: 100;
+    display: none;
+    box-shadow: var(--shadow-md);
+}
+
+.tag-suggestions.open {
+    display: block;
+}
+
+.tag-suggestions li {
+    padding: 0.35rem 0.5rem;
+    font-size: 0.8rem;
+    cursor: pointer;
+    color: var(--text-primary);
+}
+
+.tag-suggestions li.active {
+    background: var(--clr-primary);
+    color: white;
+}
+
+/* CARD DE SEPARAÇÃO COMPACTO */
 .separacao-card .card-info-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 0.1rem 1rem;
-    /* Espaçamento entre colunas */
-    margin-bottom: 0.5rem;
     font-size: 0.8rem;
 }
 
 .separacao-card .card-info-grid p {
     margin: 0;
-    /* Remove margem dos parágrafos internos */
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
 .separacao-card .card__body,
-.separacao-card .card__header,
-.separacao-card .card__footer {
+.separacao-card .card__header {
     padding: 0.5rem 0.75rem;
+}
+
+.separacao-card .card__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.25rem;
+}
+
+.separacao-card .card__header h3 {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
+.separacao-card .card__header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.15rem;
+    flex-shrink: 0;
+}
+
+.separacao-card .card__header-actions .btn-icon {
+    font-size: 0.75rem;
+    padding: 0.15rem 0.3rem;
+    border-radius: 4px;
+    cursor: pointer;
+    background: none;
+    border: 1px solid transparent;
+    opacity: 0.7;
+    line-height: 1;
+}
+
+.separacao-card .card__header-actions .btn-icon:hover {
+    opacity: 1;
+    background: rgba(255,255,255,0.08);
+}
+
+.separacao-card .card__header-actions .btn-icon--success {
+    color: var(--clr-success);
+    border-color: var(--clr-success);
+    opacity: 1;
+    font-weight: bold;
+}
+
+.separacao-card .card__header-actions .btn-icon--success:hover {
+    background: var(--clr-success);
+    color: white;
+}
+
+.separacao-card .separacao-conferente-select {
+    padding: 0.25rem 0.75rem 0.35rem;
+}
+
+.separacao-card .separacao-conferente-select select {
+    width: 100%;
+    padding: 0.35rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 6px;
+    border: 1.5px dashed var(--clr-warning);
+    background: rgba(255, 193, 7, 0.08);
+    color: var(--clr-warning);
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    padding-right: 1.5rem;
+    text-align: center;
+}
+
+.separacao-card .separacao-conferente-select select:hover {
+    border-style: solid;
+    background:
+        linear-gradient(
+            90deg,
+            transparent 0%,
+            rgba(255, 193, 7, 0.25) 45%,
+            rgba(255, 193, 7, 0.4) 50%,
+            rgba(255, 193, 7, 0.25) 55%,
+            transparent 100%
+        )
+        no-repeat,
+        rgba(255, 193, 7, 0.08);
+    background-size: 200% 100%, 100% 100%;
+    animation: shimmer-conferente 1.2s ease-in-out infinite;
+}
+
+@keyframes shimmer-conferente {
+    0%   { background-position: 200% center, 0 0; }
+    100% { background-position: -200% center, 0 0; }
+}
+
+.separacao-card .separacao-conferente-select select:focus {
+    outline: none;
+    border-style: solid;
+    box-shadow: 0 0 0 2px rgba(255, 193, 7, 0.25);
 }
 
 .separacao-card .obs-log-container {
@@ -1336,9 +1602,24 @@ body.dark-mode .btn[disabled] {
     padding: 0.2rem 0;
 }
 
-.separacao-card .card__actions .btn {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.7rem;
+.separacao-card .card__body {
+    padding: 0.3rem 0.75rem 0.25rem;
+}
+
+.separacao-card .obs-preview {
+    padding: 0.3rem 0.6rem;
+    background: rgba(255, 193, 7, 0.12);
+    border-top: 1px solid rgba(255, 193, 7, 0.25);
+    font-size: 0.72rem;
+    color: var(--clr-warning);
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.separacao-card .obs-preview:hover {
+    background: rgba(255, 193, 7, 0.2);
 }
 
 body.dark-mode .card__actions .btn--secondary {
@@ -2310,4 +2591,66 @@ body.dark-mode .bg-status-progress {
 /* No Modo Escuro ele já segue a cor primária, mas podemos dar um brilho extra se desejar */
 body.dark-mode .btn-back-to-top {
     box-shadow: 0 0 15px rgba(0, 0, 0, 0.4);
+}
+
+/* 1. A mudança mais importante: Força a tabela a usar um layout fixo.
+   As larguras das colunas serão baseadas no cabeçalho (th), e não no conteúdo das células (td). */
+#tabela-separacoes {
+    table-layout: fixed;
+    width: 100%;
+    border-collapse: collapse; /* Melhora a renderização das bordas */
+}
+
+/* 2. Definimos a largura de cada coluna no cabeçalho.
+   A soma deve ser próxima a 100%. Ajuste os valores se precisar. */
+#tabela-separacoes th:nth-child(1) { width: 8%; }  /* Nº Mov. */
+#tabela-separacoes th:nth-child(2) { width: 20%; } /* Cliente */
+#tabela-separacoes th:nth-child(3) { width: 12%; } /* Vendedor */
+#tabela-separacoes th:nth-child(4) { width: 22%; } /* Separador */
+#tabela-separacoes th:nth-child(5) { width: 12%; } /* Conferente */
+#tabela-separacoes th:nth-child(6) { width: 10%; } /* Data Criação */
+#tabela-separacoes th:nth-child(7) { width: 10%; } /* Data Finalização */
+#tabela-separacoes th:nth-child(8) { width: 6%;  min-width: 80px; }  /* Ações */
+
+
+/* 3. Com larguras fixas, precisamos controlar o que acontece com textos longos.
+   Aqui, fazemos com que o texto seja cortado e exiba "..." no final. */
+#tabela-separacoes td {
+    white-space: nowrap;     /* Impede que o texto quebre a linha */
+    overflow: hidden;        /* Esconde o que passar do limite da célula */
+    text-overflow: ellipsis; /* Adiciona "..." ao texto cortado */
+    padding: 0 10px;         /* Adiciona um espaçamento interno */
+}
+
+/* 4. Caso especial para a coluna de Separadores:
+   Queremos que os badges possam quebrar a linha, então desfazemos o "nowrap". */
+#tabela-separacoes td:nth-child(4) .badge-container {
+    white-space: normal; /* Permite que os badges quebrem a linha dentro da célula */
+}
+
+/* 5. Garante que o botão de editar sempre caiba na sua coluna */
+#tabela-separacoes .actions-cell {
+    text-align: center;
+    overflow: visible; /* Garante que o botão não seja cortado */
+}
+
+/* Seleciona as colunas Cliente (2), Data Criação (6) e Data Finalização (7) */
+#tabela-separacoes td:nth-child(2),
+#tabela-separacoes td:nth-child(6),
+#tabela-separacoes td:nth-child(7) {
+    white-space: normal;      /* PERMITE que o texto quebre em mais de uma linha */
+    overflow: visible;        /* Garante que o conteúdo não seja cortado */
+    text-overflow: clip;      /* Desativa o "..." */
+    word-break: break-word;   /* Ajuda a quebrar nomes de clientes muito longos */
+}
+
+.badge {
+    color: white;
+    padding: 4px 10px;        /* Aumentei um pouco o padding para ficar mais "respirado" */
+    border-radius: 12px;      /* <--- AQUI ESTÁ A MUDANÇA PRINCIPAL. Aumente este valor. */
+    font-size: 0.8rem;
+    font-weight: 500;
+    white-space: nowrap;
+    display: inline-block;    /* Adicionado para garantir o espaçamento correto */
+    margin: 2px;              /* Adicionado para dar um pequeno espaço entre os badges */
 }

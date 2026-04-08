@@ -55,13 +55,33 @@ function renderNotifications(notifications) {
         const li = document.createElement('li');
         if (!notif.lida) li.classList.add('unread');
 
-        const content = notif.link
+        const dataFormatada = formatTimestamp(notif.timestamp);
+        const mensagemHTML = notif.link
             ? `<a href="${notif.link}">${notif.mensagem}</a>`
             : `<span>${notif.mensagem}</span>`;
 
-        li.innerHTML = content;
+        li.innerHTML = `
+            ${mensagemHTML}
+            <div class="notification-time">${dataFormatada}</div>
+        `;
         list.appendChild(li);
     });
+}
+
+function formatTimestamp(ts) {
+    if (!ts) return '';
+    try {
+        const date = new Date(ts);
+        if (isNaN(date.getTime())) return '';
+        const dd = String(date.getDate()).padStart(2, '0');
+        const mm = String(date.getMonth() + 1).padStart(2, '0');
+        const yyyy = date.getFullYear();
+        const hh = String(date.getHours()).padStart(2, '0');
+        const min = String(date.getMinutes()).padStart(2, '0');
+        return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
+    } catch (e) {
+        return '';
+    }
 }
 
 async function fetchNotifications() {
@@ -100,6 +120,27 @@ async function markNotificationsAsRead() {
     } catch (e) { console.error(e); }
 }
 
+function showNativeNotification(mensagem, link) {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return false;
+    try {
+        const notif = new Notification('PyTudo', {
+            body: mensagem,
+            icon: '/static/favicon.ico',
+            tag: 'pytudo-' + Date.now(),
+        });
+        notif.onclick = () => {
+            window.focus();
+            if (link) window.location.href = link;
+            notif.close();
+        };
+        setTimeout(() => notif.close(), 8000);
+        return true;
+    } catch (e) {
+        console.warn('Notification API falhou:', e);
+        return false;
+    }
+}
+
 async function clearAllNotifications() {
     if (!AppState.currentUser || !AppState.currentUser.isLoggedIn) return;
     const userId = AppState.currentUser.data.uid;
@@ -121,8 +162,8 @@ export function setupNotifications() {
 
     bell.onclick = (e) => {
         e.stopPropagation();
-        const isVisible = panel.style.display === 'block';
-        panel.style.display = isVisible ? 'none' : 'block';
+        const isVisible = panel.style.display === 'flex';
+        panel.style.display = isVisible ? 'none' : 'flex';
         if (!isVisible) {
             fetchNotifications();
             if (lastNotificationCount > 0) markNotificationsAsRead();
@@ -143,8 +184,12 @@ export function setupNotifications() {
             // 2. Atualiza a lista
             fetchNotifications();
 
-            // 3. Mostra o alerta (Agora com import correto)
-            showToast(data.mensagem, "info");
+            // 3. Aba em background + permissão → pop-up nativo. Senão → toast.
+            if (document.hidden && showNativeNotification(data.mensagem, data.link)) {
+                // pop-up nativo disparado, não precisa do toast
+            } else {
+                showToast(data.mensagem, "info");
+            }
         });
     }
 
