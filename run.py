@@ -15,8 +15,8 @@ if __name__ == '__main__':
     # Corrigido: Removido o argumento 'threads=8' que causava o erro.
     # debug=True permite que o servidor reinicie sozinho ao salvar arquivos.
     # allow_unsafe_werkzeug=True é necessário em versões recentes para rodar com SocketIO localmente.
-    socketio.run(app, 
-                 host='0.0.0.0', 
-                 port=PORT, 
-                 debug=False, 
+    socketio.run(app,
+                 host='0.0.0.0',
+                 port=PORT,
+                 debug=False,
                  allow_unsafe_werkzeug=True)

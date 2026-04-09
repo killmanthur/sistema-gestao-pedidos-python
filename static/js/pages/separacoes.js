@@ -224,7 +224,8 @@ function setupMovSugestao() {
     input.addEventListener('blur', () => { ghost.innerHTML = ''; });
 
     input.addEventListener('keydown', (e) => {
-        if (e.key === 'Tab' && sugestaoMov && input.value !== sugestaoMov) {
+        // Só aceita a sugestão se o campo ainda não tem os 6 dígitos completos
+        if (e.key === 'Tab' && sugestaoMov && input.value.length < 6 && input.value !== sugestaoMov) {
             e.preventDefault();
             input.value = sugestaoMov;
             ghost.innerHTML = '';

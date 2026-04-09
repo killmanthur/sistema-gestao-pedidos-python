@@ -6,6 +6,109 @@ let lastNotificationCount = 0;
 let audioUnlocked = false;
 const notificationSound = new Audio('/static/notification.mp3');
 
+// --- Tab badge / favicon / title flashing ---
+const ORIGINAL_TITLE = document.title;
+const ORIGINAL_FAVICON = document.getElementById('favicon-link')?.href || '/static/favicon.ico';
+let titleFlashInterval = null;
+let faviconImage = null;
+
+function updateTabBadge(count) {
+    if (count > 0) {
+        document.title = `(${count > 99 ? '99+' : count}) ${ORIGINAL_TITLE}`;
+    } else {
+        document.title = ORIGINAL_TITLE;
+    }
+    drawFaviconBadge(count);
+}
+
+function drawFaviconBadge(count) {
+    const link = document.getElementById('favicon-link');
+    if (!link) return;
+
+    if (count <= 0) {
+        link.href = ORIGINAL_FAVICON;
+        return;
+    }
+
+    const draw = (img) => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 32;
+        canvas.height = 32;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, 32, 32);
+
+        // Círculo vermelho no canto inferior direito
+        const radius = 11;
+        const cx = 32 - radius;
+        const cy = 32 - radius;
+        ctx.fillStyle = '#dc2626';
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // Número
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 14px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const text = count > 9 ? '9+' : String(count);
+        ctx.fillText(text, cx, cy + 1);
+
+        link.href = canvas.toDataURL('image/png');
+    };
+
+    if (faviconImage && faviconImage.complete && faviconImage.naturalWidth > 0) {
+        draw(faviconImage);
+    } else {
+        faviconImage = new Image();
+        faviconImage.onload = () => draw(faviconImage);
+        faviconImage.onerror = () => {
+            // Se falhar, desenha só o círculo sem o favicon original de fundo
+            const canvas = document.createElement('canvas');
+            canvas.width = 32;
+            canvas.height = 32;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#dc2626';
+            ctx.beginPath();
+            ctx.arc(16, 16, 15, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 18px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(count > 9 ? '9+' : String(count), 16, 17);
+            link.href = canvas.toDataURL('image/png');
+        };
+        faviconImage.src = ORIGINAL_FAVICON;
+    }
+}
+
+function startTitleFlash() {
+    if (titleFlashInterval) return;
+    let toggle = false;
+    titleFlashInterval = setInterval(() => {
+        document.title = toggle
+            ? `(${lastNotificationCount}) ${ORIGINAL_TITLE}`
+            : `🔔 Nova notificação!`;
+        toggle = !toggle;
+    }, 1000);
+}
+
+function stopTitleFlash() {
+    if (titleFlashInterval) {
+        clearInterval(titleFlashInterval);
+        titleFlashInterval = null;
+    }
+    updateTabBadge(lastNotificationCount);
+}
+
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) stopTitleFlash();
+});
+
 // Função para tentar tocar o som
 function playNotificationSound() {
     if (audioUnlocked) {
@@ -104,6 +207,7 @@ async function fetchNotifications() {
         }
 
         lastNotificationCount = unreadCount;
+        updateTabBadge(unreadCount);
         renderNotifications(notifications);
     } catch (error) {
         console.error("Erro ao carregar notificações:", error);
@@ -117,6 +221,8 @@ async function markNotificationsAsRead() {
         const countEl = document.getElementById('notification-count');
         if (countEl) countEl.style.display = 'none';
         lastNotificationCount = 0;
+        updateTabBadge(0);
+        stopTitleFlash();
     } catch (e) { console.error(e); }
 }
 
@@ -189,6 +295,11 @@ export function setupNotifications() {
                 // pop-up nativo disparado, não precisa do toast
             } else {
                 showToast(data.mensagem, "info");
+            }
+
+            // 4. Pisca o título se a aba está em background
+            if (document.hidden) {
+                startTitleFlash();
             }
         });
     }
