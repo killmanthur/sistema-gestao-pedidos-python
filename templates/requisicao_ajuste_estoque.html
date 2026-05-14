@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Requisição de Ajuste{% endblock %}
+{% block content %}
+<div class="page-mobile">
+    <div id="campanha-banner" class="campanha-banner campanha-banner--loading">
+        Carregando campanhas...
+    </div>
+
+    <div id="sem-campanha" class="campanha-empty" style="display:none;">
+        <h3>Nenhuma campanha ativa</h3>
+        <p>Aguarde o responsável criar uma campanha e vincular você como ajustador.</p>
+    </div>
+
+    <div id="bloco-form" style="display:none;">
+        <h2>Nova Requisição de Ajuste</h2>
+        <p class="page-mobile__subtitle">Escaneie ou digite o código, informe marca e quantidade real.</p>
+
+        <form id="form-ajuste" class="form-mobile" autocomplete="off">
+            <div class="field">
+                <label for="ajuste-codigo">Código</label>
+                <div class="input-with-action">
+                    <input type="text" id="ajuste-codigo" autocomplete="off" required>
+                    <button type="button" id="btn-scan" class="btn btn--icon" title="Escanear pela câmera">📷</button>
+                </div>
+            </div>
+
+            <div id="scanner-area" style="display:none;">
+                <div id="qr-reader"></div>
+                <div id="scan-status" class="scan-status">Aproxime o código de barras da câmera...</div>
+                <div class="scanner-actions">
+                    <button type="button" id="btn-scan-torch" class="btn btn--secondary" title="Ligar flash" style="display:none;">🔦 Ligar flash</button>
+                    <button type="button" id="btn-scan-cancel" class="btn btn--secondary">Cancelar</button>
+                </div>
+            </div>
+
+            <div class="field">
+                <label for="ajuste-marca">Marca *</label>
+                <input type="text" id="ajuste-marca" required>
+            </div>
+
+            <div class="field">
+                <label for="ajuste-descricao">Descrição (opcional)</label>
+                <input type="text" id="ajuste-descricao">
+            </div>
+
+            <div class="field-row">
+                <div class="field">
+                    <label for="ajuste-qtd-sistema">Qtd. sistema</label>
+                    <input type="number" id="ajuste-qtd-sistema" inputmode="numeric">
+                </div>
+                <div class="field">
+                    <label for="ajuste-qtd-real">Qtd. real *</label>
+                    <input type="number" id="ajuste-qtd-real" inputmode="numeric" required>
+                </div>
+            </div>
+
+            <div class="field">
+                <label for="ajuste-foto">Foto da peça (opcional)</label>
+                <input type="file" id="ajuste-foto" accept="image/*" capture="environment">
+                <div id="foto-preview" class="foto-preview"></div>
+            </div>
+
+            <button type="submit" id="btn-enviar-ajuste" class="btn btn--primary btn--lg btn--block">
+                Enviar Requisição
+            </button>
+        </form>
+
+        <h3 class="recentes-titulo">Minhas requisições nesta campanha</h3>
+        <div id="lista-recentes" class="lista-ajustes"></div>
+    </div>
+</div>
+{% endblock %}

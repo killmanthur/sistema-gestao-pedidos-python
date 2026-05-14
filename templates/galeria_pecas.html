@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Galeria de Peças{% endblock %}
+{% block content %}
+<div class="page-galeria">
+    <div class="page-galeria__header">
+        <h2>Galeria de Peças</h2>
+        <div class="tabs" id="galeria-tabs">
+            <button class="tab-btn active" data-filtro="pendentes">Pendentes de cadastro</button>
+            <button class="tab-btn" data-filtro="cadastradas">Cadastradas no ERP</button>
+            <button class="tab-btn" data-filtro="todas">Todas</button>
+        </div>
+    </div>
+
+    <div id="galeria-grid" class="galeria-grid">
+        <p class="empty-state">Carregando...</p>
+    </div>
+</div>
+
+<div id="foto-lightbox-galeria" class="foto-lightbox" style="display:none;">
+    <img id="foto-lightbox-galeria-img" alt="Foto da peça">
+</div>
+{% endblock %}

@@ -7,8 +7,56 @@ import secrets
 from flask import Flask, request, jsonify, session, redirect, url_for
 from flask_socketio import SocketIO, join_room # <-- ADICIONADO: join_room
 from flask_migrate import Migrate
-from .extensions import db
+from werkzeug.middleware.proxy_fix import ProxyFix
+from datetime import datetime
+from sqlalchemy import text
+from .extensions import db, tz_cuiaba
 from .blueprints.listas_dinamicas import garantir_listas_padrao
+
+
+def _garantir_schema_campanhas_ajuste():
+    """
+    db.create_all() nao adiciona colunas novas em tabelas existentes.
+    Garante que ajuste_estoque tem campanha_id mesmo em bancos ja populados.
+    """
+    engine = db.engine
+    with engine.connect() as conn:
+        cols = [row[1] for row in conn.execute(text("PRAGMA table_info(ajuste_estoque)"))]
+        if 'campanha_id' not in cols:
+            conn.execute(text("ALTER TABLE ajuste_estoque ADD COLUMN campanha_id INTEGER"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_ajuste_estoque_campanha_id ON ajuste_estoque(campanha_id)"))
+            conn.commit()
+
+
+def _migrar_ajustes_legado():
+    """
+    Se existirem ajustes sem campanha, cria/reutiliza uma campanha 'Legado' finalizada
+    e vincula todos os ajustes orfaos a ela.
+    """
+    from .models import AjusteEstoque, CampanhaAjuste
+    orfaos = AjusteEstoque.query.filter(AjusteEstoque.campanha_id.is_(None)).count()
+    if not orfaos:
+        return
+    legado = CampanhaAjuste.query.filter_by(nome='Legado').first()
+    if not legado:
+        agora = datetime.now(tz_cuiaba).isoformat()
+        legado = CampanhaAjuste(
+            nome='Legado',
+            status='Finalizada',
+            observacao='Ajustes anteriores ao sistema de campanhas.',
+            criado_por='Sistema',
+            criado_por_id='sistema',
+            data_inicio=agora,
+            data_fim=agora,
+            finalizado_por='Sistema',
+            finalizado_por_id='sistema',
+        )
+        db.session.add(legado)
+        db.session.flush()
+    AjusteEstoque.query.filter(AjusteEstoque.campanha_id.is_(None)).update(
+        {AjusteEstoque.campanha_id: legado.id}, synchronize_session=False
+    )
+    db.session.commit()
 
 # Inicializamos o SocketIO globalmente para que possa ser importado nos Blueprints
 # cors_allowed_origins="*" garante que não haja bloqueio de conexão no navegador
@@ -38,6 +86,11 @@ def create_app():
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + db_path
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
+
+    # Confia nos headers X-Forwarded-* enviados pelo nginx (HTTPS termina no nginx).
+    # Sem isso, Flask acha que requisicoes vem em HTTP e gera redirects http://
+    # causando Mixed Content no navegador quando acessado via HTTPS.
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
     # Inicialização das extensões no App
     db.init_app(app)
@@ -94,6 +147,7 @@ def create_app():
     from .blueprints.lixeira import lixeira_bp
     from .blueprints.listas_dinamicas import listas_bp
     from .blueprints.registro_compras import compras_registro_bp
+    from .blueprints.estoque import estoque_bp
 
     app.register_blueprint(main_views_bp)
     app.register_blueprint(pedidos_bp)
@@ -108,11 +162,17 @@ def create_app():
     app.register_blueprint(lixeira_bp)
     app.register_blueprint(listas_bp)
     app.register_blueprint(compras_registro_bp)
+    app.register_blueprint(estoque_bp)
+
+    # Garante que a pasta de uploads de fotos de pecas existe
+    os.makedirs(os.path.join(app.static_folder, 'uploads', 'pecas'), exist_ok=True)
 
     # Criação das tabelas e carregamento de listas padrão
     with app.app_context():
         from . import models
         db.create_all()
+        _garantir_schema_campanhas_ajuste()
+        _migrar_ajustes_legado()
         garantir_listas_padrao()
 
     return app, socketio, TV_MODE

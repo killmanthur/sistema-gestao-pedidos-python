@@ -24,6 +24,9 @@ import { initTvExpedicaoPage } from './pages/tv_expedicao.js';
 import { initRegistroComprasPage } from './pages/registro_compras.js';
 import { initPendenciasEAlteracoesPage } from './pages/pendencias_e_alteracoes.js';
 import { initHistoricoSugestoesPage } from './pages/historico-sugestoes.js';
+import { initRequisicaoAjusteEstoquePage } from './pages/requisicao-ajuste-estoque.js';
+import { initAprovarAjustesEstoquePage } from './pages/aprovar-ajustes-estoque.js';
+import { initGaleriaPecasPage } from './pages/galeria-pecas.js';
 
 // 1. Inicializa o socket
 const socket = io({
@@ -93,7 +96,16 @@ export async function initializeAuthenticatedApp() {
 
     const path = window.location.pathname;
 
-    if (path.includes('/historico-conferencias')) {
+    if (path.includes('/requisicao-ajuste-estoque')) {
+        initRequisicaoAjusteEstoquePage();
+    }
+    else if (path.includes('/aprovar-ajustes-estoque')) {
+        initAprovarAjustesEstoquePage();
+    }
+    else if (path.includes('/galeria-pecas')) {
+        initGaleriaPecasPage();
+    }
+    else if (path.includes('/historico-conferencias')) {
         initHistoricoConferenciasPage();
     }
     else if (path.includes('/historico-sugestoes')) {

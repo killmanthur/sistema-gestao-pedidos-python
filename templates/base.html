@@ -31,6 +31,9 @@
             <div class="header__brand">
                 <h1>Quadro de Pedidos</h1>
             </div>
+            <button id="menu-toggle" class="menu-toggle" aria-label="Abrir menu" aria-expanded="false">
+                <span></span><span></span><span></span>
+            </button>
             <nav class="header__nav">
                 <ul id="main-nav">
                     <!-- Item Fixo -->
@@ -88,6 +91,11 @@
                             <li class="nav-item" data-page="gerenciar_separacoes"><a
                                     href="{{ url_for('main_views.gerenciar_separacoes_page') }}">Gerenciar
                                     Separações</a></li>
+                            <li class="nav-item" data-page="requisicao_ajuste_estoque"><a
+                                    href="{{ url_for('main_views.requisicao_ajuste_estoque_page') }}">Ajustes</a></li>
+                            <li class="nav-item" data-page="aprovar_ajuste_estoque"><a
+                                    href="{{ url_for('main_views.aprovar_ajustes_estoque_page') }}">Campanhas de
+                                    Ajustes</a></li>
                             <li class="nav-item" data-page="dashboard_conferencias"><a
                                     href="{{ url_for('main_views.dashboard_conferencias_page') }}">Dashboard
                                     Conferência</a></li>
@@ -103,6 +111,8 @@
                         <ul class="dropdown-menu">
                             <li class="nav-item" data-page="admin_sistema"><a
                                     href="{{ url_for('main_views.gerenciar_sistema_page') }}">Gerenciar Sistema</a></li>
+                            <li class="nav-item" data-page="galeria_pecas"><a
+                                    href="{{ url_for('main_views.galeria_pecas_page') }}">Galeria de Peças</a></li>
                             <li class="nav-item" data-page="lixeira"><a
                                     href="{{ url_for('main_views.lixeira_page') }}">Lixeira</a></li>
                         </ul>

@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls -la /c/PyTudo/sistema-gestao-pedidos-python/static/js/*.js)",
+      "Read(//c/PyTodo/sistema-gestao-pedidos-python/static/js/pages/**)",
+      "Bash(python -c \"import OpenSSL; print\\('pyopenssl:', OpenSSL.__version__\\)\")",
+      "Bash(find /c/PyTudo/sistema-gestao-pedidos-python -type f \\\\\\( -name \"*.html\" -o -name \"*.js\" \\\\\\) -exec grep -l \"file\\\\|upload\\\\|camera\\\\|image\" {} \\\\;)",
+      "Bash(grep -n \"input.*type.*file\\\\|accept.*image\\\\|capture\" /c/PyTudo/sistema-gestao-pedidos-python/templates/*.html)",
+      "Bash(pip show *)",
+      "Bash(python -m py_compile quadro_app/blueprints/estoque.py quadro_app/models.py quadro_app/__init__.py)",
+      "Bash(python -c \"from quadro_app import create_app; a, s, tv = create_app\\(\\); print\\('app OK'\\); print\\('routes:'\\); [print\\(' ', r\\) for r in sorted\\(str\\(r\\) for r in a.url_map.iter_rules\\(\\)\\) if 'campanha' in str\\(r\\) or 'estoque' in str\\(r\\)]\")"
+    ]
+  }
+}

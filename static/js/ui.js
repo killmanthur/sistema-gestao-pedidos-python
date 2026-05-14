@@ -110,6 +110,60 @@ export function setupUI() {
 
     navContainer.style.visibility = 'visible';
     navContainer.style.display = 'block';
+
+    setupHamburger();
+}
+
+function setupHamburger() {
+    const toggle = document.getElementById('menu-toggle');
+    const nav = document.querySelector('.header__nav');
+    if (!toggle || !nav || toggle.dataset.bound === '1') return;
+    toggle.dataset.bound = '1';
+
+    toggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const open = nav.classList.toggle('header__nav--open');
+        toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+
+    // Fecha ao clicar em link real (apenas links com href válido, não triggers de dropdown)
+    nav.addEventListener('click', (e) => {
+        const a = e.target.closest('a');
+        if (!a) return;
+        // Trigger de dropdown não tem href — ignora
+        const isDropdownTrigger = a.parentElement?.classList.contains('nav-item--dropdown');
+        if (isDropdownTrigger) return;
+        if (nav.classList.contains('header__nav--open')) {
+            nav.classList.remove('header__nav--open');
+            toggle.setAttribute('aria-expanded', 'false');
+        }
+    });
+
+    // Mobile: clique em dropdown alterna expansão vertical
+    document.querySelectorAll('.nav-item--dropdown > a').forEach(a => {
+        if (a.dataset.bound === '1') return;
+        a.dataset.bound = '1';
+        a.addEventListener('click', (e) => {
+            if (window.matchMedia('(max-width: 992px)').matches) {
+                e.preventDefault();
+                e.stopPropagation();
+                const parent = a.parentElement;
+                // Fecha outros dropdowns abertos
+                document.querySelectorAll('.nav-item--dropdown.open').forEach(d => {
+                    if (d !== parent) d.classList.remove('open');
+                });
+                parent.classList.toggle('open');
+            }
+        });
+    });
+
+    // Fecha nav ao clicar fora (mobile)
+    document.addEventListener('click', (e) => {
+        if (!nav.classList.contains('header__nav--open')) return;
+        if (nav.contains(e.target) || toggle.contains(e.target)) return;
+        nav.classList.remove('header__nav--open');
+        toggle.setAttribute('aria-expanded', 'false');
+    });
 }
 
 // ... (Funções de Log mantidas iguais, resumidas aqui para economizar espaço) ...

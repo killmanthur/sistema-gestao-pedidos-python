@@ -150,3 +150,18 @@ def registro_compras_page():
 @page_access_required('pendencias_e_alteracoes')
 def pendencias_e_alteracoes_page():
     return render_template('pendencias_e_alteracoes.html')
+
+@main_views_bp.route('/requisicao-ajuste-estoque')
+@page_access_required('requisicao_ajuste_estoque')
+def requisicao_ajuste_estoque_page():
+    return render_template('requisicao_ajuste_estoque.html')
+
+@main_views_bp.route('/aprovar-ajustes-estoque')
+@page_access_required('aprovar_ajuste_estoque')
+def aprovar_ajustes_estoque_page():
+    return render_template('aprovar_ajustes_estoque.html')
+
+@main_views_bp.route('/galeria-pecas')
+@page_access_required('galeria_pecas')
+def galeria_pecas_page():
+    return render_template('galeria_pecas.html')

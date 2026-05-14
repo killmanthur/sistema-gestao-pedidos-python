@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Aprovar Ajustes{% endblock %}
+{% block content %}
+<div class="page-ajustes">
+    <div class="page-ajustes__header">
+        <div class="page-ajustes__header-row">
+            <h2>Campanhas de Ajuste</h2>
+            <button id="btn-nova-campanha" class="btn btn--primary">+ Nova Campanha</button>
+        </div>
+        <div class="tabs" id="campanhas-tabs">
+            <button class="tab-btn active" data-status="Ativa">Ativas</button>
+            <button class="tab-btn" data-status="Finalizada">Finalizadas</button>
+        </div>
+    </div>
+
+    <div class="page-ajustes__body">
+        <div id="campanhas-lista" class="campanhas-lista">
+            <p class="empty-state">Carregando...</p>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Nova/Editar Campanha -->
+<div id="campanha-modal-overlay" class="modal-overlay" style="display:none;">
+    <div class="modal-content" style="max-width: 560px;">
+        <div class="modal-header">
+            <h2 id="campanha-modal-title">Nova Campanha</h2>
+            <button class="close-modal close-modal-icon" title="Fechar">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="field">
+                <label for="camp-nome">Nome *</label>
+                <input type="text" id="camp-nome" placeholder="Ex: Case">
+            </div>
+            <div class="field">
+                <label for="camp-obs">Observação (opcional)</label>
+                <input type="text" id="camp-obs">
+            </div>
+            <div class="field">
+                <label>Ajustadores *</label>
+                <input type="text" id="camp-busca-ajustador" placeholder="Buscar usuário..." class="ajustador-search">
+                <div id="camp-ajustadores-lista" class="ajustadores-lista"></div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn--secondary close-modal">Cancelar</button>
+            <button id="btn-salvar-campanha" class="btn btn--primary">Salvar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Detalhes ajuste -->
+<div id="ajuste-modal-overlay" class="modal-overlay" style="display:none;">
+    <div class="modal-content" style="max-width: 560px;">
+        <div class="modal-header">
+            <h2>Detalhes da Requisição</h2>
+            <button class="close-modal close-modal-icon" title="Fechar">×</button>
+        </div>
+        <div class="modal-body" id="ajuste-modal-body"></div>
+        <div class="modal-footer" id="ajuste-modal-footer"></div>
+    </div>
+</div>
+
+<!-- Lightbox -->
+<div id="foto-lightbox" class="foto-lightbox" style="display:none;">
+    <img id="foto-lightbox-img" alt="Foto da peça">
+</div>
+{% endblock %}

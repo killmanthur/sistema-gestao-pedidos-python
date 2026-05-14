@@ -117,6 +117,67 @@ class Notificacao(db.Model):
 
     usuario = db.relationship('Usuario', backref=db.backref('notificacoes', lazy=True))
 
+campanha_ajustadores = db.Table(
+    'campanha_ajustadores',
+    db.Column('campanha_id', db.Integer, db.ForeignKey('campanha_ajuste.id', ondelete='CASCADE'), primary_key=True),
+    db.Column('usuario_id', db.String(100), db.ForeignKey('usuario.id', ondelete='CASCADE'), primary_key=True),
+)
+
+
+class CampanhaAjuste(db.Model):
+    __tablename__ = 'campanha_ajuste'
+    id = db.Column(db.Integer, primary_key=True)
+    nome = db.Column(db.String(120), nullable=False, index=True)
+    # 'Ativa' | 'Finalizada'
+    status = db.Column(db.String(20), default='Ativa', nullable=False, index=True)
+    observacao = db.Column(db.String(500))
+
+    criado_por = db.Column(db.String(100), nullable=False)
+    criado_por_id = db.Column(db.String(100), nullable=False)
+    data_inicio = db.Column(db.String(50), nullable=False, index=True)
+    data_fim = db.Column(db.String(50))
+    finalizado_por = db.Column(db.String(100))
+    finalizado_por_id = db.Column(db.String(100))
+
+    ajustadores = db.relationship('Usuario', secondary=campanha_ajustadores, lazy='joined')
+    ajustes = db.relationship('AjusteEstoque', backref='campanha', lazy='dynamic')
+
+
+class AjusteEstoque(db.Model):
+    __tablename__ = 'ajuste_estoque'
+    id = db.Column(db.Integer, primary_key=True)
+
+    campanha_id = db.Column(db.Integer, db.ForeignKey('campanha_ajuste.id'), nullable=True, index=True)
+
+    # Dados da peça
+    codigo = db.Column(db.String(100), nullable=False, index=True)
+    marca = db.Column(db.String(100), nullable=False)
+    descricao = db.Column(db.String(255))
+    quantidade_sistema = db.Column(db.Integer)
+    quantidade_real = db.Column(db.Integer, nullable=False)
+
+    # Status: 'Pendente' | 'Ajustado' | 'Cancelado'
+    status = db.Column(db.String(20), default='Pendente', nullable=False, index=True)
+
+    # Auditoria - RASTREABILIDADE OBRIGATORIA
+    # Nunca apagar/alterar estes campos: se um ajuste der errado, e aqui que
+    # identificamos quem contou.
+    criado_por = db.Column(db.String(100), nullable=False)
+    criado_por_id = db.Column(db.String(100), nullable=False, index=True)
+    criado_por_role = db.Column(db.String(50))
+    data_criacao = db.Column(db.String(50), nullable=False, index=True)
+    aprovado_por = db.Column(db.String(100))
+    aprovado_por_id = db.Column(db.String(100))
+    data_aprovacao = db.Column(db.String(50))
+    observacao_gerente = db.Column(db.String(500))
+
+    # Foto (caminho relativo a static/)
+    foto_path = db.Column(db.String(255))
+    foto_cadastrada_no_erp = db.Column(db.Boolean, default=False, index=True)
+    foto_cadastrada_em = db.Column(db.String(50))
+    foto_cadastrada_por = db.Column(db.String(100))
+
+
 class RegistroCompra(db.Model):
     id = db.Column(db.Integer, primary_key=True, index=True)
     fornecedor = db.Column(db.String(200), nullable=False, index=True)

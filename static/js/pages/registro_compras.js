@@ -50,7 +50,7 @@ function renderizarLinhas(lista) {
         tr.innerHTML = `
             <td>${formatarData(reg.data_criacao)}</td>
             <td><strong>${reg.fornecedor}</strong></td>
-            <td>${reg.comprador_nome ? reg.comprador_nome : '<span style="color:var(--clr-danger); font-weight:bold;">[ EM ABERTO ]</span>'}</td>
+            <td>${reg.comprador_nome ? reg.comprador_nome : '<span style="color:var(--clr-danger); font-weight:bold;">Em Aberto</span>'}</td>
             <td><span class="badge-status ${STATUS_COLORS[reg.status]}">${reg.status}</span></td>
             <td style="font-size: 0.85rem;">${reg.observacao || '-'}</td>
             <td class="actions-cell">
