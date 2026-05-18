@@ -11,6 +11,7 @@ const ALL_PAGES = {
     criar_pedido: "Pedidos Rua (Criar)",
     atualizacao_orcamento: "Atualizar Orçamento (Criar)",
     registro_compras: "Registro de Compras",
+    auditoria_compras: "Auditoria de Compras (Gestor)",
     sugestoes: "Sugestão de Compras",
     dashboard: "Dashboard de Compras",
     dashboard_logistica: "Dashboard de Logística",

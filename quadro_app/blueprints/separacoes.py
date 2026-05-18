@@ -177,6 +177,10 @@ def atualizar_status_separacao(separacao_id):
     separacao.status = novo_status
     if novo_status == 'Finalizado':
         separacao.data_finalizacao = datetime.now(tz_cuiaba).isoformat()
+    else:
+        # Ao reverter uma separação finalizada (ex.: retorno à conferência),
+        # limpa a data de finalização para não exibir um "Fim" obsoleto.
+        separacao.data_finalizacao = None
     db.session.commit()
     registrar_log(separacao_id, editor_nome, 'STATUS_ALTERADO', detalhes={'de': status_antigo, 'para': novo_status}, log_type='separacoes')
     socketio.emit('status_separacao_atualizado', {'separacao_id': separacao_id, 'novo_status': novo_status})

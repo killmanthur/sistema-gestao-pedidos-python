@@ -261,11 +261,12 @@ def reabrir_campanha(campanha_id):
 def excluir_campanha(campanha_id):
     """
     Exclui uma campanha permanentemente.
-    Regras de proteção:
+    Regras:
       - Requer permissão de gestor/admin.
-      - A campanha 'Legado' nunca pode ser excluída.
-      - Não é permitido excluir se houver requisições (ajustes) vinculadas,
-        independentemente do status delas (preservação de histórico).
+      - Somente campanhas com status 'Finalizada' podem ser excluídas
+        (inclusive a campanha de sistema 'Legado').
+      - Todos os ajustes vinculados à campanha são apagados em cascata
+        (perda permanente de histórico — confirmada na UI).
     """
     usuario = _get_usuario_sessao()
     if not _usuario_pode_aprovar(usuario):
@@ -273,20 +274,13 @@ def excluir_campanha(campanha_id):
 
     campanha = CampanhaAjuste.query.get_or_404(campanha_id)
 
-    if campanha.nome == 'Legado':
-        return jsonify({'error': 'A campanha "Legado" e de sistema e nao pode ser excluida.'}), 409
+    if campanha.status != 'Finalizada':
+        return jsonify({
+            'error': 'Apenas campanhas finalizadas podem ser excluidas. Finalize a campanha antes de excluir.'
+        }), 409
 
     total_ajustes = AjusteEstoque.query.filter_by(campanha_id=campanha_id).count()
-    if total_ajustes > 0:
-        return jsonify({
-            'error': (
-                f'Esta campanha possui {total_ajustes} '
-                f'requisicao{"" if total_ajustes == 1 else "oes"} vinculada{"" if total_ajustes == 1 else "s"} '
-                f'e nao pode ser excluida. '
-                f'Cancele ou processe todas as requisicoes antes de excluir a campanha.'
-            ),
-            'total_ajustes': total_ajustes,
-        }), 409
+    AjusteEstoque.query.filter_by(campanha_id=campanha_id).delete(synchronize_session=False)
 
     nome_campanha = campanha.nome
     db.session.delete(campanha)
@@ -296,11 +290,15 @@ def excluir_campanha(campanha_id):
         campanha_id,
         usuario.nome or usuario.email,
         'CAMPANHA_EXCLUIDA',
-        detalhes={'nome': nome_campanha},
+        detalhes={'nome': nome_campanha, 'ajustes_excluidos': total_ajustes},
         log_type='estoque',
     )
     socketio.emit('campanha_ajuste_excluida', {'id': campanha_id, 'nome': nome_campanha})
-    return jsonify({'status': 'success', 'message': f'Campanha "{nome_campanha}" excluida com sucesso.'})
+    return jsonify({
+        'status': 'success',
+        'message': f'Campanha "{nome_campanha}" excluida com sucesso ({total_ajustes} ajuste(s) removido(s)).',
+        'ajustes_excluidos': total_ajustes,
+    })
 
 
 # ============================================================

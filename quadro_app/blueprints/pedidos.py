@@ -106,6 +106,8 @@ def editar_pedido(pedido_id):
         'comprador': pedido.comprador,
         'itens': pedido.itens[:] if pedido.itens else [],
         'codigo': pedido.codigo,
+        'descricao': pedido.descricao,
+        'vendedor': pedido.vendedor,
         'observacao_geral': pedido.observacao_geral
     }
     
@@ -124,9 +126,18 @@ def editar_pedido(pedido_id):
     detalhes_log = {}
     if comprador_novo and comprador_novo != estado_antigo['comprador']:
         detalhes_log['comprador'] = {'de': estado_antigo['comprador'] or 'N/A', 'para': comprador_novo}
-    
-    if dados.get('observacao_geral') != estado_antigo['observacao_geral']:
-        detalhes_log['observacao'] = {'de': estado_antigo['observacao_geral'] or 'N/A', 'para': dados.get('observacao_geral')}
+
+    if 'vendedor' in dados and dados.get('vendedor') != estado_antigo['vendedor']:
+        detalhes_log['vendedor'] = {'de': estado_antigo['vendedor'] or 'N/A', 'para': dados.get('vendedor') or 'N/A'}
+
+    if 'codigo' in dados and dados.get('codigo') != estado_antigo['codigo']:
+        detalhes_log['codigo'] = {'de': estado_antigo['codigo'] or 'N/A', 'para': dados.get('codigo') or 'N/A'}
+
+    if 'descricao' in dados and dados.get('descricao') != estado_antigo['descricao']:
+        detalhes_log['descricao'] = {'de': estado_antigo['descricao'] or 'N/A', 'para': dados.get('descricao') or 'N/A'}
+
+    if 'observacao_geral' in dados and dados.get('observacao_geral') != estado_antigo['observacao_geral']:
+        detalhes_log['observacao'] = {'de': estado_antigo['observacao_geral'] or 'N/A', 'para': dados.get('observacao_geral') or 'N/A'}
 
     if 'itens' in dados:
         mudancas_itens = comparar_listas_itens(estado_antigo['itens'], dados['itens'])

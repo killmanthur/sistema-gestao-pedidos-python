@@ -306,6 +306,9 @@ function criarCardElement(separacao) {
         if (separacao.status === 'Em Conferência' && perms.pode_finalizar_separacao) {
             headerActions.push(`<button class="btn-icon btn-icon--success" data-action="finalize" data-tooltip="Finalizar" title="Finalizar">✔</button>`);
         }
+        if (separacao.status === 'Finalizado' && perms.pode_finalizar_separacao) {
+            headerActions.push(`<button class="btn-icon btn-icon--return" data-action="return-conference" data-tooltip="Retornar à conferência" title="Retornar à conferência">↩</button>`);
+        }
     }
 
     if (perms.pode_deletar_separacao && !isVendedor) {
@@ -359,6 +362,7 @@ function criarCardElement(separacao) {
     card.querySelector('[data-action="edit"]')?.addEventListener('click', () => openEditModal(separacao));
     card.querySelector('[data-action="observation"]')?.addEventListener('click', () => openObservacaoModal(separacao));
     card.querySelector('[data-action="finalize"]')?.addEventListener('click', () => handleFinalize(separacao.id));
+    card.querySelector('[data-action="return-conference"]')?.addEventListener('click', () => handleReturnToConference(separacao.id));
     card.querySelector('[data-action="assign-conferente"]')?.addEventListener('change', (e) => handleAssignConferente(e, separacao.id));
 
     return card;
@@ -430,6 +434,13 @@ const handleFinalize = (id) => showConfirmModal('Finalizar esta separação?', a
         const res = await fetch(`/api/separacoes/${id}/status`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'Finalizado', editor_nome: AppState.currentUser.nome }) });
         if (res.ok) { showToast('Finalizada!'); fetchActiveSeparacoes(); carregarFinalizados(true); }
     } catch (e) { showToast('Erro ao finalizar', 'error'); }
+});
+
+const handleReturnToConference = (id) => showConfirmModal('Retornar esta separação para a conferência?', async () => {
+    try {
+        const res = await fetch(`/api/separacoes/${id}/status`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'Em Conferência', editor_nome: AppState.currentUser.nome }) });
+        if (res.ok) { showToast('Retornada para conferência'); fetchActiveSeparacoes(); carregarFinalizados(true); }
+    } catch (e) { showToast('Erro ao retornar', 'error'); }
 });
 
 const handleAssignConferente = (e, id) => {

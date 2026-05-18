@@ -146,6 +146,11 @@ def tv_expedicao_page():
 def registro_compras_page():
     return render_template('registro_compras.html')
 
+@main_views_bp.route('/auditoria-compras')
+@page_access_required('auditoria_compras')
+def auditoria_compras_page():
+    return render_template('auditoria_compras.html')
+
 @main_views_bp.route('/pendencias-e-alteracoes')
 @page_access_required('pendencias_e_alteracoes')
 def pendencias_e_alteracoes_page():

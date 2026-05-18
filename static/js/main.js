@@ -22,6 +22,7 @@ import { initPedidosACaminhoPage } from './pages/pedidos_a_caminho.js';
 import { setupNotifications } from './notifications.js';
 import { initTvExpedicaoPage } from './pages/tv_expedicao.js';
 import { initRegistroComprasPage } from './pages/registro_compras.js';
+import { initAuditoriaComprasPage } from './pages/auditoria-compras.js';
 import { initPendenciasEAlteracoesPage } from './pages/pendencias_e_alteracoes.js';
 import { initHistoricoSugestoesPage } from './pages/historico-sugestoes.js';
 import { initRequisicaoAjusteEstoquePage } from './pages/requisicao-ajuste-estoque.js';
@@ -166,6 +167,9 @@ export async function initializeAuthenticatedApp() {
     }
     else if (path.includes('/lixeira')) {
         initLixeiraPage();
+    }
+    else if (path.includes('/auditoria-compras')) {
+        initAuditoriaComprasPage();
     }
     else if (path.includes('/registro-compras')) {
         initRegistroComprasPage();

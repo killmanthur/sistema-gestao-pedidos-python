@@ -165,7 +165,8 @@ export function initRegistroComprasPage() {
             fornecedor: document.getElementById('edit-reg-fornecedor').value,
             comprador_nome: document.getElementById('edit-reg-comprador').value,
             status: document.getElementById('edit-reg-status').value,
-            observacao: document.getElementById('edit-reg-observacao').value
+            observacao: document.getElementById('edit-reg-observacao').value,
+            editor_nome: AppState.currentUser.nome
         };
         const res = await fetch(`/api/registro-compras/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados) });
         if (res.ok) { elementos.modalEditar.style.display = 'none'; carregarTabela(); }

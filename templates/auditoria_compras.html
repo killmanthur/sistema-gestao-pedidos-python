@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}Auditoria de Compras{% endblock %}
+
+{% block content %}
+<div class="auditoria-page" style="max-width: 1400px; margin: 0 auto; padding: 1.5rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
+        <div>
+            <h1>Auditoria de Compras</h1>
+        </div>
+        <button id="aud-btn-atualizar" class="btn btn--secondary">🔄 Atualizar</button>
+    </div>
+
+    <!-- Filtros -->
+    <section class="auditoria-filtros">
+        <div class="form-group">
+            <label>Comprador</label>
+            <select id="aud-filtro-comprador">
+                <option value="">Todos os Compradores</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Fornecedor</label>
+            <input type="text" id="aud-filtro-fornecedor" placeholder="Nome do fornecedor...">
+        </div>
+        <div class="form-group">
+            <label>De:</label>
+            <input type="date" id="aud-filtro-data-inicio">
+        </div>
+        <div class="form-group">
+            <label>Até:</label>
+            <input type="date" id="aud-filtro-data-fim">
+        </div>
+        <div class="form-group">
+            <label>Situação</label>
+            <select id="aud-filtro-status">
+                <option value="">Todas</option>
+                <option value="finalizados">Finalizados</option>
+                <option value="em_andamento">Em andamento</option>
+            </select>
+        </div>
+        <div class="auditoria-filtros__acoes">
+            <button id="aud-btn-aplicar" class="btn btn--primary">Aplicar</button>
+            <button id="aud-btn-limpar" class="btn btn--secondary">Limpar</button>
+        </div>
+    </section>
+
+    <!-- Cards resumo -->
+    <section id="aud-cards" class="auditoria-cards"></section>
+
+    <!-- Abas -->
+    <div class="auditoria-tabs">
+        <button class="aud-tab-btn aud-tab-btn--active" data-tab="pedidos">Por Pedido</button>
+        <button class="aud-tab-btn" data-tab="medias">Médias</button>
+    </div>
+
+    <!-- Aba: Por Pedido -->
+    <section id="aud-tab-pedidos" class="auditoria-tab-panel">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Criado em</th>
+                    <th>Fornecedor</th>
+                    <th>Comprador</th>
+                    <th>Situação atual</th>
+                    <th>Finalizado em</th>
+                    <th>Tempo até finalizar</th>
+                    <th style="width: 120px;">Ações</th>
+                </tr>
+            </thead>
+            <tbody id="aud-tabela-body"></tbody>
+        </table>
+    </section>
+
+    <!-- Aba: Médias -->
+    <section id="aud-tab-medias" class="auditoria-tab-panel" style="display:none;">
+        <h3 class="auditoria-subtitulo">Tempo médio por comprador</h3>
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Comprador</th>
+                    <th>Pedidos finalizados</th>
+                    <th>Tempo médio</th>
+                </tr>
+            </thead>
+            <tbody id="aud-medias-comprador-body"></tbody>
+        </table>
+
+        <h3 class="auditoria-subtitulo">Tempo médio por fornecedor</h3>
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Fornecedor</th>
+                    <th>Pedidos finalizados</th>
+                    <th>Tempo médio</th>
+                </tr>
+            </thead>
+            <tbody id="aud-medias-fornecedor-body"></tbody>
+        </table>
+    </section>
+</div>
+
+<!-- MODAL DE DETALHE DO PEDIDO -->
+<div id="aud-detalhe-modal-overlay" class="modal-overlay" style="display:none;">
+    <div class="modal-content" style="max-width: 640px;">
+        <div class="modal-header">
+            <h2>Auditoria do Pedido</h2>
+            <button class="close-modal close-modal-icon" id="aud-detalhe-fechar">×</button>
+        </div>
+        <div class="modal-body" id="aud-detalhe-body">
+            <p>Carregando...</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

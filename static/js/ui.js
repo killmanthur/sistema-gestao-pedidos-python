@@ -167,6 +167,25 @@ function setupHamburger() {
 }
 
 // ... (Funções de Log mantidas iguais, resumidas aqui para economizar espaço) ...
+// Rótulos amigáveis para as chaves de detalhes do log.
+const LOG_LABELS = {
+    adicionado: 'Itens adicionados',
+    removido: 'Itens removidos',
+    modificado: 'Itens alterados',
+    comprador: 'Comprador',
+    vendedor: 'Vendedor',
+    observacao: 'Observação',
+    codigo: 'Código',
+    descricao: 'Descrição',
+    status: 'Status',
+    de: 'De',
+    para: 'Para'
+};
+
+function rotuloLog(key) {
+    return LOG_LABELS[key] || (key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' '));
+}
+
 function formatarLogAcao(acao, detalhes) {
     let acaoFormatada = `<strong class="log-action">${acao.replace(/_/g, ' ')}</strong>`;
     if (!detalhes || Object.keys(detalhes).length === 0) return acaoFormatada;
@@ -175,15 +194,28 @@ function formatarLogAcao(acao, detalhes) {
     let hasDetails = false;
 
     for (const [key, value] of Object.entries(detalhes)) {
-        if (value && typeof value === 'object' && 'de' in value && 'para' in value) {
+        if (key === 'info') continue; // tratado separadamente abaixo
+
+        // Mudança no formato { de, para }
+        if (value && typeof value === 'object' && !Array.isArray(value) && 'de' in value && 'para' in value) {
             hasDetails = true;
-            const keyFormatted = key.replace(/_/g, ' ');
-            const de_val = Array.isArray(value.de) ? (value.de.length > 0 ? value.de.join(', ') : 'Nenhum') : (value.de || 'N/A');
-            const para_val = Array.isArray(value.para) ? (value.para.length > 0 ? value.para.join(', ') : 'Nenhum') : (value.para || 'N/A');
-            detalhesHtml += `<li><strong>${keyFormatted}:</strong> <span class="log-detail-change">"${de_val}"</span> → <span class="log-detail-change">"${para_val}"</span></li>`;
+            const de_val = Array.isArray(value.de) ? (value.de.length > 0 ? value.de.join(', ') : 'Nenhum') : (value.de ?? 'N/A');
+            const para_val = Array.isArray(value.para) ? (value.para.length > 0 ? value.para.join(', ') : 'Nenhum') : (value.para ?? 'N/A');
+            detalhesHtml += `<li><strong>${rotuloLog(key)}:</strong> <span class="log-detail-change">"${de_val}"</span> → <span class="log-detail-change">"${para_val}"</span></li>`;
+        }
+        // Listas (itens adicionados/removidos/alterados)
+        else if (Array.isArray(value)) {
+            if (value.length === 0) continue;
+            hasDetails = true;
+            detalhesHtml += `<li><strong>${rotuloLog(key)}:</strong> <span class="log-detail-change">${value.join(', ')}</span></li>`;
+        }
+        // Valor simples (texto/número)
+        else if (value !== null && value !== undefined && typeof value !== 'object') {
+            hasDetails = true;
+            detalhesHtml += `<li><strong>${rotuloLog(key)}:</strong> <span class="log-detail-change">${value}</span></li>`;
         }
     }
-    // ... (Resto da lógica de formatação de log) ...
+
     if (detalhes.info) { hasDetails = true; detalhesHtml += `<li><span class="log-detail-info">${detalhes.info}</span></li>`; }
 
     detalhesHtml += '</ul>';

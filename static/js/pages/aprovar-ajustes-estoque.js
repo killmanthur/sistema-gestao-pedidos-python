@@ -128,17 +128,17 @@ function renderCampanhaCard(c) {
                             Aprovar todos pendentes
                         </button>
                         <button class="btn btn--danger btn--sm" data-action="finalizar">Finalizar campanha</button>
-                    ` : (c.nome !== 'Legado' ? `
-                        <button class="btn btn--secondary btn--sm" data-action="reabrir">Reabrir</button>
-                    ` : '')}
-                    ${c.nome !== 'Legado' ? `
+                    ` : `
+                        ${c.nome !== 'Legado' ? `
+                            <button class="btn btn--secondary btn--sm" data-action="reabrir">Reabrir</button>
+                        ` : ''}
                         <button class="btn btn--excluir btn--sm" data-action="excluir"
-                            ${s.total > 0
-                                ? `disabled title="Campanha com ${s.total} requisição(ões) — esvazie-a antes de excluir"`
-                                : 'title="Excluir campanha permanentemente"'}>
+                            title="${s.total > 0
+                                ? `Excluir campanha e ${s.total} ajuste(s) vinculado(s) — permanente`
+                                : 'Excluir campanha permanentemente'}">
                             🗑 Excluir
                         </button>
-                    ` : ''}
+                    `}
                 </div>
             </div>
             ${expandida ? `
@@ -368,18 +368,12 @@ async function reabrirCampanha(campanhaId) {
 async function excluirCampanha(campanhaId) {
     const campanha = state.campanhas.find(c => c.id === campanhaId);
     const totalAjustes = campanha?.stats?.total ?? 0;
-
-    // Guarda client-side: botão já está desabilitado, mas por segurança
-    if (totalAjustes > 0) {
-        showToast(
-            `Esta campanha possui ${totalAjustes} requisição(ões) vinculada(s) e não pode ser excluída.`,
-            'error'
-        );
-        return;
-    }
+    const cascadeWarning = totalAjustes > 0
+        ? `\n\nATENÇÃO: isto também apagará permanentemente ${totalAjustes} ajuste(s) vinculado(s) (histórico, fotos e auditoria).`
+        : '';
 
     showConfirmModal(
-        `Excluir permanentemente a campanha "${campanha?.nome}"?\n\nEsta ação não pode ser desfeita.`,
+        `Excluir permanentemente a campanha "${campanha?.nome}"?${cascadeWarning}\n\nEsta ação não pode ser desfeita.`,
         async () => {
             try {
                 const res = await fetch(`/api/estoque/campanhas/${campanhaId}`, {

@@ -24,7 +24,11 @@
                 </div>
             </div>
 
-            <div id="scanner-area" style="display:none;">
+            <div id="scanner-area" role="dialog" aria-modal="true" aria-label="Escanear código de barras" style="display:none;">
+                <div class="scanner-overlay__header">
+                    <span class="scanner-overlay__title">Escanear código de barras</span>
+                    <button type="button" id="btn-scan-close" class="scanner-overlay__close" aria-label="Fechar">✕</button>
+                </div>
                 <div id="qr-reader"></div>
                 <div id="scan-status" class="scan-status">Aproxime o código de barras da câmera...</div>
                 <div class="scanner-actions">

@@ -33,11 +33,15 @@ function cacheEls() {
         btnEnviar: document.getElementById('btn-enviar-ajuste'),
         btnScan: document.getElementById('btn-scan'),
         btnScanCancel: document.getElementById('btn-scan-cancel'),
+        btnScanClose: document.getElementById('btn-scan-close'),
         btnScanTorch: document.getElementById('btn-scan-torch'),
         scannerArea: document.getElementById('scanner-area'),
         listaRecentes: document.getElementById('lista-recentes'),
     };
 }
+
+let scannerEscHandler = null;
+let scannerPopstateHandler = null;
 
 // --- Compressão client-side ---
 async function comprimirImagem(file, maxSize = 1280, quality = 0.85) {
@@ -170,7 +174,21 @@ async function iniciarScanner(els) {
     }
     try {
         await carregarHtml5Qrcode();
-        els.scannerArea.style.display = 'block';
+        els.scannerArea.style.display = 'flex';
+        document.body.classList.add('scanner-open');
+
+        scannerEscHandler = (e) => {
+            if (e.key === 'Escape') pararScanner(els);
+        };
+        document.addEventListener('keydown', scannerEscHandler);
+
+        // Botão "Voltar" do celular fecha o scanner em vez de sair da página
+        try {
+            history.pushState({ scannerOpen: true }, '');
+            scannerPopstateHandler = () => pararScanner(els);
+            window.addEventListener('popstate', scannerPopstateHandler);
+        } catch (_) { /* history pode falhar em alguns contextos */ }
+
         const Html5Qrcode = window.Html5Qrcode;
         if (state.scannerInstance) {
             try { await state.scannerInstance.stop(); } catch (e) {}
@@ -226,12 +244,27 @@ async function iniciarScanner(els) {
     } catch (err) {
         console.error('Scanner error:', err);
         showToast('Não foi possível iniciar a câmera: ' + formatScannerError(err), 'error');
-        els.scannerArea.style.display = 'none';
+        await pararScanner(els);
     }
 }
 
 async function pararScanner(els) {
     els.scannerArea.style.display = 'none';
+    document.body.classList.remove('scanner-open');
+
+    if (scannerEscHandler) {
+        document.removeEventListener('keydown', scannerEscHandler);
+        scannerEscHandler = null;
+    }
+    if (scannerPopstateHandler) {
+        window.removeEventListener('popstate', scannerPopstateHandler);
+        scannerPopstateHandler = null;
+        // Se o overlay estava no topo do history (pushState próprio), recua.
+        if (history.state && history.state.scannerOpen) {
+            try { history.back(); } catch (_) {}
+        }
+    }
+
     if (state.scannerInstance) {
         try { await state.scannerInstance.stop(); } catch (e) {}
         try { state.scannerInstance.clear(); } catch (e) {}
@@ -426,6 +459,9 @@ export function initRequisicaoAjusteEstoquePage() {
 
     els.btnScan.addEventListener('click', () => iniciarScanner(els));
     els.btnScanCancel.addEventListener('click', () => pararScanner(els));
+    if (els.btnScanClose) {
+        els.btnScanClose.addEventListener('click', () => pararScanner(els));
+    }
     if (els.btnScanTorch) {
         els.btnScanTorch.addEventListener('click', () => alternarTorch(els));
     }

@@ -186,3 +186,29 @@ class RegistroCompra(db.Model):
     status = db.Column(db.String(50), default='Aguardando', index=True) # Pedido, Em Cotação, Aguardando
     data_criacao = db.Column(db.String(100), nullable=False, index=True)
     editor_nome = db.Column(db.String(100), index=True)
+
+
+class MovimentacaoCompra(db.Model):
+    """
+    Registro de auditoria das transições de status de um RegistroCompra.
+
+    Cada mudança de status (incluindo a criação) gera um evento aqui.
+    Um registro só é considerado "auditável" se possui um evento de criação
+    (status_anterior = NULL). Registros criados antes deste módulo não têm
+    eventos e portanto são ignorados nas estatísticas de auditoria.
+    """
+    __tablename__ = 'movimentacao_compra'
+    id = db.Column(db.Integer, primary_key=True)
+    registro_id = db.Column(
+        db.Integer,
+        db.ForeignKey('registro_compra.id', ondelete='CASCADE'),
+        nullable=False,
+        index=True,
+    )
+    # status_anterior = NULL marca o evento de criação do registro.
+    status_anterior = db.Column(db.String(50))
+    status_novo = db.Column(db.String(50), nullable=False)
+    timestamp = db.Column(db.String(50), nullable=False, index=True)
+    autor = db.Column(db.String(100))
+
+    registro = db.relationship('RegistroCompra', backref=db.backref('movimentacoes', lazy='dynamic'))
