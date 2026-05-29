@@ -1,6 +1,6 @@
 # quadro_app/blueprints/registro_compras.py
 from flask import Blueprint, request, jsonify, session
-from datetime import datetime
+from datetime import datetime, timedelta, time
 from ..extensions import db, tz_cuiaba
 from ..models import RegistroCompra, MovimentacaoCompra, Usuario
 from quadro_app import socketio
@@ -56,6 +56,44 @@ def _parse_ts(ts):
         return None
 
 
+# Janelas de expediente da empresa (weekday(): 0=segunda ... 6=domingo)
+_JANELA_MANHA = (time(7, 0), time(11, 30))
+_JANELA_TARDE = (time(13, 0), time(17, 30))
+
+
+def _janelas_do_dia(weekday):
+    """Janelas de expediente para o dia da semana.
+    Seg-Sex: manha e tarde. Sabado: so manha. Domingo: fechado."""
+    if weekday <= 4:          # segunda a sexta
+        return [_JANELA_MANHA, _JANELA_TARDE]
+    if weekday == 5:          # sabado
+        return [_JANELA_MANHA]
+    return []                 # domingo
+
+
+def _segundos_uteis(inicio, fim):
+    """Conta apenas os segundos dentro do expediente entre inicio e fim,
+    descartando noites, horario de almoco e dias sem expediente."""
+    if inicio is None or fim is None:
+        return None
+    if fim <= inicio:
+        return 0
+
+    total = 0.0
+    dia = inicio.date()
+    ultimo_dia = fim.date()
+    while dia <= ultimo_dia:
+        for ini_t, fim_t in _janelas_do_dia(dia.weekday()):
+            jan_ini = datetime.combine(dia, ini_t, tzinfo=inicio.tzinfo)
+            jan_fim = datetime.combine(dia, fim_t, tzinfo=inicio.tzinfo)
+            ini_ef = max(inicio, jan_ini)
+            fim_ef = min(fim, jan_fim)
+            if fim_ef > ini_ef:
+                total += (fim_ef - ini_ef).total_seconds()
+        dia += timedelta(days=1)
+    return total
+
+
 def _format_duracao(segundos):
     """Formata uma duracao em segundos para texto curto: '2d 3h 15m'."""
     if segundos is None:
@@ -92,7 +130,7 @@ def _auditoria_de_registro(eventos):
 
     duracao = None
     if inicio and finalizado_em:
-        duracao = (finalizado_em - inicio).total_seconds()
+        duracao = _segundos_uteis(inicio, finalizado_em)
 
     return {
         'criado_em': criacao.timestamp,
@@ -347,10 +385,10 @@ def auditoria_detalhe(reg_id):
         if idx > 0:
             t_prev = _parse_ts(eventos[idx - 1].timestamp)
             if t_prev and t_atual:
-                desde_ant = (t_atual - t_prev).total_seconds()
+                desde_ant = _segundos_uteis(t_prev, t_atual)
         desde_criacao = None
         if inicio and t_atual:
-            desde_criacao = (t_atual - inicio).total_seconds()
+            desde_criacao = _segundos_uteis(inicio, t_atual)
 
         timeline.append({
             'status_anterior': ev.status_anterior,
@@ -369,7 +407,7 @@ def auditoria_detalhe(reg_id):
         if fim_intervalo is None and ev.status_novo != STATUS_FINALIZADO:
             fim_intervalo = agora  # ainda esta neste status
         if fim_intervalo is not None and t_atual is not None:
-            seg = (fim_intervalo - t_atual).total_seconds()
+            seg = _segundos_uteis(t_atual, fim_intervalo)
             tempo_por_status[ev.status_novo] = tempo_por_status.get(ev.status_novo, 0) + seg
 
     return jsonify({

@@ -146,7 +146,8 @@ function criarItemSugestao(sugestao) {
 
     // Lógica de botões
     let actionsHTML = '';
-    if (!isFinalizado && (canManage || isOwner)) {
+    const ownerPodeEditar = isOwner && sugestao.status === 'pendente';
+    if (!isFinalizado && (canManage || ownerPodeEditar)) {
         actionsHTML += `<button class="btn btn-sm btn-ghost btn--edit">Editar</button>`;
     }
 
