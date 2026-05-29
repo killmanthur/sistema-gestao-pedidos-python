@@ -21,6 +21,7 @@ log.txt
 # === Configurações de IDE ===
 .vscode/
 .idea/
+.claude/
 
 # === Arquivos Python ===
 *.py[cod]
