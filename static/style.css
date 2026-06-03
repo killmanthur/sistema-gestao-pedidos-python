@@ -20,22 +20,22 @@
     --text-on-primary: #ffffff;
     --text-on-dark: #e9ecef;
 
-    --bg-main: #f8f8f8;
-    --bg-surface: #f3f3f3;
-    --bg-muted: #f8f9fa;
+    --bg-main: #eef1f5;
+    --bg-surface: #ffffff;
+    --bg-muted: #f4f6f9;
 
     --bg-success-soft: #d4edda;
     --bg-warning-soft: #fff3cd;
     --bg-danger-soft: #f8d7da;
     --bg-info-soft: #d1ecf1;
 
-    --border-main: #dee2e6;
-    --border-strong: #ced4da;
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --border-main: #e3e8ef;
+    --border-strong: #cbd3df;
+    --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
+    --shadow-md: 0 4px 10px -2px rgba(16, 24, 40, 0.10), 0 2px 6px -2px rgba(16, 24, 40, 0.06);
+    --shadow-lg: 0 14px 28px -6px rgba(16, 24, 40, 0.16), 0 6px 12px -4px rgba(16, 24, 40, 0.08);
 
-    --border-radius: 8px;
+    --border-radius: 10px;
     --transition-main: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -195,6 +195,31 @@ main {
     outline-offset: 2px;
 }
 
+/* Resposta tatil ao clique: leve afundamento */
+.btn:active:not(:disabled):not(.loading) {
+    transform: translateY(1px);
+}
+
+/* Estado de carregamento: spinner inline + cursor de progresso.
+   O texto do botao e trocado por "Salvando..." via toggleButtonLoading (ui.js). */
+.btn.loading {
+    cursor: progress;
+    opacity: 0.85;
+    pointer-events: none;
+}
+.btn.loading::after {
+    content: '';
+    display: inline-block;
+    width: 0.85em;
+    height: 0.85em;
+    margin-left: 0.5em;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: -0.1em;
+}
+
 .btn[disabled] {
     opacity: 0.5;
     cursor: not-allowed;
@@ -241,7 +266,7 @@ main {
 }
 
 .btn--confirmar {
-    background-color: var(--clr-primary-);
+    background-color: var(--clr-primary-main);
     color: var(--text-on-primary);
     border-color: var(--clr-primary-main);
 }
@@ -304,14 +329,22 @@ body.dark-mode .btn-icon img {
 }
 
 header {
-    position: sticky;
+    position: fixed;
     top: 0;
+    left: 0;
+    right: 0;
     z-index: 1000;
     background-color: var(--bg-surface);
     color: var(--text-primary);
     padding: 0 2rem;
     box-shadow: var(--shadow-md);
     border-bottom: 1px solid var(--border-main);
+}
+
+/* Compensa a altura do header fixo (64px) para o conteudo nao
+   ficar escondido embaixo do nav. */
+body {
+    padding-top: 64px;
 }
 
 .header__content {
@@ -1062,13 +1095,13 @@ body.dark-mode .btn[disabled] {
     transition: background 0.2s, color 0.2s, border-color 0.2s;
 }
 .filter-pill:hover {
-    border-color: var(--clr-primary);
-    color: var(--clr-primary);
+    border-color: var(--clr-primary-main);
+    color: var(--clr-primary-main);
 }
 .filter-pill--active {
-    background: var(--clr-primary);
+    background: var(--clr-primary-main);
     color: #fff;
-    border-color: var(--clr-primary);
+    border-color: var(--clr-primary-main);
 }
 
 /* --- 9. Tables --- */
@@ -1390,8 +1423,8 @@ body.dark-mode .btn[disabled] {
 }
 
 .tag-input-container:focus-within {
-    border-color: var(--clr-primary);
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+    border-color: var(--clr-primary-main);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--clr-primary-light) 25%, transparent);
 }
 
 .tag-input-field {
@@ -1412,7 +1445,7 @@ body.dark-mode .btn[disabled] {
     align-items: center;
     gap: 0.2rem;
     padding: 0.1rem 0.4rem;
-    background: var(--clr-primary);
+    background: var(--clr-primary-main);
     color: white;
     border-radius: 3px;
     font-size: 0.72rem;
@@ -1471,7 +1504,7 @@ body.dark-mode .btn[disabled] {
 }
 
 .tag-suggestions li.active {
-    background: var(--clr-primary);
+    background: var(--clr-primary-main);
     color: white;
 }
 
@@ -1721,6 +1754,8 @@ body.tv-mode .filtro-container-actions {
 body.tv-mode {
     overflow: hidden;
     height: 100vh;
+    /* TV mode esconde o header, entao nao precisa do offset */
+    padding-top: 0;
 }
 
 main {
@@ -2014,6 +2049,20 @@ tr.status-finalizado {
 
 tr.status-finalizado:hover {
     background-color: #c3e6cb;
+}
+
+/* Garante texto legível nas linhas coloridas de status (tabelas de
+   Recebimento e Registro). Necessário porque a classe de badge
+   .status-pendente (modulo de estoque) define color:#fff e vazava
+   para a linha .status-pendente, deixando texto branco no fundo claro.
+   var(--text-primary) adapta automaticamente entre tema claro/escuro. */
+tr.status-aguardando,
+tr.status-em-conferencia,
+tr.status-pendente,
+tr.status-finalizado,
+tr.status-em-cotacao,
+tr.status-pedido-efetuado {
+    color: var(--text-primary);
 }
 
 /* Checkbox grid para Seleção Múltipla (Reutilizando estilo de Separações) */
@@ -2948,8 +2997,8 @@ body.scanner-open {
     color: var(--text-secondary, #666);
 }
 .tab-btn.active {
-    color: var(--clr-primary, #3b82f6);
-    border-bottom-color: var(--clr-primary, #3b82f6);
+    color: var(--clr-primary-main);
+    border-bottom-color: var(--clr-primary-main);
     font-weight: 600;
 }
 
@@ -3697,4 +3746,292 @@ body.scanner-open {
     .auditoria-filtros .form-group { flex: 1 1 100%; }
     .auditoria-filtros__acoes { width: 100%; }
     .auditoria-filtros__acoes .btn { flex: 1; }
+}
+
+/* =============================================================
+   POLIMENTO DE UX — micro-interacoes, estados vazios e loading
+   ============================================================= */
+
+/* Entrada suave de cards ao serem inseridos no DOM */
+@keyframes card-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.card,
+.separacao-card,
+.pedido-card {
+    animation: card-in 0.18s ease-out;
+}
+
+/* Estado vazio padronizado (enriquece .empty-state ja existente) */
+.empty-state,
+.sugestao-item-vazio {
+    text-align: center;
+    color: var(--text-muted);
+    padding: 2rem 1rem;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+.empty-state--inline {
+    padding: 1.25rem 0.75rem;
+    font-size: 0.85rem;
+}
+
+/* Bloco de carregamento reutilizavel: spinner + texto opcional */
+.loading-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 2rem 1rem;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+/* Item de navegacao da pagina atual (acessibilidade + orientacao) */
+.nav-item a[aria-current="page"] {
+    font-weight: 600;
+    color: var(--clr-primary-main);
+}
+
+/* Respeita a preferencia do sistema por menos movimento */
+@media (prefers-reduced-motion: reduce) {
+    .card,
+    .separacao-card,
+    .pedido-card {
+        animation: none;
+    }
+    .btn:active:not(:disabled):not(.loading) {
+        transform: none;
+    }
+    * {
+        scroll-behavior: auto !important;
+    }
+}
+
+/* =============================================================
+   REPAGINADA VISUAL v4 — componentes globais
+   Bloco no fim do arquivo: tem precedencia e e facil de ajustar.
+   Mantem estrutura/layout; moderniza apenas a aparencia.
+   ============================================================= */
+
+/* ---- CARDS: mais presenca, sombra e hover marcante ---- */
+.card {
+    border-radius: 14px;
+    border: 1px solid var(--border-main);
+    box-shadow: var(--shadow-md);
+    transition: transform 0.18s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.18s cubic-bezier(0.4, 0, 0.2, 1),
+                border-color 0.18s ease;
+}
+.card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--border-strong);
+}
+/* Barra de status lateral mais grossa e com gradiente */
+.card::before {
+    width: 6px;
+    border-radius: 14px 0 0 14px;
+    opacity: 0.95;
+}
+.card__header {
+    border-bottom: 1px solid var(--border-main);
+    padding: 10px 14px !important;
+}
+.card__body { padding: 12px 14px !important; }
+.card__footer {
+    padding: 10px 14px !important;
+    border-top: 1px solid var(--border-main);
+}
+
+/* ---- BOTOES: gradiente sutil, sombra e resposta ao clique ---- */
+.btn {
+    border-radius: 9px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.12s ease, box-shadow 0.18s ease,
+                background-color 0.18s ease, border-color 0.18s ease, filter 0.18s ease;
+}
+.btn:hover:not(:disabled):not(.loading) {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+    filter: brightness(1.05);
+}
+.btn:active:not(:disabled):not(.loading) {
+    transform: translateY(1px);
+    box-shadow: var(--shadow-sm);
+    filter: brightness(0.97);
+}
+.btn--primary {
+    background-image: linear-gradient(135deg, var(--clr-primary-light), var(--clr-primary-main));
+    border-color: transparent;
+}
+.btn--primary:hover:not(:disabled) {
+    background-image: linear-gradient(135deg, var(--clr-primary-main), var(--clr-primary-dark));
+    border-color: transparent;
+}
+.btn--confirmar {
+    background-image: linear-gradient(135deg, var(--clr-primary-light), var(--clr-primary-main));
+    border-color: transparent;
+}
+.btn-finalize,
+.btn--success {
+    background-image: linear-gradient(135deg, #3fce74, var(--clr-success));
+    border-color: transparent;
+    color: var(--text-on-primary) !important;
+}
+.btn--danger {
+    background-image: linear-gradient(135deg, #ff6b6b, var(--clr-danger));
+    border-color: transparent;
+}
+/* Footer do modal: permite quebrar linha quando ha varios botoes,
+   evitando que o "Cancelar" seja empurrado para fora do modal. */
+.modal-footer {
+    flex-wrap: wrap;
+}
+
+/* Secundario (ex.: Cancelar): definicao clara para nao "sumir" no footer */
+.btn--secondary {
+    background-image: none;
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-strong);
+    color: var(--text-primary);
+}
+.btn--secondary:hover:not(:disabled) {
+    background-color: var(--bg-muted);
+    border-color: var(--border-strong);
+}
+
+/* Ghost/edit/icon nao levam gradiente nem sombra pesada */
+.btn-ghost,
+.btn--edit,
+.btn-icon {
+    box-shadow: none;
+    background-image: none;
+}
+.btn-ghost:hover:not(:disabled),
+.btn--edit:hover:not(:disabled) {
+    box-shadow: var(--shadow-sm);
+}
+
+/* ---- CABECALHOS DE COLUNA (kanban): hierarquia clara ---- */
+.quadro-coluna h2,
+.sugestoes-coluna h2 {
+    font-weight: 700;
+    font-size: 0.82rem;
+    letter-spacing: 0.06em;
+    color: var(--text-primary);
+    border-bottom: none;
+    position: relative;
+    padding-bottom: 0.6rem;
+}
+.quadro-coluna h2::after,
+.sugestoes-coluna h2::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 0;
+    width: 48px;
+    height: 3px;
+    border-radius: 3px;
+    background: var(--clr-primary-main);
+}
+
+/* ---- BADGES de status mais vibrantes ---- */
+.item-status-badge,
+.badge-status {
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    box-shadow: var(--shadow-sm);
+}
+
+/* ---- ANIMACOES PERCEPTIVEIS ---- */
+
+/* Entrada de cards em cascata (stagger pelos primeiros da coluna) */
+@keyframes card-rise {
+    from { opacity: 0; transform: translateY(14px) scale(0.985); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.quadro-container > .card,
+.quadro-container > .separacao-card,
+.quadro-container > .pedido-card {
+    animation: card-rise 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.quadro-container > *:nth-child(1) { animation-delay: 0.02s; }
+.quadro-container > *:nth-child(2) { animation-delay: 0.06s; }
+.quadro-container > *:nth-child(3) { animation-delay: 0.10s; }
+.quadro-container > *:nth-child(4) { animation-delay: 0.14s; }
+.quadro-container > *:nth-child(5) { animation-delay: 0.18s; }
+.quadro-container > *:nth-child(6) { animation-delay: 0.22s; }
+
+/* Modal: fundo desfocado + conteudo entra com leve subida */
+.modal-overlay {
+    backdrop-filter: blur(3px);
+}
+@keyframes modal-pop {
+    from { opacity: 0; transform: translateY(16px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.modal-overlay .modal-content {
+    animation: modal-pop 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .quadro-container > .card,
+    .quadro-container > .separacao-card,
+    .quadro-container > .pedido-card,
+    .modal-overlay .modal-content {
+        animation: none;
+    }
+    .btn:hover:not(:disabled):not(.loading),
+    .card:hover {
+        transform: none;
+    }
+}
+
+/* =============================================================
+   POLIMENTO DE TABELA — seguro e verificado por screenshot
+   ============================================================= */
+
+/* Cabecalho com enfase tipografica (sem mexer em borda/canto/sticky) */
+.admin-table thead th {
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 700;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+/* CORRECAO: a celula de acoes usava display:flex no <td>, o que a tira
+   do fluxo da tabela — perdia a altura da linha, o alinhamento vertical
+   e a cor de fundo do status. Volta a ser celula de tabela normal e
+   espaca os botoes com margin (no lugar do gap do flex). */
+.admin-table td.actions-cell {
+    display: table-cell;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+.admin-table td.actions-cell .btn-action + .btn-action {
+    margin-left: 0.5rem;
+}
+
+/* CORRECAO da "quina": no Registro de Compras a tabela preenche o
+   container (padding:0), deixando os cantos arredondados do cartao
+   espiarem atras do cabecalho quadrado. Remove o visual do cartao
+   nesse caso — a tabela ja ocupa todo o espaco. */
+.form-container:has(> #tabela-registros-compras) {
+    background: none;
+    border: none;
+    box-shadow: none;
+    border-radius: 0;
+}
+
+/* Botoes de acao: leve polimento (cantos, peso, hover) */
+.btn-action {
+    border-radius: 8px;
+    font-weight: 600;
 }

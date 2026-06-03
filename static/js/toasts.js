@@ -29,6 +29,8 @@ export function showToast(text, type = 'info') {
         gravity: "top", // `top` or `bottom`
         position: "right", // `left`, `center` or `right`
         stopOnFocus: true, // Prevents dismissing of toast on hover
+        // Erros sao anunciados de forma assertiva; sucesso/info de forma educada.
+        ariaLive: type === 'error' ? 'assertive' : 'polite',
         style: {
             background: backgroundColor,
         },
