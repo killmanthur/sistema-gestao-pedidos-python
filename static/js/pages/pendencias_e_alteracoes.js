@@ -3,7 +3,6 @@ import { showToast } from '../toasts.js';
 import { toggleButtonLoading, formatarData, openLogModal } from '../ui.js';
 
 let state = {};
-let intervalId = null;
 
 function resetState() {
     state = {
@@ -32,7 +31,7 @@ function criarCardPendencia(item, tipo) {
     const contabPodeResolver = ['Admin', 'Contabilidade'].includes(role);
 
     if ((tipo === 'fornecedor' && gestorPodeResolver) || (tipo === 'alteracao' && contabPodeResolver)) {
-        actions = `<button class="btn btn--primary" data-action="resolver">Resolver</button>`;
+        actions = `<button class="btn btn--edit" data-action="resolver">Resolver</button>`;
     } else {
         actions = `<button class="btn btn--secondary" data-action="resolver">Ver/Atualizar</button>`;
     }
@@ -224,6 +223,4 @@ export function initPendenciasEAlteracoesPage() {
     });
 
     fetchData();
-    if (intervalId) clearInterval(intervalId);
-    intervalId = setInterval(fetchData, 15000);
 }
