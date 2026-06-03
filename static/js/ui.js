@@ -4,12 +4,12 @@ import { AppState } from './state.js';
 import { showToast } from './toasts.js';
 import { pedidosAPI } from './apiClient.js';
 
-export function toggleButtonLoading(button, isLoading, originalText = 'Salvar') {
+export function toggleButtonLoading(button, isLoading, originalText = 'Salvar', loadingText = 'Salvando...') {
     if (!button) return;
     if (isLoading) {
         button.disabled = true;
         button.classList.add('loading');
-        button.textContent = 'Salvando...';
+        button.textContent = loadingText;
     } else {
         button.disabled = false;
         button.classList.remove('loading');
@@ -31,6 +31,9 @@ export function formatarData(dataString) {
     });
 }
 
+// Guarda o elemento que tinha foco antes de cada modal abrir, para devolver ao fechar.
+const _focoAnteriorModal = new WeakMap();
+
 export function setupAllModalCloseHandlers() {
     document.querySelectorAll('.modal-overlay').forEach(overlay => {
         overlay.addEventListener('click', (e) => {
@@ -38,6 +41,26 @@ export function setupAllModalCloseHandlers() {
                 overlay.style.display = 'none';
             }
         });
+
+        // Observa abertura/fechamento (via style.display) para gerenciar o foco.
+        const observer = new MutationObserver(() => {
+            const aberto = overlay.style.display !== 'none' && overlay.style.display !== '';
+            if (aberto && !overlay.dataset.focoAtivo) {
+                overlay.dataset.focoAtivo = '1';
+                _focoAnteriorModal.set(overlay, document.activeElement);
+                // Foca o primeiro campo/botao util do modal.
+                const alvo = overlay.querySelector(
+                    'input:not([type="hidden"]), select, textarea, .btn, button'
+                );
+                if (alvo) setTimeout(() => alvo.focus(), 0);
+            } else if (!aberto && overlay.dataset.focoAtivo) {
+                delete overlay.dataset.focoAtivo;
+                const anterior = _focoAnteriorModal.get(overlay);
+                if (anterior && typeof anterior.focus === 'function') anterior.focus();
+                _focoAnteriorModal.delete(overlay);
+            }
+        });
+        observer.observe(overlay, { attributes: true, attributeFilter: ['style'] });
     });
 
     document.querySelectorAll('.close-modal').forEach(button => {
@@ -48,6 +71,17 @@ export function setupAllModalCloseHandlers() {
             }
         });
     });
+
+    // Esc fecha o modal visivel mais ao topo.
+    if (!document.body.dataset.modalEscBound) {
+        document.body.dataset.modalEscBound = '1';
+        document.addEventListener('keydown', (e) => {
+            if (e.key !== 'Escape') return;
+            const abertos = Array.from(document.querySelectorAll('.modal-overlay'))
+                .filter(o => o.style.display !== 'none' && o.style.display !== '');
+            if (abertos.length) abertos[abertos.length - 1].style.display = 'none';
+        });
+    }
 }
 
 export function initializeTheme() {
@@ -111,7 +145,22 @@ export function setupUI() {
     navContainer.style.visibility = 'visible';
     navContainer.style.display = 'block';
 
+    marcarNavAtual(mainNav);
     setupHamburger();
+}
+
+/** Marca com aria-current="page" o link de navegacao da pagina atual. */
+function marcarNavAtual(mainNav) {
+    const atual = window.location.pathname.replace(/\/$/, '');
+    mainNav.querySelectorAll('a[href]').forEach(a => {
+        a.removeAttribute('aria-current');
+        const href = a.getAttribute('href');
+        if (!href || href === '#') return;
+        const linkPath = new URL(href, window.location.origin).pathname.replace(/\/$/, '');
+        if (linkPath && linkPath === atual) {
+            a.setAttribute('aria-current', 'page');
+        }
+    });
 }
 
 function setupHamburger() {
@@ -178,6 +227,12 @@ const LOG_LABELS = {
     codigo: 'Código',
     descricao: 'Descrição',
     status: 'Status',
+    // Campos de Separações
+    cliente: 'Cliente',
+    separadores: 'Separadores',
+    conferente: 'Conferente',
+    'peças': 'Qtd. Peças',
+    numero: 'Nº Movimentação',
     de: 'De',
     para: 'Para'
 };

@@ -1,6 +1,6 @@
 # quadro_app/blueprints/separacoes.py
 from flask import Blueprint, request, jsonify
-from datetime import datetime
+from datetime import datetime, timedelta, time
 from sqlalchemy import or_, func, and_
 from ..extensions import db, tz_cuiaba
 from quadro_app.models import Separacao, Usuario, ItemExcluido, ListaDinamica
@@ -8,6 +8,70 @@ from quadro_app.utils import registrar_log, criar_notificacao
 from quadro_app import socketio
 
 separacoes_bp = Blueprint('separacoes', __name__, url_prefix='/api/separacoes')
+
+
+# ============================================================
+# Tempo em horas uteis (mesmo padrao da auditoria de compras)
+# Expediente: Seg-Sex 07:00-11:30 e 13:00-17:30; Sabado so manha.
+# ============================================================
+_JANELA_MANHA = (time(7, 0), time(11, 30))
+_JANELA_TARDE = (time(13, 0), time(17, 30))
+
+
+def _janelas_do_dia(weekday):
+    if weekday <= 4:
+        return [_JANELA_MANHA, _JANELA_TARDE]
+    if weekday == 5:
+        return [_JANELA_MANHA]
+    return []
+
+
+def _parse_ts(ts):
+    try:
+        return datetime.fromisoformat(ts)
+    except (TypeError, ValueError):
+        return None
+
+
+def _segundos_uteis(inicio, fim):
+    """Conta apenas os segundos dentro do expediente entre inicio e fim."""
+    if inicio is None or fim is None:
+        return None
+    if fim <= inicio:
+        return 0
+    total = 0.0
+    dia = inicio.date()
+    ultimo_dia = fim.date()
+    while dia <= ultimo_dia:
+        for ini_t, fim_t in _janelas_do_dia(dia.weekday()):
+            jan_ini = datetime.combine(dia, ini_t, tzinfo=inicio.tzinfo)
+            jan_fim = datetime.combine(dia, fim_t, tzinfo=inicio.tzinfo)
+            ini_ef = max(inicio, jan_ini)
+            fim_ef = min(fim, jan_fim)
+            if fim_ef > ini_ef:
+                total += (fim_ef - ini_ef).total_seconds()
+        dia += timedelta(days=1)
+    return total
+
+
+def _format_duracao(segundos):
+    """Formata uma duracao em segundos para texto curto: '2d 3h 15m'."""
+    if segundos is None:
+        return None
+    segundos = int(segundos)
+    if segundos < 0:
+        segundos = 0
+    dias, resto = divmod(segundos, 86400)
+    horas, resto = divmod(resto, 3600)
+    minutos, _ = divmod(resto, 60)
+    partes = []
+    if dias:
+        partes.append(f'{dias}d')
+    if horas:
+        partes.append(f'{horas}h')
+    if minutos or not partes:
+        partes.append(f'{minutos}m')
+    return ' '.join(partes)
 
 @separacoes_bp.route('/fila-separadores', methods=['GET'])
 def get_fila_endpoint():
@@ -134,16 +198,50 @@ def editar_separacao(separacao_id):
                 'error': f'Erro: O número de movimentação {novo_num_str} já está sendo usado na separação do cliente "{existente.nome_cliente}".'
             }), 409
 
+    # Captura o estado anterior dos campos auditaveis (antes de alterar).
+    LABELS_CAMPOS = {
+        'numero_movimentacao': 'numero',
+        'nome_cliente': 'cliente',
+        'vendedor_nome': 'vendedor',
+        'separadores_nomes': 'separadores',
+        'conferente_nome': 'conferente',
+        'qtd_pecas': 'peças',
+    }
+
+    def _valor_log(campo, val):
+        # separadores e uma lista — normaliza para texto legivel no log.
+        if campo == 'separadores_nomes':
+            if isinstance(val, list):
+                return ", ".join(val) if val else "Nenhum"
+            return val or "Nenhum"
+        return val
+
+    estado_antigo = {c: getattr(separacao, c, None) for c in LABELS_CAMPOS}
+
     # Atualiza os campos
     for key, value in dados.items():
         if hasattr(separacao, key): setattr(separacao, key, value)
-    
+
     if dados.get('conferente_nome') and separacao.status == 'Em Separação':
         separacao.status = 'Em Conferência'
         separacao.data_inicio_conferencia = datetime.now(tz_cuiaba).isoformat()
-        
+
+    # Monta o diff: so registra campos que realmente mudaram e vieram na requisicao.
+    detalhes_log = {}
+    for campo, rotulo in LABELS_CAMPOS.items():
+        if campo not in dados:
+            continue
+        antigo = estado_antigo.get(campo)
+        novo = getattr(separacao, campo, None)
+        if antigo != novo:
+            detalhes_log[rotulo] = {
+                'de': _valor_log(campo, antigo),
+                'para': _valor_log(campo, novo),
+            }
+
     db.session.commit()
-    registrar_log(separacao_id, editor_nome, 'EDICAO', log_type='separacoes')
+    # Se nada mudou de fato, ainda registra uma edicao simples (sem detalhes).
+    registrar_log(separacao_id, editor_nome, 'EDICAO', detalhes=detalhes_log or None, log_type='separacoes')
     socketio.emit('separacao_atualizada', {'separacao': serialize_separacao(separacao)})
     return jsonify({'status': 'success'})
 
@@ -174,15 +272,33 @@ def atualizar_status_separacao(separacao_id):
     editor_nome = dados.get('editor_nome', 'Sistema')
     separacao = Separacao.query.get_or_404(separacao_id)
     status_antigo = separacao.status
+    agora = datetime.now(tz_cuiaba)
+
+    # Quando o status ATUAL (que esta saindo) comecou, para calcular ha
+    # quanto tempo a separacao ficou nele (em horas uteis).
+    inicio_status = None
+    if status_antigo == 'Em Separação':
+        inicio_status = _parse_ts(separacao.data_criacao)
+    elif status_antigo == 'Em Conferência':
+        inicio_status = _parse_ts(separacao.data_inicio_conferencia)
+
     separacao.status = novo_status
     if novo_status == 'Finalizado':
-        separacao.data_finalizacao = datetime.now(tz_cuiaba).isoformat()
+        separacao.data_finalizacao = agora.isoformat()
     else:
         # Ao reverter uma separação finalizada (ex.: retorno à conferência),
         # limpa a data de finalização para não exibir um "Fim" obsoleto.
         separacao.data_finalizacao = None
     db.session.commit()
-    registrar_log(separacao_id, editor_nome, 'STATUS_ALTERADO', detalhes={'de': status_antigo, 'para': novo_status}, log_type='separacoes')
+
+    # Monta o detalhe do log incluindo o tempo gasto no status anterior.
+    detalhes_status = {'status': {'de': status_antigo, 'para': novo_status}}
+    if inicio_status is not None:
+        segundos = _segundos_uteis(inicio_status, agora)
+        texto = _format_duracao(segundos)
+        if texto:
+            detalhes_status['info'] = f"Ficou {texto} (horas úteis) em \"{status_antigo}\"."
+    registrar_log(separacao_id, editor_nome, 'STATUS_ALTERADO', detalhes=detalhes_status, log_type='separacoes')
     socketio.emit('status_separacao_atualizado', {'separacao_id': separacao_id, 'novo_status': novo_status})
 
     # Notifica o vendedor responsável quando a separação é finalizada
