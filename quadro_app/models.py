@@ -107,6 +107,22 @@ class Log(db.Model):
     detalhes = db.Column(db.JSON)
     timestamp = db.Column(db.String(100))
 
+class RetiradaAntecipada(db.Model):
+    """Peça retirada por um separador antes da conferência do estoque.
+    O checkbox 'conferido' sinaliza que o item já foi acertado (linha verde)."""
+    id = db.Column(db.Integer, primary_key=True)
+    data = db.Column(db.String(100), index=True)          # data informada (YYYY-MM-DD)
+    codigo = db.Column(db.String(100), index=True)
+    marca = db.Column(db.String(100))
+    separador_nome = db.Column(db.String(100), index=True)
+    quantidade = db.Column(db.Integer, default=1)
+    numero_separacao = db.Column(db.String(20), index=True)
+    conferido = db.Column(db.Boolean, default=False, nullable=False, index=True)
+    conferido_por = db.Column(db.String(100))
+    data_criacao = db.Column(db.String(100), index=True)
+    criado_por = db.Column(db.String(100))
+
+
 class Notificacao(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.String(100), db.ForeignKey('usuario.id'), nullable=False)

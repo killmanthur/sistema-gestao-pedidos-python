@@ -126,6 +126,11 @@ def recebimento_page():
 def gerenciar_separacoes_page():
     return render_template('gerenciar_separacoes.html')
 
+@main_views_bp.route('/retiradas-antecipadas')
+@page_access_required('retiradas_antecipadas')
+def retiradas_antecipadas_page():
+    return render_template('retiradas_antecipadas.html')
+
 @main_views_bp.route('/admin/sistema')
 @page_access_required('admin_sistema')
 def gerenciar_sistema_page():

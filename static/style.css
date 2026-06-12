@@ -1197,6 +1197,62 @@ body.dark-mode .btn[disabled] {
     font-size: 0.875rem;
 }
 
+/* Só o texto da observação preserva as quebras de linha digitadas.
+   Fica num span próprio para que a indentação do HTML do template
+   não vire espaço em branco visível. */
+.obs-texto {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+/* Cabeçalho da observação: texto à esquerda, lápis de editar à direita. */
+.obs-entry__head {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.4rem;
+}
+.obs-entry__head .obs-texto {
+    flex: 1;
+}
+.btn-edit-obs {
+    flex: 0 0 auto;
+    width: 24px;
+    height: 24px;
+    padding: 3px;
+    opacity: 0;
+    transition: opacity 0.15s, background-color 0.15s;
+}
+.obs-entry:hover .btn-edit-obs {
+    opacity: 0.6;
+}
+.btn-edit-obs:hover {
+    opacity: 1 !important;
+    background-color: var(--bg-muted);
+}
+.btn-edit-obs img {
+    width: 14px;
+    height: 14px;
+}
+body.dark-mode .btn-edit-obs img {
+    filter: invert(0.85);
+}
+
+/* Edição inline da observação */
+.obs-edit-area {
+    margin: 0.3rem 0;
+}
+.obs-edit-textarea {
+    width: 100%;
+    font-size: 0.85rem;
+    resize: vertical;
+}
+.obs-edit-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.4rem;
+    margin-top: 0.4rem;
+}
+
 .obs-entry:last-child {
     border-bottom: none;
 }
@@ -4034,4 +4090,40 @@ body.scanner-open {
 .btn-action {
     border-radius: 8px;
     font-weight: 600;
+}
+
+/* =============================================================
+   RETIRADAS ANTECIPADAS
+   ============================================================= */
+/* Formulario em linha (quebra em telas menores) */
+.retirada-form-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: flex-end;
+}
+.retirada-form-grid .form-group {
+    flex: 1 1 150px;
+    margin-bottom: 0;
+}
+.retirada-form-grid .form-group--submit {
+    flex: 0 0 auto;
+}
+
+/* Linha verde quando o item foi conferido (checkbox marcado) */
+tr.retirada-ok {
+    background-color: var(--bg-success-soft);
+    color: var(--text-primary);
+}
+tr.retirada-ok:hover {
+    background-color: var(--bg-success-soft);
+}
+.retirada-check {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+.retirada-check:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
 }

@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}Retiradas Antecipadas{% endblock %}
+
+{% block content %}
+<section class="form-container" style="max-width: 1500px;">
+    <div class="page-toolbar"
+        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h2>Retiradas Antecipadas</h2>
+    </div>
+    <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+        Peças retiradas pelo separador antes da conferência do estoque. Marque o checkbox quando o item for acertado.
+    </p>
+
+    <!-- FORMULÁRIO DE CADASTRO -->
+    <form id="form-retirada" style="margin-bottom: 1.5rem;">
+        <div class="retirada-form-grid">
+            <div class="form-group">
+                <label for="ret-data">Data</label>
+                <input type="date" id="ret-data" required>
+            </div>
+            <div class="form-group">
+                <label for="ret-codigo">Código</label>
+                <input type="text" id="ret-codigo" placeholder="Código da peça" required>
+            </div>
+            <div class="form-group">
+                <label for="ret-marca">Marca</label>
+                <input type="text" id="ret-marca" placeholder="Marca">
+            </div>
+            <div class="form-group">
+                <label>Separador</label>
+                <div class="tag-input-container" id="ret-separador-tag">
+                    <input type="text" class="tag-input-field" placeholder="Separador" autocomplete="off">
+                    <ul class="tag-suggestions"></ul>
+                </div>
+            </div>
+            <div class="form-group" style="max-width: 110px;">
+                <label for="ret-quantidade">Qtd.</label>
+                <input type="number" id="ret-quantidade" value="1" min="1" required>
+            </div>
+            <div class="form-group">
+                <label for="ret-numero-separacao">Nº Separação</label>
+                <input type="text" id="ret-numero-separacao" placeholder="Nº Separação">
+            </div>
+            <div class="form-group form-group--submit">
+                <button type="submit" class="btn btn--primary">Salvar</button>
+            </div>
+        </div>
+    </form>
+
+    <div id="ret-loading-spinner" class="spinner" style="display: block; margin: 2rem auto;"></div>
+
+    <!-- TABELA (PLANILHA) -->
+    <table id="tabela-retiradas" class="admin-table" style="display: none; width: 100%;">
+        <thead>
+            <tr>
+                <th style="width: 48px; text-align: center;">OK</th>
+                <th>Data</th>
+                <th>Código</th>
+                <th>Marca</th>
+                <th>Separador</th>
+                <th style="width: 70px;">Qtd.</th>
+                <th>Nº Separação</th>
+                <th>Lançado por</th>
+                <th style="width: 70px;">Ações</th>
+            </tr>
+        </thead>
+        <tbody id="tabela-retiradas-body"></tbody>
+    </table>
+</section>
+
+<!-- MODAL DE EDIÇÃO -->
+<div id="edit-retirada-modal-overlay" class="modal-overlay" style="display:none;">
+    <div class="modal-content" style="max-width: 520px;">
+        <div class="modal-header">
+            <h2>Editar Retirada</h2>
+            <button class="close-modal close-modal-icon">×</button>
+        </div>
+        <form id="form-edit-retirada">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="edit-ret-data">Data</label>
+                    <input type="date" id="edit-ret-data" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-ret-codigo">Código</label>
+                    <input type="text" id="edit-ret-codigo" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-ret-marca">Marca</label>
+                    <input type="text" id="edit-ret-marca">
+                </div>
+                <div class="form-group">
+                    <label for="edit-ret-separador">Separador</label>
+                    <select id="edit-ret-separador" required></select>
+                </div>
+                <div class="form-group">
+                    <label for="edit-ret-quantidade">Quantidade</label>
+                    <input type="number" id="edit-ret-quantidade" min="1" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-ret-numero-separacao">Nº Separação</label>
+                    <input type="text" id="edit-ret-numero-separacao">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="submit" class="btn btn--primary">Salvar Alterações</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

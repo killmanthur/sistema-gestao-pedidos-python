@@ -14,6 +14,7 @@ import { initSeparacoesPage } from './pages/separacoes.js';
 import { initConferenciasPage } from './pages/conferencias.js';
 import { initRecebimentoPage } from './pages/recebimento.js';
 import { initGerenciarSeparacoesPage } from './pages/gerenciar-separacoes.js';
+import { initRetiradasAntecipadasPage } from './pages/retiradas-antecipadas.js';
 import { initDashboardLogisticaPage } from './pages/dashboard-logistica.js';
 import { initLixeiraPage } from './pages/lixeira.js';
 import { initHistoricoConferenciasPage } from './pages/historico-conferencias.js';
@@ -164,6 +165,9 @@ export async function initializeAuthenticatedApp() {
     }
     else if (path.includes('/gerenciar-separacoes')) {
         initGerenciarSeparacoesPage();
+    }
+    else if (path.includes('/retiradas-antecipadas')) {
+        initRetiradasAntecipadasPage();
     }
     else if (path.includes('/lixeira')) {
         initLixeiraPage();

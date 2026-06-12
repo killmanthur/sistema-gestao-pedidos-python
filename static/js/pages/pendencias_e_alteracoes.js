@@ -12,6 +12,26 @@ function resetState() {
     };
 }
 
+// Observações geradas pelo sistema não têm lápis (preserva o histórico).
+const PREFIXOS_SISTEMA = ['[RESOLVIDO]', '[DIVERGÊNCIA]', '[OBS INICIAL]'];
+function isObsSistema(texto) {
+    const t = (texto || '').trimStart();
+    return PREFIXOS_SISTEMA.some(p => t.startsWith(p));
+}
+
+/** Renderiza UMA entrada de observação.
+ *  indiceReal = posição na lista original (necessário para editar).
+ *  editavel = mostra o lápis (apenas no modal, em obs comuns). */
+function renderObsEntry(obs, indiceReal, editavel) {
+    const lapis = (editavel && !isObsSistema(obs.texto))
+        ? `<button class="btn-icon btn-edit-obs" data-action="editar-obs" data-index="${indiceReal}" title="Editar observação"><img src="/static/edit.svg" alt="Editar"></button>`
+        : '';
+    return `<div class="obs-entry" data-index="${indiceReal}">`
+        + `<div class="obs-entry__head"><strong>${obs.autor}:</strong> <span class="obs-texto">${obs.texto}</span>${lapis}</div>`
+        + `<small>${formatarData(obs.timestamp)}${obs.editado_em ? ' (editado)' : ''}</small>`
+        + `</div>`;
+}
+
 function criarCardPendencia(item, tipo) {
     const card = document.createElement('div');
     card.className = 'card';
@@ -38,15 +58,14 @@ function criarCardPendencia(item, tipo) {
 
     let observacoesHTML = '';
     if (item.observacoes) {
-        observacoesHTML = '<div class="obs-log-container">';
-        [...item.observacoes].reverse().forEach(obs => {
-            observacoesHTML += `
-                <div class="obs-entry">
-                    <strong>${obs.autor}:</strong> ${obs.texto}
-                    <small>${formatarData(obs.timestamp)}</small>
-                </div>`;
-        });
-        observacoesHTML += '</div>';
+        // Render do mais novo para o mais antigo, preservando o índice real.
+        observacoesHTML = '<div class="obs-log-container">'
+            + item.observacoes
+                .map((obs, i) => ({ obs, i }))
+                .reverse()
+                .map(({ obs, i }) => renderObsEntry(obs, i, false))
+                .join('')
+            + '</div>';
     }
 
     const logBtnHTML = `<button class="btn-icon" data-action="log" title="Histórico"><img src="/static/history.svg" alt="Histórico"></button>`;
@@ -72,27 +91,83 @@ function criarCardPendencia(item, tipo) {
     return card;
 }
 
+/** Pinta o histórico de observações no container do modal (com lápis). */
+function pintarHistorico(item, histContainer) {
+    histContainer.innerHTML = '<h4>Histórico de Ações:</h4>';
+    if (item && item.observacoes && item.observacoes.length > 0) {
+        histContainer.innerHTML += item.observacoes
+            .map((obs, i) => ({ obs, i }))
+            .reverse()
+            .map(({ obs, i }) => renderObsEntry(obs, i, true))
+            .join('');
+    } else {
+        histContainer.innerHTML += '<p>Nenhuma observação ainda.</p>';
+    }
+}
+
 function openResolverModal(item) {
     const modal = state.elementos.resolverModal;
     modal.form.dataset.id = item.id;
     modal.obsInput.value = '';
-
-    const histContainer = modal.form.querySelector('#historico-observacoes');
-    histContainer.innerHTML = '<h4>Histórico de Ações:</h4>';
-
-    if (item.observacoes && item.observacoes.length > 0) {
-        [...item.observacoes].reverse().forEach(obs => {
-            histContainer.innerHTML += `
-                <div class="obs-entry">
-                    <strong>${obs.autor}:</strong> ${obs.texto}
-                    <small>${formatarData(obs.timestamp)}</small>
-                </div>`;
-        });
-    } else {
-        histContainer.innerHTML += '<p>Nenhuma observação ainda.</p>';
-    }
-
+    pintarHistorico(item, modal.form.querySelector('#historico-observacoes'));
     modal.overlay.style.display = 'flex';
+}
+
+/** Após adicionar/editar uma observação, repinta o histórico no modal já
+ *  aberto com o item atualizado (sem fechar/reabrir manualmente). */
+function reabrirHistoricoAtual(id) {
+    const todos = [...(state.pend_fornecedor || []), ...(state.pend_alteracao || [])];
+    const item = todos.find(c => String(c.id) === String(id));
+    pintarHistorico(item, state.elementos.resolverModal.form.querySelector('#historico-observacoes'));
+}
+
+/** Transforma uma entrada de observação em modo de edição inline. */
+function iniciarEdicaoObs(entryEl) {
+    if (!entryEl || entryEl.querySelector('.obs-edit-area')) return;
+    const indice = entryEl.dataset.index;
+    const textoAtual = entryEl.querySelector('.obs-texto')?.textContent || '';
+    const head = entryEl.querySelector('.obs-entry__head');
+
+    head.style.display = 'none';
+    const editor = document.createElement('div');
+    editor.className = 'obs-edit-area';
+    editor.innerHTML = `
+        <textarea class="obs-edit-textarea" rows="3">${textoAtual}</textarea>
+        <div class="obs-edit-actions">
+            <button type="button" class="btn btn-sm btn--secondary obs-edit-cancel">Cancelar</button>
+            <button type="button" class="btn btn-sm btn--primary obs-edit-save">Salvar</button>
+        </div>`;
+    entryEl.insertBefore(editor, entryEl.querySelector('small'));
+
+    const textarea = editor.querySelector('.obs-edit-textarea');
+    textarea.focus();
+
+    const cancelar = () => { editor.remove(); head.style.display = ''; };
+    editor.querySelector('.obs-edit-cancel').onclick = cancelar;
+    editor.querySelector('.obs-edit-save').onclick = async () => {
+        const novo = textarea.value.trim();
+        if (!novo) return showToast('O texto não pode ficar vazio.', 'error');
+        const id = state.elementos.resolverModal.form.dataset.id;
+        const saveBtn = editor.querySelector('.obs-edit-save');
+        toggleButtonLoading(saveBtn, true, 'Salvando...');
+        try {
+            const res = await fetch(`/api/conferencias/${id}/observacao/${indice}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ texto: novo, autor: AppState.currentUser.nome })
+            });
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error || 'Falha ao editar.');
+            }
+            showToast('Observação atualizada!', 'success');
+            await fetchData();
+            reabrirHistoricoAtual(id);
+        } catch (err) {
+            showToast(err.message, 'error');
+            toggleButtonLoading(saveBtn, false, 'Salvar');
+        }
+    };
 }
 
 async function fetchData() {
@@ -161,6 +236,13 @@ export function initPendenciasEAlteracoesPage() {
 
     if (!state.elementos.filtroInput) return;
 
+    // Edição individual de observação (lápis) no histórico do modal.
+    const histContainer = state.elementos.resolverModal.form.querySelector('#historico-observacoes');
+    histContainer.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-action="editar-obs"]');
+        if (btn) iniciarEdicaoObs(btn.closest('.obs-entry'));
+    });
+
     state.elementos.filtroInput.addEventListener('input', renderizar);
 
     // Submissão do formulário de resolução
@@ -213,7 +295,9 @@ export function initPendenciasEAlteracoesPage() {
             if (res.ok) {
                 showToast('Observação adicionada!');
                 state.elementos.resolverModal.obsInput.value = '';
-                fetchData();
+                await fetchData();
+                // Re-renderiza o histórico no modal aberto com o item atualizado.
+                reabrirHistoricoAtual(id);
             }
         } catch (error) {
             showToast('Erro ao salvar observação', 'error');

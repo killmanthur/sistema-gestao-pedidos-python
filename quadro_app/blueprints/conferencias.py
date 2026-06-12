@@ -265,6 +265,40 @@ def adicionar_observacao(conferencia_id):
     socketio.emit('observacao_adicionada', {'conferencia_id': conferencia_id, 'observacao': obs_atuais[-1]})
     return jsonify({'status': 'success'})
 
+
+# Prefixos de observações geradas pelo sistema — não editáveis.
+_PREFIXOS_SISTEMA = ('[RESOLVIDO]', '[DIVERGÊNCIA]', '[OBS INICIAL]')
+
+
+@conferencias_bp.route('/<int:conferencia_id>/observacao/<int:indice>', methods=['PUT'])
+def editar_observacao(conferencia_id, indice):
+    """Edita o texto de UMA observação (identificada pelo índice na lista).
+    Só observações comuns (sem prefixo de sistema) podem ser editadas."""
+    dados = request.get_json() or {}
+    novo_texto = (dados.get('texto') or '').strip()
+    editor_nome = dados.get('autor', 'N/A')
+    if not novo_texto:
+        return jsonify({'error': 'O texto não pode ficar vazio.'}), 400
+
+    conferencia = Conferencia.query.get_or_404(conferencia_id)
+    obs_atuais = list(conferencia.observacoes or [])
+    if indice < 0 or indice >= len(obs_atuais):
+        return jsonify({'error': 'Observação não encontrada.'}), 404
+
+    texto_atual = (obs_atuais[indice].get('texto') or '').strip()
+    if texto_atual.startswith(_PREFIXOS_SISTEMA):
+        return jsonify({'error': 'Esta observação é do sistema e não pode ser editada.'}), 403
+
+    obs_atuais[indice]['texto'] = novo_texto
+    obs_atuais[indice]['editado_em'] = datetime.now(tz_cuiaba).isoformat()
+    obs_atuais[indice]['editado_por'] = editor_nome
+    conferencia.observacoes = obs_atuais
+    db.session.commit()
+    registrar_log(conferencia_id, editor_nome, 'OBSERVACAO_EDITADA',
+                  detalhes={'info': novo_texto}, log_type='conferencias')
+    socketio.emit('observacao_adicionada', {'conferencia_id': conferencia_id})
+    return jsonify({'status': 'success'})
+
 # ==========================================
 # 4. HISTÓRICO DE CONFERÊNCIAS
 # ==========================================

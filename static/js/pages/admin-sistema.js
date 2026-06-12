@@ -22,6 +22,8 @@ const ALL_PAGES = {
     separacoes: "Separações",
     tv_expedicao: "TV Expedição (Painel)",
     gerenciar_separacoes: "Gerenciar Separações",
+    retiradas_antecipadas: "Retiradas Antecipadas (Preencher)",
+    retiradas_conferir: "Retiradas Antecipadas — Conferir (✓)",
     requisicao_ajuste_estoque: "Requisição de Ajuste de Estoque",
     aprovar_ajuste_estoque: "Aprovar Ajustes de Estoque",
     galeria_pecas: "Galeria de Peças",
