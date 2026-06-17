@@ -169,7 +169,7 @@ function criarItemSugestao(sugestao) {
     // Lista de Itens
     let itensHTML = '<ul class="item-list-selectable">';
     (sugestao.itens || []).forEach(item => {
-        const showCheckbox = canManage && (sugestao.status === 'em_cotacao' || sugestao.status === 'cogitado');
+        const showCheckbox = canManage && (sugestao.status === 'pendente' || sugestao.status === 'em_cotacao' || sugestao.status === 'cogitado');
         const checkbox = showCheckbox
             ? `<input type="checkbox" class="mover-item-checkbox" data-codigo="${item.codigo}" data-quantidade="${item.quantidade}">`
             : '<span style="color:var(--text-muted); font-size:1.1rem; line-height:1;">•</span>';

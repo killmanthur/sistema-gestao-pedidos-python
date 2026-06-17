@@ -5,32 +5,6 @@ import { formatarData, showConfirmModal, openLogModal } from '../ui.js';
 
 let state = {};
 let debounceTimer;
-let pollingInterval = null;
-
-let estadoAnterior = {
-    total_ativas: 0,
-    ultimo_update: null,
-};
-
-// --- FUNÇÃO DE POLLING ---
-async function verificarAtualizacoesSeparacoes() {
-    if (document.activeElement === state.elementos.filtroInput && state.elementos.filtroInput.value !== '') {
-        return;
-    }
-    try {
-        const response = await fetch('/api/separacoes/status-ativas');
-        if (!response.ok) return;
-        const estadoAtual = await response.json();
-
-        if (estadoAtual.total_ativas !== estadoAnterior.total_ativas || estadoAtual.ultimo_update !== estadoAnterior.ultimo_update) {
-            console.log("Detectada mudança nas separações. Atualizando...");
-            estadoAnterior = estadoAtual;
-            await fetchActiveSeparacoes();
-        }
-    } catch (error) {
-        console.error("Erro no polling de separações:", error);
-    }
-}
 
 function resetState() {
     state = {
@@ -280,11 +254,30 @@ function openEditModal(separacao) {
     modal.overlay.style.display = 'flex';
 }
 
+// Assinatura do estado visível de uma separação. Se mudar, o card é
+// recriado; se for igual, o card no DOM é preservado (sem flicker).
+function assinaturaSeparacao(s) {
+    const obs = s.observacoes ? Object.values(s.observacoes).length : 0;
+    const ultimaObs = obs ? Object.values(s.observacoes).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0]?.timestamp : '';
+    return [
+        s.status,
+        s.nome_cliente,
+        s.vendedor_nome,
+        (s.separadores_nomes || []).join(','),
+        s.conferente_nome || '',
+        s.qtd_pecas || '',
+        s.data_finalizacao || '',
+        obs,
+        ultimaObs || ''
+    ].join('|');
+}
+
 // --- RENDERIZAÇÃO DE CARDS ---
 function criarCardElement(separacao) {
     const card = document.createElement('div');
     card.className = 'card separacao-card';
     card.dataset.id = separacao.id;
+    card.dataset.sig = assinaturaSeparacao(separacao);
 
     if (separacao.status === 'Finalizado') card.classList.add('card--status-done');
     else if (separacao.status === 'Em Conferência') card.classList.add('card--status-progress');
@@ -385,14 +378,60 @@ function renderAtivas() {
     const andamento = state.todasAsSeparacoesAtivas.filter(s => s.status === 'Em Separação' && filter(s));
     const conferencia = state.todasAsSeparacoesAtivas.filter(s => s.status === 'Em Conferência' && filter(s));
 
-    state.elementos.quadroAndamento.innerHTML = '';
-    state.elementos.quadroConferencia.innerHTML = '';
+    sincronizarColuna(state.elementos.quadroAndamento, andamento, 'Nenhuma separação ativa.');
+    sincronizarColuna(state.elementos.quadroConferencia, conferencia, 'Nenhuma conferência ativa.');
+}
 
-    if (andamento.length === 0) state.elementos.quadroAndamento.innerHTML = '<p class="quadro-vazio-msg">Nenhuma separação ativa.</p>';
-    if (conferencia.length === 0) state.elementos.quadroConferencia.innerHTML = '<p class="quadro-vazio-msg">Nenhuma conferência ativa.</p>';
+// Atualiza a coluna de forma incremental: mantém cards inalterados,
+// recria os que mudaram, insere novos e remove os que saíram.
+// Evita o "piscar" de apagar e recriar tudo a cada atualização.
+function sincronizarColuna(container, lista, msgVazia) {
+    // Remove a mensagem de vazio, se estiver presente.
+    const msgEl = container.querySelector('.quadro-vazio-msg');
+    if (msgEl) msgEl.remove();
 
-    andamento.forEach(s => state.elementos.quadroAndamento.appendChild(criarCardElement(s)));
-    conferencia.forEach(s => state.elementos.quadroConferencia.appendChild(criarCardElement(s)));
+    if (lista.length === 0) {
+        container.innerHTML = `<p class="quadro-vazio-msg">${msgVazia}</p>`;
+        return;
+    }
+
+    // Mapa dos cards atualmente no DOM, por id.
+    const existentes = new Map();
+    container.querySelectorAll('.separacao-card').forEach(el => existentes.set(el.dataset.id, el));
+
+    const idsDesejados = new Set(lista.map(s => String(s.id)));
+
+    // Remove cards que não estão mais nesta coluna/lista.
+    existentes.forEach((el, id) => {
+        if (!idsDesejados.has(id)) {
+            el.remove();
+            existentes.delete(id);
+        }
+    });
+
+    // Percorre a lista na ordem desejada, criando/atualizando/reordenando.
+    let anterior = null; // último card já posicionado (para manter a ordem)
+    lista.forEach(s => {
+        const id = String(s.id);
+        let card = existentes.get(id);
+
+        if (!card) {
+            // Card novo.
+            card = criarCardElement(s);
+        } else if (card.dataset.sig !== assinaturaSeparacao(s)) {
+            // Mudou: substitui pelo card atualizado.
+            const novo = criarCardElement(s);
+            card.replaceWith(novo);
+            card = novo;
+        }
+
+        // Garante a posição correta na ordem (logo após o anterior).
+        const refNext = anterior ? anterior.nextSibling : container.firstChild;
+        if (card !== refNext) {
+            container.insertBefore(card, refNext);
+        }
+        anterior = card;
+    });
 }
 
 async function carregarFinalizados(recarregar = false) {
@@ -645,7 +684,7 @@ export async function initSeparacoesPage() {
     setupMovSugestao();
     setupEscNavigation();
 
-    // Início do Polling
-    if (pollingInterval) clearInterval(pollingInterval);
-    pollingInterval = setInterval(verificarAtualizacoesSeparacoes, 5000);
+    // As atualizações em tempo real são feitas via WebSocket (acima).
+    // O polling de 5s foi removido — ele recarregava as colunas
+    // periodicamente sem necessidade.
 }

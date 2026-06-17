@@ -7,6 +7,8 @@ let elementos = {};
 let separadoresLista = [];
 let podeConferir = false;
 let separadorTag = null;
+let todosRegistros = [];   // cache dos registros para filtrar client-side
+let termoBusca = '';
 
 // --- Tag input simples com autocomplete (seleção única) ---
 function createSingleTagInput(container, getOptions) {
@@ -83,7 +85,10 @@ function renderTabela(registros) {
     tbody.innerHTML = '';
 
     if (!registros || registros.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:2rem;">Nenhuma retirada registrada.</td></tr>';
+        const msg = termoBusca.trim()
+            ? 'Nenhuma retirada encontrada para a busca.'
+            : 'Nenhuma retirada registrada.';
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:2rem;">${msg}</td></tr>`;
         return;
     }
 
@@ -123,6 +128,27 @@ function formatarDataSimples(data) {
     return data;
 }
 
+// Filtra os registros pelo termo de busca, varrendo todas as colunas.
+function aplicarFiltro() {
+    const q = termoBusca.trim().toLowerCase();
+    if (!q) return renderTabela(todosRegistros);
+
+    const filtrados = todosRegistros.filter(r => {
+        const campos = [
+            r.data || '',
+            formatarDataSimples(r.data),      // também busca no formato DD/MM/YYYY exibido
+            r.codigo || '',
+            r.marca || '',
+            r.separador_nome || '',
+            String(r.quantidade ?? ''),
+            r.numero_separacao || '',
+            r.criado_por || '',
+        ];
+        return campos.some(c => String(c).toLowerCase().includes(q));
+    });
+    renderTabela(filtrados);
+}
+
 // --- API ---
 async function carregar() {
     elementos.spinner.style.display = 'block';
@@ -132,7 +158,8 @@ async function carregar() {
         if (!res.ok) throw new Error('Falha ao carregar.');
         const data = await res.json();
         podeConferir = !!data.pode_conferir;
-        renderTabela(data.registros);
+        todosRegistros = data.registros || [];
+        aplicarFiltro();
     } catch (e) {
         showToast('Não foi possível carregar as retiradas.', 'error');
     } finally {
@@ -292,8 +319,15 @@ export async function initRetiradasAntecipadasPage() {
         tabela: document.getElementById('tabela-retiradas'),
         tbody: document.getElementById('tabela-retiradas-body'),
         spinner: document.getElementById('ret-loading-spinner'),
+        busca: document.getElementById('ret-busca'),
     };
     if (!elementos.form) return;
+
+    // Busca por todas as colunas (filtra os registros já carregados).
+    elementos.busca?.addEventListener('input', (e) => {
+        termoBusca = e.target.value;
+        aplicarFiltro();
+    });
 
     // Data de hoje (editável) por padrão.
     const hoje = new Date();

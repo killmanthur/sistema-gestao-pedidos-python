@@ -40,3 +40,5 @@ QuadroDePedidos.spec
 firebase_export.json
 .DS_Store
 Thumbs.db
+
+.VSCodeCounter/

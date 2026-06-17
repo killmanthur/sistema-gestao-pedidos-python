@@ -277,6 +277,31 @@ async function handleRuaFormAction(actionType, event) {
     }
 }
 
+// Abre o modal global de detalhes mostrando as observações (somente leitura).
+function openObsModal(item) {
+    const overlay = document.getElementById('details-modal-overlay');
+    const title = document.getElementById('details-modal-title');
+    const body = document.getElementById('details-modal-body');
+    if (!overlay || !body) return;
+
+    title.textContent = `Observações — NF ${item.numero_nota_fiscal || ''}`;
+    const obs = item.observacoes || [];
+
+    if (obs.length === 0) {
+        body.innerHTML = '<p style="color: var(--text-muted);">Nenhuma observação registrada para este lançamento.</p>';
+    } else {
+        body.innerHTML = '<div class="obs-log-container">'
+            + obs.map(o =>
+                `<div class="obs-entry">`
+                + `<div class="obs-entry__head"><strong>${o.autor || 'N/A'}:</strong> <span class="obs-texto">${o.texto || ''}</span></div>`
+                + `<small>${formatarData(o.timestamp)}${o.editado_em ? ' (editado)' : ''}</small>`
+                + `</div>`
+            ).join('')
+            + '</div>';
+    }
+    overlay.style.display = 'flex';
+}
+
 // --- 4. Lógica de Carregamento e Renderização ---
 
 function renderizarLinhas(listaRecebimentos, limpar = false) {
@@ -297,6 +322,10 @@ function renderizarLinhas(listaRecebimentos, limpar = false) {
 
         const perms = AppState.currentUser.permissions || {};
         let actionsHTML = '';
+
+        // Botão de visualizar observação — disponível a todos (somente leitura).
+        const qtdObs = (item.observacoes || []).length;
+        actionsHTML += `<button class="btn-action btn-ver-obs" data-id="${item.id}" title="Ver observações">👁${qtdObs ? ` ${qtdObs}` : ''}</button>`;
 
         const rolesPermitidasParaEdicao = ['Admin', 'Estoque', 'Recepção', 'Contabilidade'];
         if (rolesPermitidasParaEdicao.includes(AppState.currentUser.role)) {
@@ -323,6 +352,7 @@ function renderizarLinhas(listaRecebimentos, limpar = false) {
         `;
         tr.querySelector('.btn-edit')?.addEventListener('click', () => openEditModal(item));
         tr.querySelector('.btn-delete')?.addEventListener('click', (e) => handleDelete(e.target.dataset.id));
+        tr.querySelector('.btn-ver-obs')?.addEventListener('click', () => openObsModal(item));
         elementos.tabelaBody.appendChild(tr);
     });
 }
