@@ -1,13 +1,75 @@
 # quadro_app/blueprints/conferencias.py
 from flask import Blueprint, request, jsonify
 from datetime import datetime
-from sqlalchemy import or_
+from sqlalchemy import or_, cast, String
 from ..extensions import db, tz_cuiaba
 from quadro_app.models import Conferencia, ItemExcluido, Usuario
-from quadro_app.utils import registrar_log
+from quadro_app.utils import registrar_log, criar_notificacao
 from quadro_app import socketio
 
 conferencias_bp = Blueprint('conferencias', __name__, url_prefix='/api/conferencias')
+
+# Status que representam uma conferência que ainda precisa de atenção na aba
+# "Pendências e Alterações".
+STATUS_PENDENTES = ['Pendente (Fornecedor)', 'Pendente (Alteração)', 'Pendente (Ambos)']
+
+
+def _destinatarios_pendencia():
+    """Usuários que enxergam a aba Pendências (Admin ou com a página liberada).
+    São quem recebe o sino/som e quem vê a badge no menu.
+
+    accessible_pages é coluna JSON; o filtro é feito em Python para não depender
+    de operadores JSON do SQLite."""
+    return [
+        u for u in Usuario.query.all()
+        if u.role == 'Admin' or (u.accessible_pages and 'pendencias_e_alteracoes' in u.accessible_pages)
+    ]
+
+
+def _assinatura_pendencia(c):
+    """Assinatura de atividade de uma pendência. Muda quando há atualização de
+    status ou uma nova observação/adição — fazendo a badge 'reacender' mesmo
+    para uma pendência já vista."""
+    n_obs = len(c.observacoes or [])
+    return f"{c.status}|{n_obs}"
+
+
+def _pendencia_items():
+    """Lista [{id, v}] das conferências pendentes; v = assinatura de atividade.
+    O cliente compara com o que já viu para decidir o que ainda é 'novo'."""
+    pendentes = Conferencia.query.filter(Conferencia.status.in_(STATUS_PENDENTES)).all()
+    return [{'id': c.id, 'v': _assinatura_pendencia(c)} for c in pendentes]
+
+
+def _contar_pendencias():
+    return Conferencia.query.filter(Conferencia.status.in_(STATUS_PENDENTES)).count()
+
+
+def _emitir_pendencias_atualizado():
+    """Avisa todos os clientes para recalcularem a badge do menu."""
+    items = _pendencia_items()
+    socketio.emit('pendencias_atualizado', {'count': len(items), 'items': items})
+
+
+def _notificar_pendencia(conferencia, msg, actor_nome):
+    """Cria notificação (sino + som + nativa) para os responsáveis, exceto para
+    quem fez o movimento, e atualiza a badge de todos."""
+    for usuario in _destinatarios_pendencia():
+        if usuario.nome and usuario.nome == actor_nome:
+            continue
+        criar_notificacao(usuario.id, msg, link='/pendencias-e-alteracoes')
+    _emitir_pendencias_atualizado()
+
+
+def _notificar_nova_pendencia(conferencia, tem_pendencia_fornecedor, solicita_alteracao, editor_nome):
+    """Notifica quando uma conferência vira pendência/alteração."""
+    if tem_pendencia_fornecedor and solicita_alteracao:
+        msg = f"Nova pendência (fornecedor + alteração) — NF {conferencia.numero_nota_fiscal} ({conferencia.nome_fornecedor})"
+    elif tem_pendencia_fornecedor:
+        msg = f"Nova pendência de fornecedor — NF {conferencia.numero_nota_fiscal} ({conferencia.nome_fornecedor})"
+    else:
+        msg = f"Nova solicitação de alteração — NF {conferencia.numero_nota_fiscal} ({conferencia.nome_fornecedor})"
+    _notificar_pendencia(conferencia, msg, editor_nome)
 
 def serialize_conferencia(c):
     """Converte um objeto Conferencia do SQLAlchemy em um dicionário para JSON."""
@@ -202,6 +264,11 @@ def finalizar_conferencia_logica(conferencia_id):
     db.session.commit()
     registrar_log(conferencia_id, editor_nome, f'FINALIZADO_COMO_{conferencia.status.upper()}', detalhes={'info': observacao}, log_type='conferencias')
     socketio.emit('conferencia_finalizada', {'conferencia': serialize_conferencia(conferencia)})
+
+    # Avisa os responsáveis (sino + som + badge) quando surge pendência/alteração.
+    if tem_pendencia_fornecedor or solicita_alteracao:
+        _notificar_nova_pendencia(conferencia, tem_pendencia_fornecedor, solicita_alteracao, editor_nome)
+
     return jsonify({'status': 'success'})
 
 # ==========================================
@@ -210,10 +277,15 @@ def finalizar_conferencia_logica(conferencia_id):
 
 @conferencias_bp.route('/pendentes-e-resolvidas', methods=['GET'])
 def get_pendentes_e_resolvidas():
-    status_relevantes = ['Pendente (Fornecedor)', 'Pendente (Alteração)', 'Pendente (Ambos)']
-    itens = Conferencia.query.filter(Conferencia.status.in_(status_relevantes))\
+    itens = Conferencia.query.filter(Conferencia.status.in_(STATUS_PENDENTES))\
         .order_by(Conferencia.data_recebimento.desc()).all()
     return jsonify([serialize_conferencia(c) for c in itens])
+
+@conferencias_bp.route('/pendencias-count', methods=['GET'])
+def get_pendencias_count():
+    """Itens (id + assinatura de atividade) das pendências — usado pela badge do menu."""
+    items = _pendencia_items()
+    return jsonify({'count': len(items), 'items': items})
 
 @conferencias_bp.route('/<int:conferencia_id>/resolver-item', methods=['PUT'])
 def resolver_item_pendencia(conferencia_id):
@@ -250,6 +322,14 @@ def resolver_item_pendencia(conferencia_id):
     db.session.commit()
     registrar_log(conferencia_id, editor_nome, log_acao, detalhes={'info': observacao}, log_type='conferencias')
     socketio.emit('item_pendencia_resolvido', {'conferencia': serialize_conferencia(conferencia)})
+
+    # Notifica os responsáveis (exceto quem agiu): finalização ou atualização de status.
+    nf = conferencia.numero_nota_fiscal
+    if conferencia.status == 'Finalizado':
+        msg = f"Pendência finalizada — NF {nf} ({conferencia.nome_fornecedor}) por {editor_nome}"
+    else:
+        msg = f"Pendência atualizada — NF {nf} ({conferencia.nome_fornecedor}) por {editor_nome}"
+    _notificar_pendencia(conferencia, msg, editor_nome)
     return jsonify({'status': 'success'})
 
 @conferencias_bp.route('/<int:conferencia_id>/observacao', methods=['POST'])
@@ -263,6 +343,11 @@ def adicionar_observacao(conferencia_id):
     conferencia.observacoes = list(obs_atuais)
     db.session.commit()
     socketio.emit('observacao_adicionada', {'conferencia_id': conferencia_id, 'observacao': obs_atuais[-1]})
+
+    # Nova adição numa pendência: notifica os responsáveis (exceto o autor).
+    if conferencia.status in STATUS_PENDENTES:
+        msg = f"Nova atualização na pendência — NF {conferencia.numero_nota_fiscal} ({conferencia.nome_fornecedor}) por {editor_nome}"
+        _notificar_pendencia(conferencia, msg, editor_nome)
     return jsonify({'status': 'success'})
 
 
@@ -319,6 +404,10 @@ def get_historico_conferencias():
             query = query.filter(Conferencia.data_finalizacao >= filtros['dataInicio'])
         if filtros.get('dataFim'):
             query = query.filter(Conferencia.data_finalizacao <= filtros['dataFim'] + 'T23:59:59')
+        if filtros.get('apenas_resolvidas'):
+            # Pendências resolvidas têm uma observação com prefixo [RESOLVIDO].
+            # observacoes é JSON (texto no SQLite); LIKE no texto serializado funciona.
+            query = query.filter(cast(Conferencia.observacoes, String).like('%[RESOLVIDO]%'))
 
         pagination = query.order_by(Conferencia.data_finalizacao.desc()).paginate(page=page + 1, per_page=limit, error_out=False)
         return jsonify({'conferencias': [serialize_conferencia(c) for c in pagination.items], 'temMais': pagination.has_next})
@@ -341,6 +430,7 @@ def reiniciar_conferencia(conferencia_id):
     db.session.commit()
     registrar_log(conferencia_id, autor, 'CONFERENCIA_REINICIADA', detalhes={'info': motivo}, log_type='conferencias')
     socketio.emit('conferencia_reiniciada', {'conferencia': serialize_conferencia(conferencia)})
+    _emitir_pendencias_atualizado()
     return jsonify({'status': 'success'})
 
 # ==========================================

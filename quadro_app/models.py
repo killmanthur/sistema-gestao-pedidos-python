@@ -194,6 +194,41 @@ class AjusteEstoque(db.Model):
     foto_cadastrada_por = db.Column(db.String(100))
 
 
+class AnotacaoColuna(db.Model):
+    """Coluna de um quadro Kanban de anotações (compartilhado pela equipe)."""
+    __tablename__ = 'anotacao_coluna'
+    id = db.Column(db.Integer, primary_key=True)
+    nome = db.Column(db.String(120), nullable=False)
+    cor = db.Column(db.String(20), default='#6366f1')   # cor do cabeçalho da coluna
+    ordem = db.Column(db.Integer, default=0, index=True)
+
+    cards = db.relationship(
+        'AnotacaoCard',
+        backref='coluna',
+        cascade='all, delete-orphan',
+        order_by='AnotacaoCard.ordem',
+        lazy='joined',
+    )
+
+
+class AnotacaoCard(db.Model):
+    """Card (anotação) que pertence a uma coluna do Kanban."""
+    __tablename__ = 'anotacao_card'
+    id = db.Column(db.Integer, primary_key=True)
+    coluna_id = db.Column(
+        db.Integer,
+        db.ForeignKey('anotacao_coluna.id', ondelete='CASCADE'),
+        nullable=False,
+        index=True,
+    )
+    titulo = db.Column(db.String(200))
+    conteudo = db.Column(db.Text)
+    cor = db.Column(db.String(20))           # cor opcional do card (sobrescreve padrão)
+    ordem = db.Column(db.Integer, default=0, index=True)
+    criado_por = db.Column(db.String(100))
+    data_criacao = db.Column(db.String(100))
+
+
 class RegistroCompra(db.Model):
     id = db.Column(db.Integer, primary_key=True, index=True)
     fornecedor = db.Column(db.String(200), nullable=False, index=True)

@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}Anotações{% endblock %}
+
+{% block content %}
+<!-- SortableJS: drag-and-drop dos cards e colunas (carrega antes do main.js) -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+
+<section class="anotacoes-page">
+    <div class="page-toolbar anotacoes-toolbar">
+        <h2>Anotações</h2>
+        <button id="btn-nova-coluna" class="btn btn--primary">+ Nova Coluna</button>
+    </div>
+    <p style="color: var(--text-secondary); margin: 0 0 1rem;">
+        Quadro Kanban compartilhado. Arraste os cards entre colunas, crie e personalize colunas como quiser.
+    </p>
+
+    <div id="anot-loading-spinner" class="spinner" style="display: block; margin: 2rem auto;"></div>
+
+    <!-- BOARD: colunas inseridas via JS -->
+    <div id="anot-board" class="kanban-board" style="display: none;"></div>
+</section>
+
+<!-- MODAL: criar/editar coluna -->
+<div id="coluna-modal-overlay" class="modal-overlay" style="display:none;">
+    <div class="modal-content" style="max-width: 420px;">
+        <div class="modal-header">
+            <h2 id="coluna-modal-title">Nova Coluna</h2>
+            <button class="close-modal close-modal-icon">×</button>
+        </div>
+        <form id="form-coluna">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="coluna-nome">Nome</label>
+                    <input type="text" id="coluna-nome" placeholder="Ex.: A Fazer" maxlength="120" required>
+                </div>
+                <div class="form-group">
+                    <label for="coluna-cor">Cor</label>
+                    <div class="cor-picker-row">
+                        <input type="color" id="coluna-cor" value="#6366f1">
+                        <div class="cor-presets" id="coluna-cor-presets"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="submit" class="btn btn--primary">Salvar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL: criar/editar card -->
+<div id="card-modal-overlay" class="modal-overlay" style="display:none;">
+    <div class="modal-content" style="max-width: 480px;">
+        <div class="modal-header">
+            <h2 id="card-modal-title">Nova Anotação</h2>
+            <button class="close-modal close-modal-icon">×</button>
+        </div>
+        <form id="form-card">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="card-titulo">Título</label>
+                    <input type="text" id="card-titulo" placeholder="Título da anotação" maxlength="200">
+                </div>
+                <div class="form-group">
+                    <label for="card-conteudo">Conteúdo</label>
+                    <textarea id="card-conteudo" rows="5" placeholder="Detalhes..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="card-cor">Cor do card</label>
+                    <div class="cor-picker-row">
+                        <input type="color" id="card-cor" value="#ffffff">
+                        <div class="cor-presets" id="card-cor-presets"></div>
+                        <button type="button" id="card-cor-limpar" class="btn btn--secondary btn--sm">Padrão</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="submit" class="btn btn--primary">Salvar</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

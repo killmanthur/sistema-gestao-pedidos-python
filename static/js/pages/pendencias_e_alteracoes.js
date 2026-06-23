@@ -306,5 +306,12 @@ export function initPendenciasEAlteracoesPage() {
         }
     });
 
+    // Atualização em tempo real: novas pendências/alterações ou resolvidas
+    // por outros usuários recarregam o quadro automaticamente.
+    if (AppState.socket) {
+        AppState.socket.off('pendencias_atualizado', fetchData);
+        AppState.socket.on('pendencias_atualizado', fetchData);
+    }
+
     fetchData();
 }

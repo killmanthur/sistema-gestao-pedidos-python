@@ -70,7 +70,8 @@
 
                     <!-- Dropdown de Logística -->
                     <li class="nav-item nav-item--dropdown">
-                        <a>Logística <span class="dropdown-arrow">▼</span></a>
+                        <a>Logística <span id="pendencias-dropdown-badge" class="notification-badge"
+                                style="display: none;"></span> <span class="dropdown-arrow">▼</span></a>
                         <ul class="dropdown-menu">
                             <li class="nav-item" data-page="tv_expedição"><a
                                     href="{{ url_for('main_views.tv_expedicao_page') }}">TV Expedição</a></li>
@@ -80,7 +81,9 @@
                                     href="{{ url_for('main_views.conferencias_page') }}">Conferência</a></li>
                             <li class="nav-item" data-page="pendencias_e_alteracoes"><a
                                     href="{{ url_for('main_views.pendencias_e_alteracoes_page') }}">Pendências e
-                                    Alterações</a></li>
+                                    Alterações
+                                    <span id="pendencias-nav-badge" class="notification-badge"
+                                        style="display: none;"></span></a></li>
                             <li class="nav-item" data-page="historico_conferencias"><a
                                     href="{{ url_for('main_views.historico_conferencias_page') }}">Histórico de
                                     Conferências</a></li>
@@ -108,6 +111,8 @@
                             <li class="nav-item" data-page="dashboard_logistica"><a
                                     href="{{ url_for('main_views.dashboard_logistica_page') }}">Dashboard de
                                     Separação</a></li>
+                            <li class="nav-item" data-page="anotacoes"><a
+                                    href="{{ url_for('main_views.anotacoes_page') }}">Anotações</a></li>
                         </ul>
                     </li>
 

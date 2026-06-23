@@ -161,6 +161,11 @@ def auditoria_compras_page():
 def pendencias_e_alteracoes_page():
     return render_template('pendencias_e_alteracoes.html')
 
+@main_views_bp.route('/anotacoes')
+@page_access_required('anotacoes')
+def anotacoes_page():
+    return render_template('anotacoes.html')
+
 @main_views_bp.route('/requisicao-ajuste-estoque')
 @page_access_required('requisicao_ajuste_estoque')
 def requisicao_ajuste_estoque_page():

@@ -182,11 +182,13 @@ async function carregarHistorico(recarregar = false) {
         const fornecedor = document.getElementById('filtro-fornecedor').value;
         const dataInicio = document.getElementById('filtro-data-inicio').value;
         const dataFim = document.getElementById('filtro-data-fim').value;
+        const apenasResolvidas = document.getElementById('filtro-apenas-resolvidas')?.checked;
 
         if (nf) filtrosAtuais.nf = nf;
         if (fornecedor) filtrosAtuais.fornecedor = fornecedor;
         if (dataInicio) filtrosAtuais.dataInicio = dataInicio;
         if (dataFim) filtrosAtuais.dataFim = dataFim;
+        if (apenasResolvidas) filtrosAtuais.apenas_resolvidas = true;
     }
 
     const body = { ...filtrosAtuais, page: paginaAtual, limit: TAMANHO_PAGINA };

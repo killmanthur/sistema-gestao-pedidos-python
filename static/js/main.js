@@ -21,6 +21,7 @@ import { initHistoricoConferenciasPage } from './pages/historico-conferencias.js
 import { initDashboardConferenciasPage } from './pages/dashboard-conferencias.js';
 import { initPedidosACaminhoPage } from './pages/pedidos_a_caminho.js';
 import { setupNotifications } from './notifications.js';
+import { setupPendenciasBadge } from './pendencias-badge.js';
 import { initTvExpedicaoPage } from './pages/tv_expedicao.js';
 import { initRegistroComprasPage } from './pages/registro_compras.js';
 import { initAuditoriaComprasPage } from './pages/auditoria-compras.js';
@@ -29,6 +30,7 @@ import { initHistoricoSugestoesPage } from './pages/historico-sugestoes.js';
 import { initRequisicaoAjusteEstoquePage } from './pages/requisicao-ajuste-estoque.js';
 import { initAprovarAjustesEstoquePage } from './pages/aprovar-ajustes-estoque.js';
 import { initGaleriaPecasPage } from './pages/galeria-pecas.js';
+import { initAnotacoesPage } from './pages/anotacoes.js';
 
 // 1. Inicializa o socket
 const socket = io({
@@ -83,6 +85,7 @@ export async function initializeAuthenticatedApp() {
     setupAllModalCloseHandlers();
     setupEditModal();
     setupNotifications();
+    setupPendenciasBadge();
     setupBackToTop();
 
     // Solicita permissão de notificação nativa do SO após primeira interação
@@ -177,6 +180,9 @@ export async function initializeAuthenticatedApp() {
     }
     else if (path.includes('/registro-compras')) {
         initRegistroComprasPage();
+    }
+    else if (path.includes('/anotacoes')) {
+        initAnotacoesPage();
     }
 }
 
