@@ -97,11 +97,13 @@ function renderTabela(registros) {
         if (r.conferido) tr.classList.add('retirada-ok');
 
         const checkboxAttrs = podeConferir ? '' : 'disabled title="Você não tem permissão para conferir"';
-        // Editar e excluir sao restritos a quem pode conferir (+ Admin).
-        const acoesHTML = podeConferir
-            ? `<button class="btn-action btn-edit" data-action="editar" data-id="${r.id}">Editar</button>`
-              + `<button class="btn-action btn-delete btn-delete--icon" data-action="excluir" data-id="${r.id}" title="Excluir">X</button>`
-            : '<span style="color:var(--text-muted);">—</span>';
+        // Editar: liberado para quem vê a página (Preencher).
+        // Excluir: restrito a quem pode conferir (+ Admin).
+        const acoesHTML =
+            `<button class="btn-action btn-edit" data-action="editar" data-id="${r.id}">Editar</button>`
+            + (podeConferir
+                ? `<button class="btn-action btn-delete btn-delete--icon" data-action="excluir" data-id="${r.id}" title="Excluir">X</button>`
+                : '');
 
         tr.innerHTML = `
             <td style="text-align:center;">

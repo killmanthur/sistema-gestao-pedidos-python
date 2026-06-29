@@ -284,8 +284,11 @@ export function setupNotifications() {
         AppState.socket.on('nova_notificacao', (data) => {
             console.log("Nova notificação via Socket!");
 
-            // 1. Toca o som
-            playNotificationSound();
+            // 1. Toca o som (exceto para notificações de pendências, que são silenciosas)
+            const ehPendencia = (data?.link || '').includes('/pendencias-e-alteracoes');
+            if (!ehPendencia) {
+                playNotificationSound();
+            }
 
             // 2. Atualiza a lista
             fetchNotifications();

@@ -117,11 +117,9 @@ def alternar_conferido(retirada_id):
 @retiradas_bp.route('/<int:retirada_id>', methods=['PUT'])
 def editar(retirada_id):
     u = _usuario_atual()
+    # Editar e liberado para quem pode ver/preencher (nao exige conferir).
     if not _pode_ver(u):
         return jsonify({'error': 'Acesso restrito.'}), 403
-    # Editar e excluir sao restritos a quem pode conferir (+ Admin).
-    if not _pode_conferir(u):
-        return jsonify({'error': 'Você não tem permissão para editar retiradas.'}), 403
 
     reg = RetiradaAntecipada.query.get_or_404(retirada_id)
     dados = request.get_json() or {}
