@@ -360,6 +360,12 @@ body {
     font-weight: 700;
 }
 
+.header__brand h1 a {
+    color: inherit;
+    text-decoration: none;
+    cursor: pointer;
+}
+
 .header__nav {
     flex-grow: 1;
 }

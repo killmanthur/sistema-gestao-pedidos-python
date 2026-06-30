@@ -147,9 +147,14 @@ async function apiCall(endpoint, method = 'GET', body = null) {
     return result;
 }
 
-function renderPermissionsCheckboxes(container, permissionsMap, userPermissions) {
+function renderPermissionsCheckboxes(container, permissionsMap, userPermissions, sort = false) {
     if (!container) return;
-    container.innerHTML = Object.entries(permissionsMap).map(([key, name]) => {
+    let entradas = Object.entries(permissionsMap);
+    if (sort) {
+        // Ordena pelo rótulo exibido (respeitando acentos do português).
+        entradas = entradas.sort((a, b) => a[1].localeCompare(b[1], 'pt-BR', { sensitivity: 'base' }));
+    }
+    container.innerHTML = entradas.map(([key, name]) => {
         const isChecked = userPermissions && userPermissions[key] === true;
         return `<label><input type="checkbox" data-key="${key}" ${isChecked ? 'checked' : ''}>${name}</label>`;
     }).join('');
@@ -160,7 +165,7 @@ function openModal(mode = 'create', user = null) {
     elements.form.dataset.mode = mode;
     const userPages = user ? user.accessible_pages || [] : [];
     const allPermissions = user ? user.permissions : {};
-    renderPermissionsCheckboxes(elements.pagesPermissionsContainer, ALL_PAGES, Object.fromEntries(userPages.map(p => [p, true])));
+    renderPermissionsCheckboxes(elements.pagesPermissionsContainer, ALL_PAGES, Object.fromEntries(userPages.map(p => [p, true])), true);
     renderPermissionsCheckboxes(elements.separacoesPermissionsContainer, SEPARACOES_PERMS, allPermissions);
     renderPermissionsCheckboxes(elements.sugestoesPermissionsContainer, SUGESTOES_PERMS, allPermissions);
     renderPermissionsCheckboxes(elements.conferenciasPermissionsContainer, CONFERENCIAS_PERMS, allPermissions);

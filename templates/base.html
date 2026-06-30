@@ -29,16 +29,13 @@
     <header>
         <div class="header__content">
             <div class="header__brand">
-                <h1>Quadro de Pedidos</h1>
+                <h1><a href="{{ url_for('main_views.inicio') }}">Quadro de Pedidos</a></h1>
             </div>
             <button id="menu-toggle" class="menu-toggle" aria-label="Abrir menu" aria-expanded="false">
                 <span></span><span></span><span></span>
             </button>
             <nav class="header__nav">
                 <ul id="main-nav">
-                    <!-- Item Fixo -->
-                    <li class="nav-item" data-page="inicio"><a href="{{ url_for('main_views.inicio') }}">Início</a></li>
-
                     <!-- Dropdown de Compras -->
                     <li class="nav-item nav-item--dropdown">
                         <a>Compras <span class="dropdown-arrow">▼</span></a>
