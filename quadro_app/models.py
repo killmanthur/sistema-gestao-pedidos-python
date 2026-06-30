@@ -70,6 +70,14 @@ class Conferencia(db.Model):
     conferente_nome = db.Column(db.String(100), index=True) # <-- ADICIONADO: Índice
     editor_nome = db.Column(db.String(100))
     total_itens = db.Column(db.Integer, default=0, index=True) # <-- ADICIONADO: Índice
+    # Prioridade do recebimento (gerenciada no Kanban de prioridades).
+    # NULL = lançamento legado (importado) — não aparece no Kanban/TV de prioridade.
+    # Lançamentos novos nascem como 'A definir'.
+    prioridade = db.Column(db.String(30), nullable=True, index=True)
+    # Momento em que a prioridade ATUAL foi definida. Usado pela regra de
+    # escalonamento automático (após 48h a nota sobe um nível, priorizando as
+    # mais antigas). NULL enquanto a prioridade for 'A definir'.
+    prioridade_definida_em = db.Column(db.String(100))
 
 # --- MODELOS DE SUPORTE ---
 
@@ -121,6 +129,20 @@ class RetiradaAntecipada(db.Model):
     conferido_por = db.Column(db.String(100))
     data_criacao = db.Column(db.String(100), index=True)
     criado_por = db.Column(db.String(100))
+
+
+class SeparacaoCancelada(db.Model):
+    """Registro simples (apenas controle) de uma separação que foi cancelada.
+    Não tem relação com a tabela Separacao — é um lançamento manual em estilo
+    planilha (data, número, cliente e separador)."""
+    __tablename__ = 'separacao_cancelada'
+    id = db.Column(db.Integer, primary_key=True)
+    data = db.Column(db.String(20), index=True)          # data informada (YYYY-MM-DD)
+    numero_separacao = db.Column(db.String(20), index=True)
+    nome_cliente = db.Column(db.String(200), index=True)
+    separador_nome = db.Column(db.String(100), index=True)
+    criado_por = db.Column(db.String(100))
+    data_criacao = db.Column(db.String(100), index=True)
 
 
 class Notificacao(db.Model):

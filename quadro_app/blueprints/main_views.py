@@ -126,6 +126,16 @@ def recebimento_page():
 def gerenciar_separacoes_page():
     return render_template('gerenciar_separacoes.html')
 
+@main_views_bp.route('/separacoes-canceladas')
+@page_access_required('separacoes_canceladas')
+def separacoes_canceladas_page():
+    return render_template('separacoes_canceladas.html')
+
+@main_views_bp.route('/gerenciar-clientes')
+@page_access_required('gerenciar_clientes')
+def gerenciar_clientes_page():
+    return render_template('gerenciar_clientes.html')
+
 @main_views_bp.route('/retiradas-antecipadas')
 @page_access_required('retiradas_antecipadas')
 def retiradas_antecipadas_page():
@@ -165,6 +175,16 @@ def pendencias_e_alteracoes_page():
 @page_access_required('anotacoes')
 def anotacoes_page():
     return render_template('anotacoes.html')
+
+@main_views_bp.route('/gerenciar-prioridade')
+@page_access_required('gerenciar_prioridade')
+def gerenciar_prioridade_page():
+    return render_template('gerenciar_prioridade.html')
+
+@main_views_bp.route('/tv-prioridade')
+@page_access_required('tv_prioridade')
+def tv_prioridade_page():
+    return render_template('tv_prioridade.html', tv_mode=True)
 
 @main_views_bp.route('/requisicao-ajuste-estoque')
 @page_access_required('requisicao_ajuste_estoque')

@@ -1,6 +1,6 @@
 # quadro_app/blueprints/conferencias.py
 from flask import Blueprint, request, jsonify
-from datetime import datetime
+from datetime import datetime, timedelta
 from sqlalchemy import or_, cast, String
 from ..extensions import db, tz_cuiaba
 from quadro_app.models import Conferencia, ItemExcluido, Usuario
@@ -92,8 +92,55 @@ def serialize_conferencia(c):
         'resolvido_gestor': c.resolvido_gestor, 
         'resolvido_contabilidade': c.resolvido_contabilidade,
         'conferente_nome': c.conferente_nome,
-        'total_itens': c.total_itens
+        'total_itens': c.total_itens,
+        'prioridade': c.prioridade,
+        'prioridade_definida_em': c.prioridade_definida_em
     }
+
+# Prioridades válidas no Kanban (inclui 'A definir' e as 4 prioridades).
+PRIORIDADES = ['A definir', 'Prioridade 1', 'Prioridade 2', 'Prioridade 3', 'Prioridade 4']
+# Prioridades "reais" que aparecem na TV (sem 'A definir').
+PRIORIDADES_TV = ['Prioridade 1', 'Prioridade 2', 'Prioridade 3', 'Prioridade 4']
+# Cadeia de escalonamento, da MENOS para a MAIS urgente. Após 48h, a nota sobe
+# um nível (em direção à Prioridade 1), priorizando as notas mais antigas.
+ESCALA = ['Prioridade 4', 'Prioridade 3', 'Prioridade 2', 'Prioridade 1']
+HORAS_ESCALONAMENTO = 48
+# Status de um recebimento que ainda está "em jogo" (aparece no Kanban/TV).
+STATUS_OPERACIONAIS = ['Aguardando Conferência', 'Em Conferência']
+
+
+def _escalar_prioridades_vencidas():
+    """Sobe automaticamente de nível as notas cuja prioridade ATUAL passou de
+    48h (cada janela de 48h vale 1 nível). 'A definir' e 'Prioridade 1' não
+    escalonam. Retorna True se algo mudou (para emitir atualização)."""
+    agora = datetime.now(tz_cuiaba)
+    candidatas = Conferencia.query.filter(
+        Conferencia.prioridade.in_(['Prioridade 2', 'Prioridade 3', 'Prioridade 4']),
+        Conferencia.status.in_(STATUS_OPERACIONAIS),
+        Conferencia.prioridade_definida_em.isnot(None),
+    ).all()
+
+    mudou = False
+    for c in candidatas:
+        try:
+            definido = datetime.fromisoformat(c.prioridade_definida_em)
+        except (ValueError, TypeError):
+            continue
+        horas = (agora - definido).total_seconds() / 3600
+        niveis = int(horas // HORAS_ESCALONAMENTO)
+        if niveis < 1:
+            continue
+        idx = ESCALA.index(c.prioridade)
+        novo_idx = min(len(ESCALA) - 1, idx + niveis)   # avança em direção à P1
+        if novo_idx == idx:
+            continue
+        c.prioridade = ESCALA[novo_idx]
+        c.prioridade_definida_em = agora.isoformat()
+        mudou = True
+
+    if mudou:
+        db.session.commit()
+    return mudou
 
 # ==========================================
 # 1. ROTAS DE RECEBIMENTO (TELA DE ENTRADA)
@@ -112,7 +159,8 @@ def criar_recebimento():
         nome_transportadora=dados.get('nome_transportadora'),
         qtd_volumes=dados.get('qtd_volumes'),
         recebido_por=dados.get('recebido_por'),
-        status='Aguardando Conferência'
+        status='Aguardando Conferência',
+        prioridade='A definir'
     )
 
     if obs_inicial:
@@ -143,9 +191,10 @@ def criar_recebimento_rua():
         qtd_volumes=dados.get('qtd_volumes'),
         vendedor_nome=dados.get('vendedor_nome'),
         recebido_por=dados.get('recebido_por'),
-        status='Em Conferência', 
+        status='Em Conferência',
         data_inicio_conferencia=now_iso,
-        conferentes=[editor_nome] 
+        conferentes=[editor_nome],
+        prioridade='A definir'
     )
 
     db.session.add(novo_recebimento)
@@ -270,6 +319,64 @@ def finalizar_conferencia_logica(conferencia_id):
         _notificar_nova_pendencia(conferencia, tem_pendencia_fornecedor, solicita_alteracao, editor_nome)
 
     return jsonify({'status': 'success'})
+
+# ==========================================
+# 2.1. GESTÃO DE PRIORIDADE (KANBAN + TV)
+# ==========================================
+
+@conferencias_bp.route('/prioridades/kanban', methods=['GET'])
+def get_prioridades_kanban():
+    """Recebimentos NOVOS (prioridade != NULL) ainda não finalizados, para o
+    Kanban do gerente de estoque. Legados (prioridade NULL) ficam de fora."""
+    if _escalar_prioridades_vencidas():
+        socketio.emit('prioridade_atualizada', {})
+    itens = Conferencia.query.filter(
+        Conferencia.prioridade.isnot(None),
+        Conferencia.status.in_(STATUS_OPERACIONAIS)
+    ).order_by(Conferencia.data_recebimento.desc()).all()
+    return jsonify([serialize_conferencia(c) for c in itens])
+
+
+@conferencias_bp.route('/prioridades/tv', methods=['GET'])
+def get_prioridades_tv():
+    """Recebimentos com prioridade DEFINIDA (1/2/3/4) e ainda não finalizados.
+    Ordem: primeiro os que aguardam (por prioridade, do mais antigo p/ o mais
+    novo); por último os que já estão EM CONFERÊNCIA (vão para o fim da fila)."""
+    if _escalar_prioridades_vencidas():
+        socketio.emit('prioridade_atualizada', {})
+    itens = Conferencia.query.filter(
+        Conferencia.prioridade.in_(PRIORIDADES_TV),
+        Conferencia.status.in_(STATUS_OPERACIONAIS)
+    ).all()
+
+    def chave(c):
+        em_conf = 1 if c.status == 'Em Conferência' else 0   # em conferência vai pro fim
+        return (em_conf, PRIORIDADES_TV.index(c.prioridade), c.data_recebimento or '')
+
+    itens.sort(key=chave)
+    return jsonify([serialize_conferencia(c) for c in itens])
+
+
+@conferencias_bp.route('/<int:conferencia_id>/prioridade', methods=['PUT'])
+def definir_prioridade(conferencia_id):
+    dados = request.get_json() or {}
+    nova = dados.get('prioridade')
+    editor_nome = dados.get('editor_nome', 'N/A')
+    if nova not in PRIORIDADES:
+        return jsonify({'error': 'Prioridade inválida.'}), 400
+
+    conferencia = Conferencia.query.get_or_404(conferencia_id)
+    conferencia.prioridade = nova
+    # Marca o início da janela de 48h (só p/ prioridades reais; 'A definir' não escalona).
+    conferencia.prioridade_definida_em = (
+        datetime.now(tz_cuiaba).isoformat() if nova in PRIORIDADES_TV else None
+    )
+    db.session.commit()
+    registrar_log(conferencia_id, editor_nome, 'PRIORIDADE_DEFINIDA',
+                  detalhes={'info': nova}, log_type='conferencias')
+    socketio.emit('prioridade_atualizada', {'conferencia': serialize_conferencia(conferencia)})
+    return jsonify({'status': 'success'})
+
 
 # ==========================================
 # 3. GESTÃO DE PENDÊNCIAS E ALTERAÇÕES
@@ -485,15 +592,47 @@ def get_dashboard_conferencia_data():
             c_list = conf.conferentes or []
             num = len(c_list)
             if num > 0:
-                for nome in c_list:
+                # Distribui volumes e itens em valores inteiros (mesma regra do
+                # dashboard de separação): cada conferente recebe a parte inteira
+                # e o resto é distribuído de um em um, evitando dízimas quebradas.
+                vol_total = conf.qtd_volumes or 0
+                itens_total = conf.total_itens or 0
+                base_vol, resto_vol = divmod(vol_total, num)
+                base_itens, resto_itens = divmod(itens_total, num)
+                for i, nome in enumerate(c_list):
                     c_stats = conferente_stats.setdefault(nome, {'nome': nome, 'count': 0, 'volumes': 0, 'total_itens': 0, 'total_seconds': 0, 'items_for_avg': 0})
                     c_stats['count'] += 1
-                    c_stats['volumes'] += (conf.qtd_volumes or 0) / num
-                    c_stats['total_itens'] += (conf.total_itens or 0) / num
-        
+                    c_stats['volumes'] += base_vol + (1 if i < resto_vol else 0)
+                    c_stats['total_itens'] += base_itens + (1 if i < resto_itens else 0)
+
+        # Garante valores inteiros na saída, igual ao dashboard de separação.
+        for data in conferente_stats.values():
+            data['volumes'] = round(data['volumes'])
+            data['total_itens'] = round(data['total_itens'])
+
         return jsonify({
             'conferentes': sorted(conferente_stats.values(), key=lambda x: x['count'], reverse=True),
             'fornecedores': sorted(fornecedor_stats.values(), key=lambda x: x['count'], reverse=True)
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+# ==========================================
+# 6. MONITOR DE ESCALONAMENTO (background)
+# ==========================================
+
+def iniciar_monitor_prioridades(app):
+    """Inicia um loop em segundo plano que, a cada 15 min, sobe de nível as
+    notas cuja prioridade passou de 48h e avisa as telas (Kanban + TV)."""
+    def _loop():
+        while True:
+            socketio.sleep(900)   # 15 minutos
+            try:
+                with app.app_context():
+                    if _escalar_prioridades_vencidas():
+                        socketio.emit('prioridade_atualizada', {})
+            except Exception as e:
+                print(f"[monitor_prioridades] erro: {e}")
+
+    socketio.start_background_task(_loop)

@@ -449,6 +449,12 @@ body {
     transform: translateY(-10px);
     transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
 
+    /* Em telas menores o menu pode ficar maior que a tela: rola internamente */
+    max-height: calc(100vh - 80px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+
     /* Flex para organizar melhor se necessário */
     display: flex;
     flex-direction: column;
@@ -569,9 +575,20 @@ input[type="number"]::-webkit-outer-spin-button {
     cursor: pointer;
 }
 
-input[type="checkbox"] {
+input[type="checkbox"],
+input[type="radio"] {
+    /* Não herdar padding/transição/box-shadow dos campos de texto — isso causava
+       um "flash"/glitch ao marcar (animação da transição + anel de foco). */
     width: auto;
     height: auto;
+    padding: 0;
+    margin: 0;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    transition: none;
+    accent-color: var(--clr-primary-main);
+    cursor: pointer;
 }
 
 input:focus,
@@ -580,6 +597,17 @@ textarea:focus {
     outline: none;
     border-color: var(--clr-primary-main);
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--clr-primary-light) 25%, transparent);
+}
+
+/* Checkbox/radio não usam o anel de foco animado dos campos de texto. */
+input[type="checkbox"]:focus,
+input[type="radio"]:focus {
+    box-shadow: none;
+}
+
+body.dark-mode input[type="checkbox"],
+body.dark-mode input[type="radio"] {
+    background-color: transparent;
 }
 
 body.dark-mode input,
@@ -4385,5 +4413,193 @@ tr.retirada-ok:hover {
     cursor: pointer;
     padding: 0;
     transition: transform 0.12s ease;
+}
+
+/* ==========================================================================
+   GERENCIAR PRIORIDADE (Kanban) + TV PRIORIDADE (Painel)
+   ========================================================================== */
+
+/* --- Card de recebimento no Kanban de prioridade --- */
+.prio-card__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.4rem;
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+}
+.prio-card__conf {
+    margin-top: 0.35rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+.prio-card__escala {
+    margin-top: 0.35rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+.prio-card__escala--vencido {
+    color: #dc2626;
+    font-weight: 700;
+}
+
+/* Botões de ação em linha (tabelas de gestão) — evita quebra/empilhamento */
+.row-acoes {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: nowrap;
+}
+.row-acoes .btn {
+    margin: 0;
+    white-space: nowrap;
+}
+
+/* Área rolável das tabelas de gestão */
+.tabela-scroll {
+    max-height: calc(100vh - 250px);
+    overflow-y: auto;
+    border: 1px solid var(--border-main);
+    border-radius: var(--border-radius);
+    scrollbar-width: thin;
+}
+/* O .admin-table base usa "top: 64px" (pensado p/ a rolagem da página). Dentro
+   do container rolável o cabeçalho deve grudar no TOPO do container (top: 0),
+   senão fica 64px deslocado e sobrepõe as linhas. */
+.tabela-scroll .admin-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+}
+.tabela-scroll .admin-table thead th {
+    background-color: var(--bg-muted);   /* opaco: não deixa as linhas vazarem */
+    box-shadow: inset 0 -1px 0 var(--border-strong);
+}
+
+/* Cliente oculto — feedback visual */
+.cliente-oculto .cliente-nome {
+    text-decoration: line-through;
+    opacity: 0.55;
+}
+.cliente-oculto td {
+    opacity: 0.85;
+}
+.badge-oculto {
+    display: inline-block;
+    margin-left: 0.5rem;
+    padding: 0.05rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    background: var(--bg-muted);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-strong);
+    vertical-align: middle;
+}
+
+/* Barra de mesclagem de clientes */
+.merge-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin: 0 0 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: color-mix(in srgb, var(--clr-primary-main) 12%, var(--bg-card));
+    border: 1px solid var(--clr-primary-main);
+    border-radius: var(--border-radius);
+}
+.merge-bar #merge-count {
+    font-weight: 600;
+    margin-right: auto;
+}
+
+.merge-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    max-height: 220px;
+    overflow-y: auto;
+}
+.merge-option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.5rem;
+    border: 1px solid var(--border-main);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+}
+.merge-option:hover {
+    background: var(--bg-muted);
+}
+.merge-option span {
+    flex: 1;
+    word-break: break-word;
+}
+.merge-option small {
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+.prio-badge {
+    border-radius: 999px;
+    padding: 0.1rem 0.55rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #fff;
+}
+.prio-badge--conf { background: #16a34a; }
+.prio-badge--aguard { background: #64748b; }
+
+/* --- TV Prioridade --- */
+.tv-prio {
+    padding: 0.6rem 1rem;
+    color: #f1f5f9;
+}
+.tv-prio-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 4px;
+    font-size: 1.05rem;
+}
+.tv-prio-table thead th {
+    text-align: left;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #94a3b8;
+    padding: 0 0.7rem 0.3rem;
+}
+.tv-prio-table__num { text-align: center; }
+.tv-prio-table__prio {
+    text-align: center;
+    font-weight: 800;
+    width: 70px;
+}
+.tv-prio-row {
+    color: #fff;
+    font-weight: 600;
+}
+.tv-prio-row td {
+    padding: 0.4rem 0.7rem;
+    vertical-align: middle;
+}
+.tv-prio-row td:first-child { border-radius: 8px 0 0 8px; }
+.tv-prio-row td:last-child { border-radius: 0 8px 8px 0; }
+.tv-prio-status {
+    display: inline-block;
+    background: rgba(0, 0, 0, 0.22);
+    border-radius: 999px;
+    padding: 0.1rem 0.55rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+.tv-prio-status--aguard { background: rgba(255, 255, 255, 0.18); }
+.tv-prio-conf {
+    margin-left: 0.5rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+    opacity: 0.95;
 }
 .cor-preset:hover { transform: scale(1.15); }

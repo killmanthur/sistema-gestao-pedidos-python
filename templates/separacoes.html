@@ -18,7 +18,8 @@
             </div>
             <div class="form-group" style="margin-bottom: 0; flex-grow: 2;">
                 <label for="nome-cliente">Nome do Cliente</label>
-                <input type="text" id="nome-cliente" required>
+                <input type="text" id="nome-cliente" list="lista-clientes" autocomplete="off" required>
+                <datalist id="lista-clientes"></datalist>
             </div>
             <div class="form-group" style="margin-bottom: 0; flex-grow: 1;">
                 <div class="tag-input-container" id="vendedor-tag-input">
@@ -129,7 +130,7 @@
                     </div>
                 </div>
                 <div class="form-group"><label>Nome do Cliente</label><input type="text" id="edit-nome-cliente"
-                        required></div>
+                        list="lista-clientes" autocomplete="off" required></div>
                 <div class="form-group"><label>Vendedor</label><select id="edit-vendedor-nome" required></select></div>
                 <div class="form-group">
                     <label>Separador(es)</label>

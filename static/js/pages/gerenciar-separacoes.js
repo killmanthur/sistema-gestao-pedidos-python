@@ -2,10 +2,12 @@
 import { AppState } from '../state.js';
 import { showToast } from '../toasts.js';
 import { formatarData, toggleButtonLoading } from '../ui.js';
+import { attachAutocomplete } from '../autocomplete.js';
 
 // --- VARIÁVEIS DE CONTROLE DO MÓDULO ---
 let elementos = {};
 let listasUsuarios = { vendedores: [], separadores: [], expedicao: [] };
+let clientesCache = [];   // nomes de clientes p/ o autocomplete
 let currentPage = 0;
 let isLoading = false;
 let hasMore = true;
@@ -557,6 +559,15 @@ async function fetchInitialUserData() {
     }
 }
 
+// Recarrega a lista de clientes usada pelo autocomplete.
+async function popularDatalistClientes() {
+    try {
+        const res = await fetch('/api/separacoes/clientes-nomes');
+        if (!res.ok) return;
+        clientesCache = await res.json();
+    } catch (e) { /* autocomplete é opcional */ }
+}
+
 function handleTableActions(event) {
     const target = event.target.closest('.btn-edit');
     if (!target) return;
@@ -636,6 +647,10 @@ export async function initGerenciarSeparacoesPage() {
 
     // Carga Inicial
     await fetchInitialUserData();
+    await popularDatalistClientes();
+    const getClientes = () => clientesCache;
+    attachAutocomplete(document.getElementById('nome-cliente'), getClientes);
+    attachAutocomplete(document.getElementById('edit-nome-cliente'), getClientes);
 
     // Controle de Permissões de UI
     if (AppState.currentUser.permissions?.pode_criar_separacao) {

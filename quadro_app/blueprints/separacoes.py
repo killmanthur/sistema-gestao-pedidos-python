@@ -127,6 +127,37 @@ def atualizar_fila_e_status():
         print(f"ERRO ao atualizar fila de separadores: {e}")
         return jsonify({'error': str(e)}), 500
 
+import re
+# Nome "válido" para autocomplete: começa com uma letra (ignora aspas, pontos
+# e números soltos vindos de dados sujos — ex.: "'ANA", ".CA", "371650", "4").
+_NOME_VALIDO = re.compile(r'^[A-Za-zÀ-ÿ]')
+
+
+@separacoes_bp.route('/clientes-nomes', methods=['GET'])
+def get_clientes_nomes():
+    """Nomes de clientes já usados em separações — alimenta o autocomplete do
+    campo 'Nome do Cliente' para evitar dois nomes para o mesmo cliente.
+    Ignora nomes que não começam com letra (aspas, pontos, números)."""
+    try:
+        from quadro_app.blueprints.clientes import get_clientes_ocultos
+        ocultos = get_clientes_ocultos()
+        linhas = db.session.query(Separacao.nome_cliente).filter(
+            Separacao.nome_cliente.isnot(None),
+            Separacao.nome_cliente != ''
+        ).distinct().all()
+        nomes = sorted(
+            {l[0].strip() for l in linhas
+             if l[0] and l[0].strip()
+             and _NOME_VALIDO.match(l[0].strip())
+             and l[0].strip() not in ocultos},
+            key=lambda n: n.lower()
+        )
+        return jsonify(nomes)
+    except Exception as e:
+        print(f"ERRO em get_clientes_nomes: {e}")
+        return jsonify([])
+
+
 def serialize_separacao(s):
     return {
         'id': s.id, 'numero_movimentacao': s.numero_movimentacao, 'nome_cliente': s.nome_cliente,

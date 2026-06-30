@@ -28,6 +28,24 @@ def _garantir_schema_campanhas_ajuste():
             conn.commit()
 
 
+def _garantir_coluna_prioridade_conferencia():
+    """
+    db.create_all() nao adiciona colunas novas em tabelas existentes.
+    Garante que conferencia tem a coluna 'prioridade' mesmo em bancos ja populados.
+    Lancamentos legados ficam com prioridade NULL (nao aparecem no Kanban/TV).
+    """
+    engine = db.engine
+    with engine.connect() as conn:
+        cols = [row[1] for row in conn.execute(text("PRAGMA table_info(conferencia)"))]
+        if 'prioridade' not in cols:
+            conn.execute(text("ALTER TABLE conferencia ADD COLUMN prioridade VARCHAR(30)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_conferencia_prioridade ON conferencia(prioridade)"))
+            conn.commit()
+        if 'prioridade_definida_em' not in cols:
+            conn.execute(text("ALTER TABLE conferencia ADD COLUMN prioridade_definida_em VARCHAR(100)"))
+            conn.commit()
+
+
 def _migrar_ajustes_legado():
     """
     Se existirem ajustes sem campanha, cria/reutiliza uma campanha 'Legado' finalizada
@@ -150,6 +168,8 @@ def create_app():
     from .blueprints.estoque import estoque_bp
     from .blueprints.retiradas import retiradas_bp
     from .blueprints.anotacoes import anotacoes_bp
+    from .blueprints.separacoes_canceladas import separacoes_canceladas_bp
+    from .blueprints.clientes import clientes_bp
 
     app.register_blueprint(main_views_bp)
     app.register_blueprint(pedidos_bp)
@@ -167,6 +187,8 @@ def create_app():
     app.register_blueprint(estoque_bp)
     app.register_blueprint(retiradas_bp)
     app.register_blueprint(anotacoes_bp)
+    app.register_blueprint(separacoes_canceladas_bp)
+    app.register_blueprint(clientes_bp)
 
     # Garante que a pasta de uploads de fotos de pecas existe
     os.makedirs(os.path.join(app.static_folder, 'uploads', 'pecas'), exist_ok=True)
@@ -176,7 +198,12 @@ def create_app():
         from . import models
         db.create_all()
         _garantir_schema_campanhas_ajuste()
+        _garantir_coluna_prioridade_conferencia()
         _migrar_ajustes_legado()
         garantir_listas_padrao()
+
+    # Monitor de escalonamento automático de prioridades (sobe nível após 48h).
+    from .blueprints.conferencias import iniciar_monitor_prioridades
+    iniciar_monitor_prioridades(app)
 
     return app, socketio, TV_MODE

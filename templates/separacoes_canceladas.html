@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}Separações Canceladas{% endblock %}
+
+{% block content %}
+<!-- Formulário de Lançamento -->
+<section class="form-container" id="form-container-cancelada"
+    style="padding: 0.5rem 1rem; margin: 0.5rem auto 0.25rem; max-width: 1400px;">
+    <form id="form-cancelada">
+        <div style="display: flex; gap: 0.5rem; align-items: flex-end; flex-wrap: wrap;">
+            <div class="form-group" style="margin-bottom: 0; width: 160px;">
+                <label for="cancelada-data">Data</label>
+                <input type="date" id="cancelada-data" required>
+            </div>
+            <div class="form-group" style="margin-bottom: 0; flex-grow: 1;">
+                <label for="cancelada-numero">Nº Separação</label>
+                <input type="text" id="cancelada-numero" placeholder="Nº" required>
+            </div>
+            <div class="form-group" style="margin-bottom: 0; flex-grow: 2;">
+                <label for="cancelada-cliente">Cliente</label>
+                <input type="text" id="cancelada-cliente" list="lista-clientes" autocomplete="off"
+                    placeholder="Nome do Cliente" required>
+            </div>
+            <div class="form-group" style="margin-bottom: 0; flex-grow: 1;">
+                <label for="cancelada-separador">Separador</label>
+                <select id="cancelada-separador" required></select>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+                <button type="submit" class="btn btn--primary">Lançar</button>
+            </div>
+        </div>
+    </form>
+    <!-- Datalist compartilhado de clientes (autocomplete) -->
+    <datalist id="lista-clientes"></datalist>
+</section>
+
+<section class="form-container" style="max-width: 1400px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+        <h2 style="font-size: 1rem;">Separações Canceladas</h2>
+    </div>
+
+    <div style="margin: 0.5rem 0; display: flex; gap: 10px;">
+        <input type="search" id="filtro-canceladas" placeholder="🔎 Buscar por cliente, separador ou nº..."
+            style="flex: 1;">
+    </div>
+
+    <div id="loading-spinner-canceladas" class="spinner" style="display: block; margin: 1rem auto;"></div>
+
+    <table id="tabela-canceladas" class="admin-table" style="display: none; width: 100%; margin-top: 0.5rem;">
+        <thead>
+            <tr>
+                <th style="width: 130px;">Data</th>
+                <th style="width: 120px;">Nº Separação</th>
+                <th>Cliente</th>
+                <th>Separador</th>
+                <th style="width: 110px;">Ações</th>
+            </tr>
+        </thead>
+        <tbody id="tabela-canceladas-body"></tbody>
+    </table>
+
+    <div id="pagination-container-canceladas" class="pagination-container">
+        <div id="loading-more-spinner-canceladas" class="spinner" style="display: none;"></div>
+    </div>
+</section>
+{% endblock %}

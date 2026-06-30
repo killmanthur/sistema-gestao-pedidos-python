@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Gerenciar Prioridade{% endblock %}
+
+{% block content %}
+<!-- SortableJS: drag-and-drop dos cards entre colunas (carrega antes do main.js) -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+
+<section class="anotacoes-page">
+    <div class="page-toolbar anotacoes-toolbar">
+        <h2>Gerenciar Prioridade</h2>
+    </div>
+    <p style="color: var(--text-secondary); margin: 0 0 1rem;">
+        Arraste os recebimentos entre as colunas para definir a prioridade da conferência.
+        Recebimentos finalizados saem do quadro automaticamente.
+    </p>
+
+    <div id="prio-loading-spinner" class="spinner" style="display: block; margin: 2rem auto;"></div>
+
+    <!-- BOARD: 4 colunas fixas (preenchidas via JS) -->
+    <div id="prio-board" class="kanban-board" style="display: none;"></div>
+</section>
+{% endblock %}

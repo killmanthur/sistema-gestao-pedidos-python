@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}Painel de Prioridade{% endblock %}
+
+{% block content %}
+<section class="tv-prio">
+    <div class="tv-prio__table-wrap">
+        <table class="tv-prio-table">
+            <thead>
+                <tr>
+                    <th class="tv-prio-table__prio">Prioridade</th>
+                    <th>NF</th>
+                    <th>Fornecedor</th>
+                    <th>Transportadora</th>
+                    <th class="tv-prio-table__num">Volumes</th>
+                    <th>Recebido por</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="tv-prio-body"></tbody>
+        </table>
+        <div id="tv-prio-empty" class="tv-empty-state" style="display:none;">Nenhum recebimento priorizado.</div>
+    </div>
+</section>
+{% endblock %}

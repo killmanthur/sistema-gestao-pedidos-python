@@ -2,9 +2,20 @@
 import { AppState } from '../state.js';
 import { showToast } from '../toasts.js';
 import { formatarData, showConfirmModal, openLogModal } from '../ui.js';
+import { attachAutocomplete } from '../autocomplete.js';
 
 let state = {};
 let debounceTimer;
+let clientesCache = [];   // nomes de clientes p/ o autocomplete
+
+// Recarrega a lista de clientes usada pelo autocomplete do campo "Nome do Cliente".
+async function popularDatalistClientes() {
+    try {
+        const res = await fetch('/api/separacoes/clientes-nomes');
+        if (!res.ok) return;
+        clientesCache = await res.json();
+    } catch (e) { /* autocomplete é opcional */ }
+}
 
 function resetState() {
     state = {
@@ -597,6 +608,7 @@ export async function initSeparacoesPage() {
             if (state.vendedorInput) state.vendedorInput.clear();
             autoPreencherMovimentacao();
             fetchActiveSeparacoes();
+            popularDatalistClientes();
         }
         else { const err = await res.json(); showToast(err.error, 'error'); }
     };
@@ -648,6 +660,12 @@ export async function initSeparacoesPage() {
         expedicao: await eRes.json()
     };
     state.filaAtiva = await filaRes.json();
+
+    // Autocomplete de clientes (evita dois nomes para o mesmo cliente)
+    await popularDatalistClientes();
+    const getClientes = () => clientesCache;
+    attachAutocomplete(document.getElementById('nome-cliente'), getClientes);
+    attachAutocomplete(document.getElementById('edit-nome-cliente'), getClientes);
 
     // Controle de Permissões de UI
     if (AppState.currentUser.permissions?.pode_criar_separacao) document.getElementById('form-container-separacao').style.display = 'block';

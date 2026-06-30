@@ -31,6 +31,10 @@ import { initRequisicaoAjusteEstoquePage } from './pages/requisicao-ajuste-estoq
 import { initAprovarAjustesEstoquePage } from './pages/aprovar-ajustes-estoque.js';
 import { initGaleriaPecasPage } from './pages/galeria-pecas.js';
 import { initAnotacoesPage } from './pages/anotacoes.js';
+import { initGerenciarPrioridadePage } from './pages/gerenciar-prioridade.js';
+import { initTvPrioridadePage } from './pages/tv-prioridade.js';
+import { initSeparacoesCanceladasPage } from './pages/separacoes-canceladas.js';
+import { initGerenciarClientesPage } from './pages/gerenciar-clientes.js';
 
 // 1. Inicializa o socket
 const socket = io({
@@ -101,7 +105,19 @@ export async function initializeAuthenticatedApp() {
 
     const path = window.location.pathname;
 
-    if (path.includes('/requisicao-ajuste-estoque')) {
+    if (path.includes('/tv-prioridade')) {
+        initTvPrioridadePage();
+    }
+    else if (path.includes('/gerenciar-prioridade')) {
+        initGerenciarPrioridadePage();
+    }
+    else if (path.includes('/separacoes-canceladas')) {
+        initSeparacoesCanceladasPage();
+    }
+    else if (path.includes('/gerenciar-clientes')) {
+        initGerenciarClientesPage();
+    }
+    else if (path.includes('/requisicao-ajuste-estoque')) {
         initRequisicaoAjusteEstoquePage();
     }
     else if (path.includes('/aprovar-ajustes-estoque')) {

@@ -68,13 +68,37 @@
                         </ul>
                     </li>
 
-                    <!-- Dropdown de Logística -->
+                    <!-- Dropdown de Separação -->
                     <li class="nav-item nav-item--dropdown">
-                        <a>Logística <span id="pendencias-dropdown-badge" class="notification-badge"
+                        <a>Separação <span class="dropdown-arrow">▼</span></a>
+                        <ul class="dropdown-menu">
+                            <li class="nav-item" data-page="separacoes">
+                                <a href="{{ url_for('main_views.separacoes_page') }}">
+                                    Separações
+                                    <span id="separacoes-notification-badge" class="notification-badge"
+                                        style="display: none;"></span>
+                                </a>
+                            </li>
+                            <li class="nav-item" data-page="gerenciar_separacoes"><a
+                                    href="{{ url_for('main_views.gerenciar_separacoes_page') }}">Gerenciar
+                                    Separações</a></li>
+                            <li class="nav-item" data-page="separacoes_canceladas"><a
+                                    href="{{ url_for('main_views.separacoes_canceladas_page') }}">Separações
+                                    Canceladas</a></li>
+                            <li class="nav-item" data-page="retiradas_antecipadas"><a
+                                    href="{{ url_for('main_views.retiradas_antecipadas_page') }}">Retiradas
+                                    Antecipadas</a></li>
+                            <li class="nav-item" data-page="dashboard_logistica"><a
+                                    href="{{ url_for('main_views.dashboard_logistica_page') }}">Dashboard de
+                                    Separação</a></li>
+                        </ul>
+                    </li>
+
+                    <!-- Dropdown de Estoque -->
+                    <li class="nav-item nav-item--dropdown">
+                        <a>Estoque <span id="pendencias-dropdown-badge" class="notification-badge"
                                 style="display: none;"></span> <span class="dropdown-arrow">▼</span></a>
                         <ul class="dropdown-menu">
-                            <li class="nav-item" data-page="tv_expedição"><a
-                                    href="{{ url_for('main_views.tv_expedicao_page') }}">TV Expedição</a></li>
                             <li class="nav-item" data-page="recebimento"><a
                                     href="{{ url_for('main_views.recebimento_page') }}">Recebimento</a></li>
                             <li class="nav-item" data-page="conferencias"><a
@@ -87,19 +111,6 @@
                             <li class="nav-item" data-page="historico_conferencias"><a
                                     href="{{ url_for('main_views.historico_conferencias_page') }}">Histórico de
                                     Conferências</a></li>
-                            <li class="nav-item" data-page="separacoes">
-                                <a href="{{ url_for('main_views.separacoes_page') }}">
-                                    Separações
-                                    <span id="separacoes-notification-badge" class="notification-badge"
-                                        style="display: none;"></span>
-                                </a>
-                            </li>
-                            <li class="nav-item" data-page="gerenciar_separacoes"><a
-                                    href="{{ url_for('main_views.gerenciar_separacoes_page') }}">Gerenciar
-                                    Separações</a></li>
-                            <li class="nav-item" data-page="retiradas_antecipadas"><a
-                                    href="{{ url_for('main_views.retiradas_antecipadas_page') }}">Retiradas
-                                    Antecipadas</a></li>
                             <li class="nav-item" data-page="requisicao_ajuste_estoque"><a
                                     href="{{ url_for('main_views.requisicao_ajuste_estoque_page') }}">Ajustes</a></li>
                             <li class="nav-item" data-page="aprovar_ajuste_estoque"><a
@@ -108,11 +119,22 @@
                             <li class="nav-item" data-page="dashboard_conferencias"><a
                                     href="{{ url_for('main_views.dashboard_conferencias_page') }}">Dashboard
                                     Conferência</a></li>
-                            <li class="nav-item" data-page="dashboard_logistica"><a
-                                    href="{{ url_for('main_views.dashboard_logistica_page') }}">Dashboard de
-                                    Separação</a></li>
                             <li class="nav-item" data-page="anotacoes"><a
                                     href="{{ url_for('main_views.anotacoes_page') }}">Anotações</a></li>
+                            <li class="nav-item" data-page="gerenciar_prioridade"><a
+                                    href="{{ url_for('main_views.gerenciar_prioridade_page') }}">Gerenciar
+                                    Prioridade</a></li>
+                        </ul>
+                    </li>
+
+                    <!-- Dropdown de TV -->
+                    <li class="nav-item nav-item--dropdown">
+                        <a>TV <span class="dropdown-arrow">▼</span></a>
+                        <ul class="dropdown-menu">
+                            <li class="nav-item" data-page="tv_expedição"><a
+                                    href="{{ url_for('main_views.tv_expedicao_page') }}">TV Expedição</a></li>
+                            <li class="nav-item" data-page="tv_prioridade"><a
+                                    href="{{ url_for('main_views.tv_prioridade_page') }}">TV Prioridade</a></li>
                         </ul>
                     </li>
 
@@ -124,6 +146,8 @@
                                     href="{{ url_for('main_views.gerenciar_sistema_page') }}">Gerenciar Sistema</a></li>
                             <li class="nav-item" data-page="galeria_pecas"><a
                                     href="{{ url_for('main_views.galeria_pecas_page') }}">Galeria de Peças</a></li>
+                            <li class="nav-item" data-page="gerenciar_clientes"><a
+                                    href="{{ url_for('main_views.gerenciar_clientes_page') }}">Gerenciar Clientes</a></li>
                             <li class="nav-item" data-page="lixeira"><a
                                     href="{{ url_for('main_views.lixeira_page') }}">Lixeira</a></li>
                         </ul>
