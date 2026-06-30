@@ -170,6 +170,7 @@ def create_app():
     from .blueprints.anotacoes import anotacoes_bp
     from .blueprints.separacoes_canceladas import separacoes_canceladas_bp
     from .blueprints.clientes import clientes_bp
+    from .blueprints.garantias import garantias_bp
 
     app.register_blueprint(main_views_bp)
     app.register_blueprint(pedidos_bp)
@@ -189,6 +190,7 @@ def create_app():
     app.register_blueprint(anotacoes_bp)
     app.register_blueprint(separacoes_canceladas_bp)
     app.register_blueprint(clientes_bp)
+    app.register_blueprint(garantias_bp)
 
     # Garante que a pasta de uploads de fotos de pecas existe
     os.makedirs(os.path.join(app.static_folder, 'uploads', 'pecas'), exist_ok=True)

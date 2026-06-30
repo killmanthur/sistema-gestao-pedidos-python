@@ -261,6 +261,48 @@ class RegistroCompra(db.Model):
     editor_nome = db.Column(db.String(100), index=True)
 
 
+class Garantia(db.Model):
+    """Processo de garantia de uma peça junto ao fornecedor.
+
+    Recebe atualizações constantes (linha do tempo de 'acompanhamento') enquanto
+    está com status 'Pendente'. Ao mudar para qualquer outro status
+    ('Recusada', 'Concedida', 'Abandono') o processo é considerado finalizado e
+    passa a aparecer na aba de Finalizadas. Pode retornar para 'Pendente' caso
+    volte a ser trabalhado."""
+    __tablename__ = 'garantia'
+    id = db.Column(db.Integer, primary_key=True)
+
+    # Dados do processo
+    nome_cliente = db.Column(db.String(200), index=True)
+    descricao_peca = db.Column(db.Text)
+    codigo_peca = db.Column(db.String(100), index=True)
+    marca = db.Column(db.String(100))
+    fornecedor = db.Column(db.String(200), index=True)
+    defeito = db.Column(db.Text)
+    quantidade = db.Column(db.Integer, default=1)
+
+    # Datas (texto YYYY-MM-DD, como o restante do sistema)
+    data_inicio = db.Column(db.String(20), index=True)
+    data_envio_fornecedor = db.Column(db.String(20))
+    ultimo_contato = db.Column(db.String(20))
+    data_final = db.Column(db.String(20))        # preenchida ao finalizar
+
+    # Linha do tempo de acompanhamento: lista de {texto, autor, timestamp}.
+    # Recebe edições constantes ("em contato com fornecedor dia 30/06...").
+    acompanhamento = db.Column(MutableList.as_mutable(JSON), default=[])
+    conclusao = db.Column(db.Text)               # desfecho/observação final
+
+    # 'Pendente' | 'Recusada' | 'Concedida' | 'Abandono'
+    status = db.Column(db.String(20), default='Pendente', nullable=False, index=True)
+
+    # Auditoria
+    criado_por = db.Column(db.String(100))
+    data_criacao = db.Column(db.String(100), index=True)
+    atualizado_em = db.Column(db.String(100))
+    finalizado_por = db.Column(db.String(100))
+    finalizado_em = db.Column(db.String(100))
+
+
 class MovimentacaoCompra(db.Model):
     """
     Registro de auditoria das transições de status de um RegistroCompra.

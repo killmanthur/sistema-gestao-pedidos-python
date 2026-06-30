@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+
+{% block title %}Garantias{% endblock %}
+
+{% block content %}
+<section class="form-container" style="max-width: 1600px;">
+    <div class="page-toolbar"
+        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+        <h2>Garantias — Processos Pendentes</h2>
+        <button type="button" id="btn-nova-garantia" class="btn btn--primary">+ Nova Garantia</button>
+    </div>
+    <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+        Acompanhamento detalhado dos processos de garantia em andamento. Ao mudar o status
+        (Concedida, Recusada ou Abandono) o processo é movido para a aba
+        <strong>Garantias Finalizadas</strong>.
+    </p>
+
+    <!-- BUSCA -->
+    <div style="margin-bottom: 1rem;">
+        <input type="search" id="g-busca"
+            placeholder="🔎 Buscar por cliente, código, descrição, marca, fornecedor ou defeito..."
+            style="width: 100%;">
+    </div>
+
+    <div id="g-loading-spinner" class="spinner" style="display: block; margin: 2rem auto;"></div>
+
+    <!-- TABELA -->
+    <table id="tabela-garantias" class="admin-table" style="display: none; width: 100%;">
+        <thead>
+            <tr>
+                <th>Cliente</th>
+                <th>Código</th>
+                <th>Descrição</th>
+                <th>Marca</th>
+                <th>Fornecedor</th>
+                <th style="width: 60px;">Qtd.</th>
+                <th>Início</th>
+                <th>Envio Forn.</th>
+                <th style="width: 90px;">Tempo</th>
+                <th style="width: 90px; text-align:center;">Acomp.</th>
+                <th style="width: 220px;">Ações</th>
+            </tr>
+        </thead>
+        <tbody id="tabela-garantias-body"></tbody>
+    </table>
+</section>
+
+<!-- MODAL DE NOVA GARANTIA -->
+<div id="garantia-novo-modal-overlay" class="modal-overlay" style="display:none;">
+    <div class="modal-content" style="max-width: 640px;">
+        <div class="modal-header">
+            <h2>Nova Garantia</h2>
+            <button class="close-modal close-modal-icon">×</button>
+        </div>
+        <form id="form-garantia">
+            <div class="modal-body">
+                <div class="garantia-edit-grid">
+                    <div class="form-group form-group--wide">
+                        <label for="g-nome-cliente">Cliente *</label>
+                        <input type="text" id="g-nome-cliente" placeholder="Nome do cliente" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="g-codigo">Código da Peça *</label>
+                        <input type="text" id="g-codigo" placeholder="Código" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="g-quantidade">Qtd.</label>
+                        <input type="number" id="g-quantidade" value="1" min="1" required>
+                    </div>
+                    <div class="form-group form-group--wide">
+                        <label for="g-descricao">Descrição da Peça</label>
+                        <input type="text" id="g-descricao" placeholder="Descrição da peça">
+                    </div>
+                    <div class="form-group">
+                        <label for="g-marca">Marca</label>
+                        <input type="text" id="g-marca" placeholder="Marca">
+                    </div>
+                    <div class="form-group">
+                        <label for="g-fornecedor">Fornecedor</label>
+                        <input type="text" id="g-fornecedor" placeholder="Fornecedor">
+                    </div>
+                    <div class="form-group form-group--wide">
+                        <label for="g-defeito">Defeito</label>
+                        <input type="text" id="g-defeito" placeholder="Descrição do defeito">
+                    </div>
+                    <div class="form-group">
+                        <label for="g-data-inicio">Data Início</label>
+                        <input type="date" id="g-data-inicio">
+                    </div>
+                    <div class="form-group">
+                        <label for="g-data-envio">Envio ao Fornecedor</label>
+                        <input type="date" id="g-data-envio">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn--secondary close-modal">Cancelar</button>
+                <button type="submit" class="btn btn--primary">Salvar Garantia</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL DE EDIÇÃO DE DADOS -->
+<div id="garantia-edit-modal-overlay" class="modal-overlay" style="display:none;">
+    <div class="modal-content" style="max-width: 640px;">
+        <div class="modal-header">
+            <h2 id="garantia-edit-modal-title">Editar Garantia</h2>
+            <button class="close-modal close-modal-icon">×</button>
+        </div>
+        <form id="form-edit-garantia">
+            <div class="modal-body">
+                <input type="hidden" id="edit-g-id">
+                <div class="garantia-edit-grid">
+                    <div class="form-group form-group--wide">
+                        <label for="edit-g-nome-cliente">Cliente *</label>
+                        <input type="text" id="edit-g-nome-cliente" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-g-codigo">Código *</label>
+                        <input type="text" id="edit-g-codigo" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-g-quantidade">Qtd.</label>
+                        <input type="number" id="edit-g-quantidade" min="1">
+                    </div>
+                    <div class="form-group form-group--wide">
+                        <label for="edit-g-descricao">Descrição da Peça</label>
+                        <input type="text" id="edit-g-descricao">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-g-marca">Marca</label>
+                        <input type="text" id="edit-g-marca">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-g-fornecedor">Fornecedor</label>
+                        <input type="text" id="edit-g-fornecedor">
+                    </div>
+                    <div class="form-group form-group--wide">
+                        <label for="edit-g-defeito">Defeito</label>
+                        <input type="text" id="edit-g-defeito">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-g-data-inicio">Data Início</label>
+                        <input type="date" id="edit-g-data-inicio">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-g-data-envio">Envio ao Fornecedor</label>
+                        <input type="date" id="edit-g-data-envio">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn--secondary close-modal">Cancelar</button>
+                <button type="submit" class="btn btn--primary">Salvar Dados</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL DE ACOMPANHAMENTO + FINALIZAÇÃO -->
+<div id="garantia-acomp-modal-overlay" class="modal-overlay" style="display:none;">
+    <div class="modal-content garantia-modal">
+        <div class="modal-header">
+            <h2 id="garantia-acomp-modal-title">Processo de Garantia</h2>
+            <button class="close-modal close-modal-icon">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="garantia-meta" id="garantia-meta"></div>
+
+            <!-- Linha do tempo de acompanhamento -->
+            <div class="garantia-acomp">
+                <h3>Acompanhamento</h3>
+                <form id="form-acompanhamento" class="garantia-acomp-add">
+                    <textarea id="acomp-texto" rows="2"
+                        placeholder="Ex.: em contato com fornecedor dia 30/06, peça ainda não analisada..."></textarea>
+                    <button type="submit" class="btn btn--primary btn--sm">Adicionar</button>
+                </form>
+                <ul id="acomp-lista" class="garantia-timeline"></ul>
+            </div>
+
+            <!-- Finalização do processo -->
+            <div class="garantia-finalizar">
+                <h3>Finalizar Processo</h3>
+                <p style="color: var(--text-secondary); font-size: 0.85rem; margin:0 0 0.6rem;">
+                    Defina o desfecho. O processo sairá desta aba e irá para
+                    <strong>Garantias Finalizadas</strong>.
+                </p>
+                <div class="garantia-finalizar-grid">
+                    <div class="form-group">
+                        <label for="fin-status">Status final</label>
+                        <select id="fin-status">
+                            <option value="Concedida">Concedida</option>
+                            <option value="Recusada">Recusada</option>
+                            <option value="Abandono">Abandono</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="fin-data-final">Data Final</label>
+                        <input type="date" id="fin-data-final">
+                    </div>
+                    <div class="form-group form-group--wide">
+                        <label for="fin-conclusao">Conclusão / Observação final</label>
+                        <input type="text" id="fin-conclusao" placeholder="Desfecho do processo">
+                    </div>
+                    <div class="form-group form-group--submit">
+                        <button type="button" id="btn-finalizar-garantia" class="btn btn--danger">Finalizar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

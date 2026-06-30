@@ -127,6 +127,18 @@
                         </ul>
                     </li>
 
+                    <!-- Dropdown de Garantia -->
+                    <li class="nav-item nav-item--dropdown">
+                        <a>Garantia <span class="dropdown-arrow">▼</span></a>
+                        <ul class="dropdown-menu">
+                            <li class="nav-item" data-page="garantias"><a
+                                    href="{{ url_for('main_views.garantias_page') }}">Garantias</a></li>
+                            <li class="nav-item" data-page="garantias_finalizadas"><a
+                                    href="{{ url_for('main_views.garantias_finalizadas_page') }}">Garantias
+                                    Finalizadas</a></li>
+                        </ul>
+                    </li>
+
                     <!-- Dropdown de TV -->
                     <li class="nav-item nav-item--dropdown">
                         <a>TV <span class="dropdown-arrow">▼</span></a>

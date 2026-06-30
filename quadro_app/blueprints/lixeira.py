@@ -1,7 +1,7 @@
 # quadro_app/blueprints/lixeira.py
 from flask import Blueprint, request, jsonify
 from ..extensions import db
-from quadro_app.models import ItemExcluido, Pedido, Sugestao, Separacao, Conferencia
+from quadro_app.models import ItemExcluido, Pedido, Sugestao, Separacao, Conferencia, Garantia
 from quadro_app.utils import registrar_log
 
 lixeira_bp = Blueprint('lixeira', __name__, url_prefix='/api/lixeira')
@@ -20,7 +20,8 @@ MODEL_MAP = {
     'Pedido': Pedido,
     'Sugestao': Sugestao,
     'Separacao': Separacao,
-    'Conferencia': Conferencia
+    'Conferencia': Conferencia,
+    'Garantia': Garantia
 }
 
 @lixeira_bp.route('', methods=['GET'])

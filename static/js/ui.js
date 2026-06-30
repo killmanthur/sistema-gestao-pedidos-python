@@ -36,10 +36,19 @@ const _focoAnteriorModal = new WeakMap();
 
 export function setupAllModalCloseHandlers() {
     document.querySelectorAll('.modal-overlay').forEach(overlay => {
+        // Só fecha quando o clique COMEÇOU e TERMINOU no próprio overlay.
+        // Sem isso, ao selecionar um texto dentro do modal e soltar o mouse
+        // fora (sobre o overlay), o alvo do 'click' vira o overlay e o modal
+        // fecha indevidamente.
+        let pressIniciouNoOverlay = false;
+        overlay.addEventListener('mousedown', (e) => {
+            pressIniciouNoOverlay = (e.target === overlay);
+        });
         overlay.addEventListener('click', (e) => {
-            if (e.target === overlay) {
+            if (e.target === overlay && pressIniciouNoOverlay) {
                 overlay.style.display = 'none';
             }
+            pressIniciouNoOverlay = false;
         });
 
         // Observa abertura/fechamento (via style.display) para gerenciar o foco.

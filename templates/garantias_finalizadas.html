@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}Garantias Finalizadas{% endblock %}
+
+{% block content %}
+<section class="form-container" style="max-width: 1600px;">
+    <div class="page-toolbar"
+        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+        <h2>Garantias Finalizadas</h2>
+    </div>
+    <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+        Processos de garantia já finalizados (Concedida, Recusada ou Abandono). Use
+        <strong>Reabrir</strong> para devolver um processo à aba de pendentes caso ele
+        volte a ser trabalhado.
+    </p>
+
+    <!-- FILTRO POR STATUS + BUSCA -->
+    <div class="garantia-filtros" style="margin-bottom: 1rem;">
+        <select id="gf-filtro-status">
+            <option value="">Todos os status</option>
+            <option value="Concedida">Concedida</option>
+            <option value="Recusada">Recusada</option>
+            <option value="Abandono">Abandono</option>
+        </select>
+        <input type="search" id="gf-busca"
+            placeholder="🔎 Buscar por cliente, código, descrição, marca, fornecedor ou defeito..."
+            style="flex: 1;">
+    </div>
+
+    <div id="gf-loading-spinner" class="spinner" style="display: block; margin: 2rem auto;"></div>
+
+    <!-- TABELA -->
+    <table id="tabela-garantias-finalizadas" class="admin-table" style="display: none; width: 100%;">
+        <thead>
+            <tr>
+                <th>Cliente</th>
+                <th>Código</th>
+                <th>Descrição</th>
+                <th>Marca</th>
+                <th>Fornecedor</th>
+                <th style="width: 60px;">Qtd.</th>
+                <th style="width: 110px;">Status</th>
+                <th>Conclusão</th>
+                <th>Início</th>
+                <th>Data Final</th>
+                <th style="width: 90px;">Tempo</th>
+                <th style="width: 200px;">Ações</th>
+            </tr>
+        </thead>
+        <tbody id="tabela-garantias-finalizadas-body"></tbody>
+    </table>
+</section>
+
+<!-- MODAL DE DETALHES (somente leitura + reabrir) -->
+<div id="garantia-fin-modal-overlay" class="modal-overlay" style="display:none;">
+    <div class="modal-content garantia-modal">
+        <div class="modal-header">
+            <h2 id="garantia-fin-modal-title">Processo de Garantia</h2>
+            <button class="close-modal close-modal-icon">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="garantia-modal-cols">
+                <!-- Coluna esquerda: dados do processo (leitura) -->
+                <div class="garantia-detalhes" id="garantia-fin-detalhes"></div>
+
+                <!-- Coluna direita: linha do tempo de acompanhamento -->
+                <div class="garantia-acomp">
+                    <h3>Acompanhamento</h3>
+                    <ul id="gf-acomp-lista" class="garantia-timeline"></ul>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" id="btn-reabrir-garantia" class="btn btn--primary">Reabrir (voltar para Pendente)</button>
+            <button class="btn btn--secondary close-modal">Fechar</button>
+        </div>
+    </div>
+</div>
+{% endblock %}

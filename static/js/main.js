@@ -35,6 +35,8 @@ import { initGerenciarPrioridadePage } from './pages/gerenciar-prioridade.js';
 import { initTvPrioridadePage } from './pages/tv-prioridade.js';
 import { initSeparacoesCanceladasPage } from './pages/separacoes-canceladas.js';
 import { initGerenciarClientesPage } from './pages/gerenciar-clientes.js';
+import { initGarantiasPage } from './pages/garantias.js';
+import { initGarantiasFinalizadasPage } from './pages/garantias-finalizadas.js';
 
 // 1. Inicializa o socket
 const socket = io({
@@ -107,6 +109,12 @@ export async function initializeAuthenticatedApp() {
 
     if (path.includes('/tv-prioridade')) {
         initTvPrioridadePage();
+    }
+    else if (path.includes('/garantias-finalizadas')) {
+        initGarantiasFinalizadasPage();
+    }
+    else if (path.includes('/garantias')) {
+        initGarantiasPage();
     }
     else if (path.includes('/gerenciar-prioridade')) {
         initGerenciarPrioridadePage();

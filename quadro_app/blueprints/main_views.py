@@ -141,6 +141,16 @@ def gerenciar_clientes_page():
 def retiradas_antecipadas_page():
     return render_template('retiradas_antecipadas.html')
 
+@main_views_bp.route('/garantias')
+@page_access_required('garantias')
+def garantias_page():
+    return render_template('garantias.html')
+
+@main_views_bp.route('/garantias-finalizadas')
+@page_access_required('garantias_finalizadas')
+def garantias_finalizadas_page():
+    return render_template('garantias_finalizadas.html')
+
 @main_views_bp.route('/admin/sistema')
 @page_access_required('admin_sistema')
 def gerenciar_sistema_page():

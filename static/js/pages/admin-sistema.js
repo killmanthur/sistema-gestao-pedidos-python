@@ -31,6 +31,8 @@ const ALL_PAGES = {
     retiradas_conferir: "Retiradas Antecipadas — Conferir (✓)",
     requisicao_ajuste_estoque: "Requisição de Ajuste de Estoque",
     aprovar_ajuste_estoque: "Aprovar Ajustes de Estoque",
+    garantias: "Garantias (Pendentes)",
+    garantias_finalizadas: "Garantias Finalizadas",
     galeria_pecas: "Galeria de Peças",
     admin_sistema: "Gerenciar Sistema",
     lixeira: "Lixeira"

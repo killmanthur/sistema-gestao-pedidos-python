@@ -18,6 +18,8 @@ function getDescricaoPrincipal(item) {
             return `Mov: ${dados.numero_movimentacao} - Cliente: ${dados.nome_cliente}`;
         case 'Conferencia':
             return `NF: ${dados.numero_nota_fiscal} - Fornecedor: ${dados.nome_fornecedor}`;
+        case 'Garantia':
+            return `Cliente: ${dados.nome_cliente || 'N/A'} - Cód: ${dados.codigo_peca || 'N/A'} (${dados.status || ''})`;
         default:
             return `ID Original: ${item.item_id_original}`;
     }
